@@ -1,1 +1,1 @@
-# se2026-t15
+# Meeting Minutes Assistant 
