@@ -1,648 +1,331 @@
-# SE2026-T15 — Repo Breakdown & Weekly Implementation Roadmap
+# SE2026-T15 — Breakdown & Implementation Phases
 
-> **Dự án:** Meeting Minutes Assistant tiếng Việt (AI-05 — AI / Speech)  
-> **Repository:** https://github.com/vietquang8071/se2026-t15  
-> **Phiên bản kế hoạch:** 1.0 — 24/10/2026  
-> **Đường dẫn đề xuất khi đưa lên GitHub:** `docs/implementation-roadmap.md`  
-> **Mục tiêu:** Chia toàn bộ MVP thành các phần đủ nhỏ để lập GitHub Issues, commit/push đều mỗi tuần, review qua PR và demo theo từng milestone.
+- **Dự án:** Meeting Minutes Assistant tiếng Việt (AI-05 — AI / Speech)
+- **Repository:** https://github.com/vietquang8071/se2026-t15
+- **Phiên bản:** 1.1 — 24/10/2026
+- **Vị trí trong repo:** `docs/implementation-roadmap.md`
+- **Mục đích:** Chia đề tài thành các phase, task và phạm vi commit rõ ràng để nhóm dễ triển khai, review và theo dõi tiến độ.
 
 ---
 
-## 0. Cách sử dụng tài liệu
+## 1. Cách dùng breakdown
 
-- Đây là **backlog và thứ tự triển khai đề xuất**, **chưa phải** Issues/PR đã tạo trên GitHub và chưa có thay đổi nào được push lên repo.
-- Kế hoạch mặc định **12 tuần, 3 thành viên**, mục tiêu **khoảng 6 commit có ý nghĩa/tuần trên toàn nhóm** (mỗi thành viên khoảng 2 commit/tuần), thường gom thành **3 PR/tuần**. Đây là nhịp gợi ý, **không phải quota**; không tạo commit rỗng hoặc chia một thay đổi thành các phần không chạy được chỉ để tăng số lượng.
-- Mỗi dòng `Wxx-yy` dưới đây là **đơn vị công việc nhỏ, có thể tạo 1 commit logic**. Khi cần, một task có thể gồm nhiều commit; khi thay đổi quá nhỏ, ghép cùng test và code liên quan thành một commit.
-- Dùng ô `[ ]` để theo dõi tiến độ. Chỉ đánh dấu `[x]` khi đã hoàn thành tiêu chí nghiệm thu, chạy test liên quan và liên kết được tới PR.
-- **Đừng cố giữ đúng lịch tuần nếu phụ thuộc chưa xong.** Ưu tiên milestone chạy được hơn số lượng tính năng dở dang.
-- `FE` = frontend; `BE` = backend/data; `AI` = audio/ASR/diarization/LLM. Phân công là **vai trò**, nhóm tự thay bằng tên thật.
-- **P0:** bắt buộc cho demo end-to-end; **P1:** mục tiêu MVP đầy đủ theo tài liệu nhóm; **P2:** nâng cao/để sau. Có thể điều chỉnh ưu tiên khi được giảng viên thống nhất.
+- Đây là **kế hoạch đề xuất**; danh sách task không phải bằng chứng tính năng đã được triển khai. Tại lần rà soát 24/10/2026, repo có README, CONTRIBUTING và hai tài liệu mô tả; chưa có frontend/backend.
+- Có **12 phase, 72 task gợi ý**. Phase thể hiện thứ tự phụ thuộc, **không mặc định một phase bằng một tuần**. Nhóm chốt deadline và năng lực trước khi gán lịch.
+- Mỗi task hướng đến **một thay đổi có thể review và kiểm tra**, thường tương ứng một commit logic. Có thể gộp task nhỏ hoặc chia task lớn; không tạo commit chỉ để đủ số lượng.
+- Mỗi phase có 2 nhóm việc, đầu vào và đầu ra cụ thể. Kiểm thử liên quan đi cùng chức năng; task test riêng dành cho kịch bản tích hợp hoặc lỗi phức tạp.
+- `FE`, `BE`, `AI` là vai trò gợi ý, không phải phân công cố định. Thành viên chọn task theo năng lực và cân bằng khối lượng; không cần mỗi người đúng hai commit/phase.
+- Chỉ đánh dấu hoàn thành khi đầu ra chạy được, đã kiểm tra và có commit/PR liên quan. Mock được dùng để phát triển song song, phải ghi rõ và thay bằng tích hợp thật trước nghiệm thu.
+- Không tạo cả 72 Issues ngay. Mỗi lần chọn 3–6 task sẵn sàng thực hiện, ghi owner, điều kiện hoàn thành và phụ thuộc.
 
-### Tài liệu đã có trong repo (kiểm tra ngày 24/10/2026)
+## 2. Phạm vi cần giữ theo đề tài
 
-| Đường dẫn | Tình trạng | Việc cần làm |
+Nguồn đối chiếu: `docs/product-description.md` v1.1, `docs/feature-overview.md` v1.0 và `CONTRIBUTING.md`. Đây là breakdown để thực hiện các tài liệu đó; những thay đổi phạm vi cần nhóm thống nhất và cập nhật tài liệu gốc.
+
+| Feature Card hiện có | Đầu ra cần có trong MVP | Phase chính |
 |---|---|---|
-| `README.md` | Mới có tiêu đề | Bổ sung giới thiệu, setup, commands, screenshots |
-| `CONTRIBUTING.md` | Đã có Git Flow rút gọn, commit/PR/review rules | Giữ nguyên workflow; áp dụng cho các PR |
-| `docs/product-description.md` | Mô tả MVP và **6 module nghiệp vụ** | Chốt các điểm mơ hồ, đồng bộ tiêu chí và ví dụ ngày tháng |
-| `docs/feature-overview.md` | Chia thành **4 Feature Cards** | Bổ sung manual editing, audit history, API/data contracts, testing |
-| `frontend/`, `backend/` | Chưa có tại thời điểm kiểm tra | Tạo theo các tuần phía dưới |
+| FC1 — Audio Ingestion | Tạo meeting với title, anchor date, participants; upload WAV/MP3/M4A/WebM; thu âm có waveform/timer; chia file lớn | P02, P04, P05 |
+| FC2 — Transcription & Speaker Attribution | OpenAI Whisper API; timestamp theo segment **và word**; nhãn người nói; ghép transcript các chunk về audio gốc | P03, P05, P06 |
+| FC3 — Business Extraction & Temporal Resolution | Đủ 6 module, JSON có validation, ngày tương đối dựa trên ngày họp, bằng chứng nguồn | P03, P07, P08 |
+| FC4 — Meeting Document UI & Export | Xem đủ 6 module; tìm transcript; click timestamp để nghe; export Markdown và copy summary | P09, P10 |
 
-Các nhánh hiện có: `main` và `develop` (đều được báo là protected). Repo hiện chưa có backlog GitHub Issues được tìm thấy. **Đọc `CONTRIBUTING.md` là nguồn quy định Git/PR cuối cùng** nếu kế hoạch này có điểm diễn đạt khác.
+**Sáu module bắt buộc:** Meeting Summary, Action Items, Decision Log, Open Issues / Questions, Follow-up Items, Timeline / Event Extraction. Summary/actions ở P03 chỉ là bản tích hợp ban đầu; không thay thế bốn module còn lại.
 
----
+**Cần chốt trước khi triển khai:**
 
-## 1. Phạm vi chức năng và thứ tự ưu tiên
+- **ASR:** giữ OpenAI Whisper API (`whisper-1`) theo đề tài. Dùng `response_format="verbose_json"` và `timestamp_granularities=["segment", "word"]`; kiểm tra response thật, lưu cả hai mức timestamp. Whisper transcription và speaker diarization là hai bước riêng. Tham khảo [API transcription](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create).
+- **Vòng đời provider:** hướng dẫn OpenAI hiện ghi `whisper-1` deprecated, hỗ trợ timestamp cho tích hợp hiện có đến 26/02/2027. P00 phải kiểm tra quyền sử dụng thực tế và thời hạn dự án; nếu cần đổi provider, nhóm cập nhật yêu cầu trước, giữ hợp đồng timestamp và speaker. Chưa coi quyền truy cập API là đã xác minh. Nguồn: [Speech-to-text — Timestamps](https://developers.openai.com/api/docs/guides/speech-to-text#timestamps).
+- **File lớn:** giới hạn hiện tại là 25 MB/request; kiểm tra dung lượng **file chunk sau encode**, không chỉ số phút. Giới hạn upload của ứng dụng cần cho phép file lớn hơn để đi qua chunking. Nguồn: [Speech-to-text — Longer inputs](https://developers.openai.com/api/docs/guides/speech-to-text#longer-inputs).
+- **Speaker:** phải có bước suy luận nhãn người nói từ audio hoặc phương án attribution được nhóm chấp thuận. `unknown` và sửa nhãn là fallback; chỉ gán tay không chứng minh tính năng tự động đã hoàn thành. Không dùng nội dung LLM suy đoán làm danh tính người nói đã xác thực.
+- **Export:** Markdown/copy summary là đầu ra rõ trong FC4; JSON là dữ liệu cấu trúc và có thể cho tải thêm. Product description còn nhắc HTML/PDF, nên P00 phải chốt có cần file HTML/PDF khi nghiệm thu. Nếu cần, bổ sung task P10; không tự bỏ yêu cầu hoặc mặc định đã có PDF.
+- **Ngày tháng:** với `anchor_date=2026-10-05`, “thứ Sáu này” là **2026-10-09**; `2026-10-08` là thứ Năm. “Tuần sau” chỉ xác định tuần nếu chưa có ngày cụ thể: giữ khoảng ngày/`needs_review`, không tự tạo deadline thứ Hai. P00 đồng bộ các ví dụ sai trong tài liệu gốc.
 
-### 1.1. MVP mục tiêu
+**Phần bổ sung, cần phân biệt với yêu cầu gốc:** sửa transcript/biên bản và cảnh báo khi tạo lại là cải thiện hữu ích, đặt tại P10. Audit history đầy đủ, xử lý xung đột nhiều người sửa và phân quyền phức tạp là phần mở rộng, không chặn MVP khi nhóm chưa đưa vào yêu cầu.
 
-| ID | Nhóm tính năng | Điều kiện thành công | Mức |
+**Ngoài MVP theo đề tài:** live streaming transcription, bot tham gia Zoom/Meet/Teams, đồng bộ Calendar/Jira/Trello và voiceprint training.
+
+## 3. Ghi chú triển khai tối thiểu
+
+Luồng chính: **Meeting + audio → kiểm tra/chia audio → Whisper transcript → speaker attribution → LLM trích xuất + xử lý ngày → giao diện + export**.
+
+- React/TypeScript và FastAPI/Pydantic là **stack đề xuất**, chưa phải ràng buộc từ đề tài. Chốt trong P00, không biến lựa chọn công cụ thành tính năng sản phẩm.
+- Dùng database và lưu audio trên local volume cho bản dev. Chỉ tạo model, endpoint và thư mục khi có task sử dụng; chưa cần nhiều lớp abstraction để dự phòng.
+- P03 xử lý nền có trạng thái để HTTP trả về sớm. P05 bổ sung độ bền khi restart/retry; cân nhắc Redis/RQ nếu cần queue riêng, chưa bắt buộc dựng từ P01.
+- Dữ liệu tối thiểu: meeting, participants, audio, job, transcript segments/words, speakers và sáu loại artifacts. Artifact tham chiếu segment trong cùng meeting; các field chi tiết bám schema tài liệu gốc.
+- Thiếu owner/deadline/rationale thì để `null` hoặc đánh dấu cần xác nhận; không tự bịa. JSON hợp lệ chưa đồng nghĩa nội dung đúng.
+- API key và audio riêng tư không đưa vào Git; fixture phải có quyền sử dụng. Bản deploy công khai cần bảo vệ quyền truy cập meeting/audio phù hợp.
+
+## 4. Các phase và task gợi ý commit
+
+### P00 — Chốt phạm vi và đầu ra
+
+**Đầu vào:** hai tài liệu đề tài và CONTRIBUTING. **Nhóm A:** yêu cầu (01–03). **Nhóm B:** hợp đồng và kế hoạch (04–06).
+
+| Task | Vai trò | Phần việc / đầu ra | Commit gợi ý |
 |---|---|---|---|
-| FR-01 | Tạo meeting & metadata | Title, ngày họp (`anchor_date`), người tham gia | P0 |
-| FR-02 | Upload file | WAV, MP3, M4A, WebM; kiểm tra file hợp lệ và lỗi | P0 |
-| FR-03 | Record trong trình duyệt | Xin quyền microphone, Start/Pause/Resume/Stop, upload bản ghi | P1 |
-| FR-04 | Audio preprocessing | Đọc duration, chuẩn hóa, chia chunk khi cần | P0 |
-| FR-05 | Speech-to-Text | Transcript tiếng Việt + timestamp theo segment | P0 |
-| FR-06 | Speaker diarization | Speaker 1/2/... hoặc unknown; gán/đổi tên được | P0 (thủ công fallback), P1 (tự động) |
-| FR-07 | Meeting summary | Tóm tắt nội dung và chủ đề chính | P0 |
-| FR-08 | Action items | Công việc, người phụ trách, deadline nếu có | P0 |
-| FR-09 | Decision log | Quyết định đã chốt và bằng chứng | P1 |
-| FR-10 | Open issues | Vấn đề chưa giải quyết | P1 |
-| FR-11 | Follow-up items | Việc cần theo dõi sau họp | P1 |
-| FR-12 | Project timeline | Mốc công việc/ngày tương đối được chuẩn hóa | P1 |
-| FR-13 | Transcript/manual review | Sửa text, speaker và lưu lại thay đổi | P0 |
-| FR-14 | Meeting minutes review | Sửa nội dung AI tạo, không bị ghi đè âm thầm | P0 |
-| FR-15 | Audio seek theo nguồn | Nhấn timestamp để nghe lại đoạn gốc | P1 |
-| FR-16 | Export | Markdown/JSON; có thể copy quick summary | P0 |
-| FR-17 | Processing jobs | Trạng thái, lỗi, retry, chống chạy trùng | P0 |
-| FR-18 | Edit audit | Lưu lịch sử sửa và thời gian sửa | P1 — quan trọng cho test SE |
+| P00-01 | FE | Viết user flow upload/record → transcript → biên bản → export; phác thảo màn hình | `docs(requirements): define meeting user flows` |
+| P00-02 | BE | Chốt yêu cầu bắt buộc, giới hạn file/thời lượng, định dạng export; xác nhận deadline và ưu tiên phần mở rộng | `docs(requirements): define MVP acceptance criteria` |
+| P00-03 | AI | Kiểm tra khả năng dùng Whisper và diarization, ngân sách, tài nguyên; ghi quyết định provider và rủi ro vòng đời | `docs(ai): record speech provider constraints` |
+| P00-04 | BE | Thống nhất stack, schema meeting/transcript/artifacts, API và trạng thái xử lý ban đầu | `docs(api): define meeting data contracts` |
+| P00-05 | AI | Chọn audio có quyền sử dụng và gold transcript/artifacts; mô tả cách đo và dự kiến tiêu chí chất lượng | `docs(test): define AI evaluation cases` |
+| P00-06 | FE | Đồng bộ ví dụ ngày tháng, link tương đối, README và liên kết roadmap với tài liệu gốc | `docs: align project planning documents` |
 
-**Để sau MVP:** live streaming ASR, bot Zoom/Meet, tích hợp Google Calendar/Jira/Trello, nhận diện danh tính bằng voiceprint, hệ thống quyền phức tạp, đa tenant, PDF nâng cao nếu chưa đủ nguồn lực.
+**Hoàn thành khi:** nhóm phân biệt được yêu cầu bắt buộc và mở rộng; chốt export/provider, sample kiểm thử và hợp đồng dữ liệu để bắt đầu code. Nếu provider bị chặn, ghi blocker và quyết định thay thế trước khi tích hợp.
 
-### 1.2. Sáu module nghiệp vụ theo tài liệu hiện có
+### P01 — Khởi tạo ứng dụng
 
-1. **Meeting Summary:** overview, key topics, context.
-2. **Action Items:** task, owner, deadline, evidence timestamp.
-3. **Decision Log:** decision, rationale, evidence.
-4. **Open Issues:** câu hỏi/blocker chưa có kết luận.
-5. **Follow-up Items:** nội dung cần kiểm tra, cuộc hẹn/theo dõi tiếp.
-6. **Project Timeline:** sự kiện/mốc dự án được suy ra từ *ngày họp*, khác với timestamp trong audio.
+**Phụ thuộc:** P00. **Nhóm A:** ứng dụng (01–03). **Nhóm B:** nền tảng kiểm tra (04–06).
 
-**Nguyên tắc chất lượng:** Không bịa người thực hiện, ngày hết hạn hoặc quyết định. Thiếu thông tin thì để `null`/`unknown` hoặc `needs_review`. Mỗi artifact quan trọng phải tham chiếu đến nguồn: `source_segment_ids` hoặc timestamp.
+| Task | Vai trò | Phần việc / đầu ra | Commit gợi ý |
+|---|---|---|---|
+| P01-01 | BE | Tạo backend, `/health`, settings, `.env.example`, `.gitignore` | `feat(api): bootstrap backend application` |
+| P01-02 | FE | Tạo frontend, route và layout cơ bản | `feat(web): initialize frontend application` |
+| P01-03 | AI | Tạo hàm chuyển response ASR về schema chung và fixture segment/word, chưa cần nhiều provider | `feat(asr): define transcript normalization` |
+| P01-04 | BE | Kết nối database, migration/schema ban đầu và cấu hình thư mục lưu audio | `feat(db): configure meeting persistence` |
+| P01-05 | FE | API client và trạng thái loading/error dùng chung; gọi `/health` thật | `feat(web): connect backend health endpoint` |
+| P01-06 | BE | Thêm smoke test, CI lint/test/build tối thiểu và lệnh chạy local | `ci: add application smoke checks` |
 
----
+**Hoàn thành khi:** frontend gọi được backend; database khởi tạo được; người khác chạy local theo README. Không cần tạo sẵn các thư mục chưa dùng.
 
-## 2. Kiến trúc, stack và cấu trúc repo đích
+### P02 — Tạo meeting và upload audio
 
-### 2.1. Kiến trúc đề xuất
+**Phụ thuộc:** P01. **Nhóm A:** metadata (01–03). **Nhóm B:** upload (04–06).
+
+| Task | Vai trò | Phần việc / đầu ra | Commit gợi ý |
+|---|---|---|---|
+| P02-01 | BE | API tạo/lấy meeting, title, anchor date và participants; validation | `feat(meetings): add meeting metadata API` |
+| P02-02 | FE | Form tạo meeting, validate và điều hướng tới trang chi tiết | `feat(meetings): add meeting creation form` |
+| P02-03 | AI | Dùng FFprobe/FFmpeg đọc duration, codec và kiểm tra audio giải mã được | `feat(audio): inspect audio metadata` |
+| P02-04 | BE | Upload multipart WAV/MP3/M4A/WebM, kiểm tra file rỗng/MIME/dung lượng và storage path | `feat(audio): implement validated audio upload` |
+| P02-05 | FE | Chọn/kéo thả file, hiển thị metadata và lỗi upload | `feat(audio): add meeting audio uploader` |
+| P02-06 | BE | Kiểm tra tạo meeting → upload → reload; file lỗi và ID không hợp lệ | `test(audio): cover meeting upload integration` |
+
+**Hoàn thành khi:** tạo meeting và upload cả bốn định dạng; reload còn metadata/audio; file hỏng bị từ chối rõ lý do. Storage không cho phép đọc/ghi ra ngoài thư mục audio.
+
+### P03 — Luồng AI đầu tiên chạy thật
+
+**Phụ thuộc:** P02. **Nhóm A:** transcription (01–03). **Nhóm B:** biên bản ban đầu (04–06).
+
+| Task | Vai trò | Phần việc / đầu ra | Commit gợi ý |
+|---|---|---|---|
+| P03-01 | BE | API bắt đầu xử lý nền, lấy job status, lưu trạng thái và lỗi; chặn chạy trùng đang active | `feat(jobs): add background processing status` |
+| P03-02 | AI | Tích hợp Whisper cho audio ngắn; lấy segment/word timestamps, timeout và mã lỗi provider | `feat(asr): transcribe audio with word timestamps` |
+| P03-03 | BE | Lưu và trả transcript segments/words, kiểm tra timestamp trong duration | `feat(transcript): persist timestamped transcription` |
+| P03-04 | AI | LLM tạo Summary và Action Items tối giản; validate JSON, giữ source segment và field chưa rõ | `feat(extraction): add initial summary and actions` |
+| P03-05 | FE | Hiển thị job status, transcript và summary/actions đơn giản; xử lý empty/error | `feat(web): display initial meeting results` |
+| P03-06 | BE | Nối pipeline thật, lưu artifacts và kiểm tra upload → ASR → LLM → reload kết quả | `test(pipeline): verify initial live meeting flow` |
+
+**Hoàn thành khi — M1:** một audio ngắn đi qua **provider ASR và LLM thật**, xem được transcript cùng summary/actions. Lưu model/config, lỗi và kết quả kiểm tra; không dùng mock để kết luận tích hợp thật thành công. Speaker tự động và biên bản đủ sáu module hoàn thiện ở phase sau.
+
+### P04 — Thu âm và nghe lại
+
+**Phụ thuộc:** P02; có thể làm song song P03. **Nhóm A:** recorder (01–03). **Nhóm B:** playback/chuẩn hóa (04–06).
+
+| Task | Vai trò | Phần việc / đầu ra | Commit gợi ý |
+|---|---|---|---|
+| P04-01 | FE | Xin quyền microphone, kiểm tra MIME hỗ trợ, start/stop và cleanup MediaRecorder | `feat(recording): capture microphone audio` |
+| P04-02 | FE | Pause/resume, timer và waveform cơ bản | `feat(recording): add recorder controls and waveform` |
+| P04-03 | FE | Preview bản ghi, upload qua API sẵn có và phản hồi lỗi | `feat(recording): preview and upload recordings` |
+| P04-04 | BE | Phục vụ audio đúng meeting, content type và byte-range để seek trên trình duyệt | `feat(audio): support meeting audio playback` |
+| P04-05 | AI | Chuẩn hóa audio khi cần; giữ thời lượng/mốc thời gian, kiểm tra lỗi FFmpeg và dọn file tạm | `feat(audio): normalize recorded audio safely` |
+| P04-06 | FE | Kiểm tra từ chối microphone, pause/resume, record → upload → process thật trên trình duyệt mục tiêu | `test(recording): verify browser recording workflow` |
+
+**Hoàn thành khi:** thu âm có waveform/timer, nghe lại và xử lý được bằng cùng pipeline upload; không ghi âm tiếp sau khi stop/rời trang.
+
+### P05 — File dài, chunking và job ổn định
+
+**Phụ thuộc:** P03; kiểm tra playback sau P04. **Nhóm A:** audio dài (01–03). **Nhóm B:** lỗi/retry (04–06).
+
+| Task | Vai trò | Phần việc / đầu ra | Commit gợi ý |
+|---|---|---|---|
+| P05-01 | AI | Chia audio theo dung lượng sau encode, overlap cấu hình được; mỗi chunk trong giới hạn API | `feat(asr): split oversized audio recordings` |
+| P05-02 | AI | Ghép segment và word timestamps về audio gốc, loại trùng vùng overlap | `feat(asr): stitch chunk transcripts and timestamps` |
+| P05-03 | BE | Gắn tiến độ từng chunk vào job; lưu kết quả an toàn, quy định partial result | `feat(jobs): track chunk processing progress` |
+| P05-04 | BE | Retry/backoff có giới hạn, idempotency và trạng thái job khi worker restart; chọn queue riêng nếu cần | `feat(jobs): handle retries and interrupted workers` |
+| P05-05 | FE | Hiển thị tiến độ/lỗi, cho retry phù hợp và tránh bấm xử lý liên tục | `feat(web): add processing recovery controls` |
+| P05-06 | AI | Kiểm tra chunk boundary, trùng chữ, offset segment/word và seek sau khi ghép | `test(asr): verify long audio stitching` |
+
+**Hoàn thành khi:** file lớn hơn 25 MB của ứng dụng được chia và xử lý; mỗi request đáp ứng giới hạn provider; retry không tạo transcript trùng. Phân biệt lỗi quota/provider với lỗi hệ thống, không báo thành công khi thiếu chunk.
+
+### P06 — Speaker attribution và sửa nhãn
+
+**Phụ thuộc:** P03; dùng output P05 khi audio nhiều chunk. **Nhóm A:** suy luận nhãn (01–03). **Nhóm B:** hiển thị/sửa nhãn (04–06).
+
+| Task | Vai trò | Phần việc / đầu ra | Commit gợi ý |
+|---|---|---|---|
+| P06-01 | AI | Tích hợp phương án speaker attribution đã chốt, ví dụ diarization dựa trên audio | `feat(diarization): detect speaker turns` |
+| P06-02 | AI | Align speaker turns với transcript; speaker ID nhất quán qua chunk, xử lý overlap/unknown | `feat(diarization): align transcript speaker labels` |
+| P06-03 | BE | Lưu speaker và mapping participant; API validate speaker thuộc meeting | `feat(speakers): persist meeting speaker mapping` |
+| P06-04 | FE | Hiển thị speaker trên transcript, màu và nhãn unknown nhất quán | `feat(transcript): display attributed speakers` |
+| P06-05 | FE | Đổi tên/gán Speaker 1 sang participant, lưu qua API và reload | `feat(speakers): add speaker mapping editor` |
+| P06-06 | AI | Kiểm tra audio 2–3 người, overlap và nhiều chunk; ghi lỗi gán nhãn trước/sau sửa thủ công | `test(diarization): evaluate speaker attribution cases` |
+
+**Hoàn thành khi:** có output attribution tự động trên audio kiểm thử, có thể sửa nhãn; báo riêng lỗi tự động và kết quả sau sửa. Chưa đủ chất lượng thì ghi giới hạn/blocker, không đổi nhãn “fallback thủ công” thành tính năng tự động hoàn thành.
+
+### P07 — Hoàn thiện trích xuất sáu module
+
+**Phụ thuộc:** P03; chạy lại với speaker sau P06. **Nhóm A:** schema/nội dung (01–03). **Nhóm B:** validation/bằng chứng (04–06).
+
+| Task | Vai trò | Phần việc / đầu ra | Commit gợi ý |
+|---|---|---|---|
+| P07-01 | BE | Hoàn thiện schema/persistence sáu module theo tài liệu gốc; API đọc artifacts | `feat(minutes): complete six module schemas` |
+| P07-02 | AI | Hoàn thiện Summary/Action Items: context, topics, owner, deadline, priority và nguồn | `feat(extraction): refine summary and action items` |
+| P07-03 | AI | Decision Log/Open Issues: phân biệt đã chốt với đề xuất, giữ rationale và phần chưa rõ | `feat(extraction): add decisions and open issues` |
+| P07-04 | AI | Follow-up/Timeline: phân biệt theo dõi với task; giữ raw temporal expression và nguồn | `feat(extraction): add followups and timeline events` |
+| P07-05 | BE | Validate JSON/schema và evidence trong cùng meeting; retry/repair hữu hạn, không tự bịa field | `feat(minutes): validate extracted artifacts and sources` |
+| P07-06 | AI | Đối chiếu gold artifacts, trường hợp không có quyết định/owner/deadline và nội dung mâu thuẫn | `test(extraction): verify six module business outputs` |
+
+**Hoàn thành khi — M2:** API có đủ sáu module; module không có thông tin trả danh sách rỗng hợp lệ. Item thiếu bằng chứng phải được đánh dấu cần review, không coi là kết quả đã xác minh.
+
+### P08 — Chuẩn hóa ngày và timeline
+
+**Phụ thuộc:** P07. **Nhóm A:** quy tắc thời gian (01–03). **Nhóm B:** kiểm tra/tích hợp (04–06).
+
+| Task | Vai trò | Phần việc / đầu ra | Commit gợi ý |
+|---|---|---|---|
+| P08-01 | AI | Quy tắc anchor date/timezone, thứ trong tuần, tuần sau và cuối tháng; phân biệt ngày với khoảng ngày | `feat(temporal): define relative date resolution rules` |
+| P08-02 | AI | Resolve ngày từ expression; lưu raw statement, ngày/khoảng ngày và needs_review khi mơ hồ | `feat(temporal): resolve meeting relative dates` |
+| P08-03 | BE | Lưu kết quả temporal theo schema đã thống nhất cho timeline, action deadline và follow-up | `feat(timeline): persist resolved event dates` |
+| P08-04 | AI | Test 05/10/2026 → thứ Sáu 09/10/2026, cuối tháng, năm nhuận, qua năm và câu không đủ ngày | `test(temporal): cover calendar boundaries and ambiguity` |
+| P08-05 | FE | Timeline theo thứ tự ngày; tách rõ event chưa rõ ngày, không xếp thành ngày giả | `feat(timeline): display resolved meeting milestones` |
+| P08-06 | BE | Kiểm tra thay anchor date phải yêu cầu tính lại/kết quả cũ được đánh dấu; đồng bộ ngày giữa các module | `test(timeline): verify date consistency across artifacts` |
+
+**Hoàn thành khi:** ngày rõ ràng được tính đúng từ ngày họp; không dùng ngày chạy máy thay anchor date. Mốc mơ hồ giữ nguyên thông tin để người dùng xác nhận.
+
+### P09 — Giao diện biên bản và truy nguồn
+
+**Phụ thuộc:** P04, P06, P07, P08; UI có thể dựng trước bằng fixture. **Nhóm A:** sáu block (01–03). **Nhóm B:** tra cứu nguồn (04–06).
+
+| Task | Vai trò | Phần việc / đầu ra | Commit gợi ý |
+|---|---|---|---|
+| P09-01 | FE | Meeting summary và Action Items: task, checkbox/trạng thái, owner, deadline | `feat(minutes): render summary and action items` |
+| P09-02 | FE | Decision Log, Open Issues và Follow-up cards; rationale, source, empty states | `feat(minutes): render decisions issues and followups` |
+| P09-03 | FE | Gắn Timeline vào trang biên bản và thống nhất loading/error/needs_review cho sáu block | `feat(minutes): assemble complete meeting document` |
+| P09-04 | FE | Transcript inspector có speaker, tìm kiếm/highlight và click segment để nghe | `feat(transcript): add searchable audio transcript` |
+| P09-05 | FE | Click evidence của artifact → seek audio gốc và highlight segment nguồn | `feat(minutes): link artifacts to source audio` |
+| P09-06 | BE | Kiểm tra response nguồn, ID sai/khác meeting và nội dung frontend đọc đúng schema | `test(minutes): verify document source navigation` |
+
+**Hoàn thành khi — M3:** xem đủ sáu block trên dữ liệu thật; từ action/decision/issue/follow-up/event nghe lại đúng nguồn. Click-to-play không trỏ vào timestamp cục bộ của chunk.
+
+### P10 — Export và review cơ bản
+
+**Phụ thuộc:** P09. **Nhóm A:** export bắt buộc (01–03). **Nhóm B:** cải thiện review (04–06, phần bổ sung).
+
+| Task | Vai trò | Phần việc / đầu ra | Commit gợi ý |
+|---|---|---|---|
+| P10-01 | BE | Sinh Markdown đủ sáu module từ dữ liệu đang hiển thị; JSON download nếu đã chọn, HTML/PDF nếu P00 xác nhận | `feat(export): generate meeting document downloads` |
+| P10-02 | FE | Download Markdown và copy quick summary; lỗi download/clipboard rõ ràng | `feat(export): add download and summary copy actions` |
+| P10-03 | BE | Kiểm tra export tiếng Việt, ngày tháng, speaker/source, module rỗng và nội dung mới nhất | `test(export): verify meeting document content` |
+| P10-04 | BE | API sửa text/speaker và artifacts cơ bản; giữ bản gốc, đánh dấu kết quả phụ thuộc cũ khi sửa transcript | `feat(review): save corrected meeting content` |
+| P10-05 | FE | Form edit/save/cancel, yêu cầu xác nhận trước khi regenerate nội dung đã sửa | `feat(review): add meeting correction controls` |
+| P10-06 | FE | Kiểm tra sửa → reload → export; không ghi đè âm thầm, timestamp từ gốc không giả lập alignment sau sửa text | `test(review): verify corrected content persistence` |
+
+**Hoàn thành khi — M4:** Markdown/copy hoạt động và các định dạng đã chốt ở P00 có đủ; nếu triển khai review thì export đúng phiên bản đã lưu. Audit history và chỉnh sửa đồng thời chỉ thêm sau khi nhóm nhận task riêng; không cần dựng trước.
+
+### P11 — Kiểm thử tổng thể và bàn giao
+
+**Phụ thuộc:** P03–P10; review bổ sung được ghi rõ nếu chưa làm. **Nhóm A:** chất lượng (01–03). **Nhóm B:** tái lập/demo (04–06).
+
+| Task | Vai trò | Phần việc / đầu ra | Commit gợi ý |
+|---|---|---|---|
+| P11-01 | AI | Báo cáo WER/CER, lỗi speaker, kết quả trích xuất sáu module và temporal trên bộ kiểm thử đã chốt | `docs(ai): report meeting pipeline evaluation` |
+| P11-02 | BE | Test file hỏng, ID sai, provider timeout/quota, JSON lỗi, retry và dọn file tạm | `test(api): cover processing failure scenarios` |
+| P11-03 | FE | E2E tự động dùng mock ổn định cho UI; ghi rõ phần mock trong kết quả | `test(e2e): cover meeting UI workflow` |
+| P11-04 | BE | Tài liệu/lệnh setup từ môi trường sạch, biến môi trường, database/worker; Compose nếu stack cần | `chore(dev): finalize reproducible local setup` |
+| P11-05 | AI | Chạy E2E provider thật cho cả upload và recording: ASR → speaker → sáu module → source playback → export; lưu bằng chứng | `docs(test): record live pipeline acceptance results` |
+| P11-06 | FE | README, ảnh/video, demo script, giới hạn và release checklist; tổng hợp commit/PR liên quan | `docs: prepare meeting assistant handoff` |
+
+**Hoàn thành khi — M5:** người khác setup và chạy lại được; có bằng chứng provider thật và đủ tính năng bắt buộc. Test mock xanh không thay thế nghiệm thu thật. Chỉ tạo release sau review nhóm; roadmap không xác nhận dự án đã hoàn thành.
+
+## 5. Thứ tự triển khai và chia PR
 
 ```mermaid
-flowchart TD
-    U[React / TypeScript web UI] --> API[FastAPI REST API]
-    API --> DB[(PostgreSQL)]
-    API --> FS[(Audio storage)]
-    API --> Q[Redis + RQ]
-    Q --> W[Python AI worker]
-    W --> FF[FFmpeg preprocess / chunking]
-    FF --> ASR[TranscriptionProvider]
-    ASR --> DIA[Speaker diarization + alignment]
-    DIA --> LLM[LLM extraction + temporal resolver]
-    LLM --> DB
-    W --> DB
-    API --> U
+flowchart LR
+    P00["P00 Scope"] --> P01["P01 Skeleton"]
+    P01 --> P02["P02 Upload"]
+    P02 --> P03["P03 Live AI flow"]
+    P02 --> P04["P04 Recorder"]
+    P03 --> P05["P05 Long audio and jobs"]
+    P05 --> P06["P06 Speakers"]
+    P03 --> P07["P07 Six modules"]
+    P07 --> P08["P08 Dates"]
+    P04 --> P09["P09 UI and sources"]
+    P06 --> P09
+    P08 --> P09
+    P09 --> P10["P10 Export and review"]
+    P10 --> P11["P11 Acceptance"]
 ```
 
-- **Frontend:** React + TypeScript + Vite; Tailwind CSS nếu nhóm chọn.
-- **Backend:** Python + FastAPI + Pydantic + SQLAlchemy + Alembic.
-- **Data & jobs:** PostgreSQL; Redis + RQ; audio trong local volume khi dev, có lớp storage abstraction để nâng cấp sau.
-- **AI:** FFmpeg, `TranscriptionProvider` (có thể là faster-whisper hoặc cloud ASR), pyannote.audio nếu đủ tài nguyên, LLM trả dữ liệu theo schema.
-- **Tests:** pytest, Vitest, Playwright; GitHub Actions cho lint/test/build.
-- **Tính di động:** Model/provider có thể thay đổi. **Không khóa core business logic vào một tên model/API cố định.** Chốt model cụ thể bằng một ADR sau thử nghiệm chi phí, latency, timestamps, tiếng Việt và tài nguyên máy.
-- **Bảo mật:** Không đưa `.env`, API key, audio thật hoặc thông tin người họp vào Git. Test fixture chỉ dùng audio có quyền sử dụng.
+- P04 có thể song song P03; P06 có thể thử trên audio ngắn từ P03, rồi kiểm tra nhiều chunk sau P05; P07 có thể dùng transcript chuẩn trước khi diarization xong.
+- FE dùng fixture theo contract trong lúc BE/AI đang làm. Đến checkpoint tích hợp phải thay fixture bằng API thật và kiểm tra lại.
+- Mỗi PR nên gom task cùng đầu ra. Ví dụ `P02-01 + P02-02` cho tạo meeting; `P02-03 + P02-04 + P02-05 + P02-06` có thể chia thành PR upload backend và PR upload UI theo độ lớn thực tế.
+- Không mở một PR quá lớn cho cả phase nếu nhiều phần độc lập; cũng không tách riêng code và test cần thiết chỉ để tăng commit.
+- Khi deadline ngắn, ưu tiên hoàn thành yêu cầu gốc; dời review/audit mở rộng và hiệu ứng UI trước. Bản chỉ có upload, summary/actions hoặc gán speaker hoàn toàn thủ công là **demo từng phần**, chưa phải MVP đầy đủ. Không mặc định có bản 8 tuần đạt tất cả yêu cầu.
 
-### 2.2. Cấu trúc thư mục đích
+## 6. Issue → Branch → Commit → PR
 
-```text
-se2026-t15/
-├── README.md
-├── CONTRIBUTING.md
-├── .gitignore
-├── .env.example
-├── docker-compose.yml
-├── docs/
-│   ├── product-description.md            # đã có
-│   ├── feature-overview.md                # đã có
-│   ├── implementation-roadmap.md          # tài liệu này
-│   ├── requirements.md
-│   ├── architecture.md
-│   ├── api-contract.md
-│   ├── testing-plan.md
-│   ├── benchmark-report.md                # cuối dự án
-│   ├── release-checklist.md
-│   └── decisions/                         # ADR: ASR, storage, diarization
-├── frontend/
-│   ├── package.json
-│   ├── vite.config.ts
-│   └── src/
-│       ├── api/                           # typed API client
-│       ├── components/                    # reusable UI
-│       ├── features/
-│       │   ├── meetings/
-│       │   ├── audio/
-│       │   ├── transcript/
-│       │   └── minutes/
-│       ├── pages/
-│       ├── hooks/
-│       └── types/
-├── backend/
-│   ├── pyproject.toml
-│   ├── alembic/
-│   ├── app/
-│   │   ├── main.py
-│   │   ├── api/routes/
-│   │   ├── core/
-│   │   ├── db/
-│   │   ├── models/
-│   │   ├── schemas/
-│   │   ├── jobs/
-│   │   └── services/
-│   │       ├── audio/
-│   │       ├── transcription/
-│   │       ├── diarization/
-│   │       ├── extraction/
-│   │       ├── temporal/
-│   │       └── export/
-│   └── tests/
-├── tests/
-│   └── fixtures/                          # audio nhỏ + gold transcripts được phép sử dụng
-└── .github/
-    ├── workflows/
-    ├── ISSUE_TEMPLATE/
-    └── pull_request_template.md
-```
+Workflow thông thường theo `CONTRIBUTING.md`: tạo branch từ `develop`, PR về `develop`, reviewer khác approve và Squash and Merge; release dùng PR `develop → main`. Không push trực tiếp lên `main`/`develop`.
 
-### 2.3. Data model tối thiểu
-
-| Entity | Trường chính | Ghi chú |
-|---|---|---|
-| `Meeting` | `id`, `title`, `anchor_date`, `status`, `created_at` | metadata & trạng thái tổng |
-| `Participant` | `id`, `meeting_id`, `display_name` | tên do người dùng cung cấp |
-| `AudioAsset` | `id`, `meeting_id`, `storage_key`, `mime_type`, `duration_sec`, `size_bytes` | không lưu binary vào DB |
-| `ProcessingJob` | `id`, `meeting_id`, `stage`, `status`, `attempt_count`, `error_code` | trạng thái/retry/idempotency |
-| `Speaker` | `id`, `meeting_id`, `label`, `participant_id` | mapping thủ công, có `unknown` |
-| `TranscriptSegment` | `id`, `meeting_id`, `start_sec`, `end_sec`, `speaker_id`, `text`, `version` | nguồn tham chiếu |
-| `MeetingArtifact` | `id`, `meeting_id`, `type`, `payload_json`, `review_status` | 6 loại artifact; chuẩn hóa dần nếu cần |
-| `ArtifactEvidence` | `artifact_id`, `segment_id` | liên kết bằng chứng |
-| `AuditEvent` | `id`, `meeting_id`, `entity_type`, `entity_id`, `before`, `after`, `changed_at` | lịch sử sửa; người sửa nếu có auth |
-
-Không xây auth phức tạp ngay từ đầu. Với MVP chạy cục bộ, phải ghi rõ giới hạn truy cập; khi deploy công khai phải có cơ chế bảo vệ meeting/audio phù hợp, không công khai link file tùy ý.
-
-### 2.4. API contract khởi đầu
-
-| Method | Route | Response/chức năng |
-|---|---|---|
-| `GET` | `/health` | tình trạng backend |
-| `POST` | `/api/meetings` | tạo meeting |
-| `GET` | `/api/meetings/{id}` | metadata meeting |
-| `POST` | `/api/meetings/{id}/audio` | upload audio |
-| `GET` | `/api/meetings/{id}/audio` | phát audio có kiểm soát truy cập |
-| `POST` | `/api/meetings/{id}/process` | `202 Accepted` + `job_id` |
-| `GET` | `/api/jobs/{id}` | stage/status/progress/error |
-| `GET` | `/api/meetings/{id}/transcript` | danh sách segment |
-| `PATCH` | `/api/meetings/{id}/segments/{segment_id}` | cập nhật segment |
-| `PATCH` | `/api/meetings/{id}/speakers/{speaker_id}` | cập nhật tên/gán speaker |
-| `GET` | `/api/meetings/{id}/minutes` | dữ liệu 6 module |
-| `PATCH` | `/api/meetings/{id}/minutes` | cập nhật biên bản |
-| `GET` | `/api/meetings/{id}/audit` | lịch sử chỉnh sửa |
-| `GET` | `/api/meetings/{id}/export?format=md` | xuất Markdown/JSON |
-
-**Job state thống nhất:** `queued → preprocessing → transcribing → diarizing → extracting → ready`, thêm `failed`, `partial`, `reviewed` khi phù hợp. Không chặn HTTP request trong lúc model chạy.
-
----
-
-## 3. Lộ trình 12 tuần — 12 phase lớn, 24 mini-phase, 72 commit gợi ý
-
-**Ký hiệu:** mỗi `[ ]` = 1 task độc lập, thông thường ứng với 1 commit logic. Các commit message bên dưới là **gợi ý**, điều chỉnh cho đúng phạm vi code thực tế.
-
-### Tuần 01 — P00: Chốt yêu cầu và thiết kế (6 commits; 3 PR)
-
-**P00.1 — Requirements & product boundaries**
-
-- [ ] **W01-01 [FE]** Viết user journeys/use cases cho upload → review → export tại `docs/requirements.md`. Commit: `docs(requirements): document meeting user journeys`.
-- [ ] **W01-02 [BE]** Chốt FR/NFR, in-scope/out-of-scope, acceptance criteria và danh sách lỗi bắt buộc. Commit: `docs(requirements): define functional acceptance criteria`.
-- [ ] **W01-03 [AI]** Chốt tiêu chí chọn ASR, diarization, benchmark audio và ghi ADR đầu tiên. Commit: `docs(ai): record transcription provider decision criteria`.
-
-**P00.2 — System contracts & planning**
-
-- [ ] **W01-04 [BE]** Phác thảo data model và bản API contract v1. Commit: `docs(api): define initial endpoints and data model`.
-- [ ] **W01-05 [AI]** Viết `docs/testing-plan.md`, kịch bản WER/CER, noisy audio, failure/retry. Commit: `docs(test): define audio evaluation strategy`.
-- [ ] **W01-06 [FE]** Bổ sung roadmap, sửa README, link tương đối trong docs, rà soát ví dụ ngày tháng sai. Commit: `docs: align project overview and roadmap`.
-
-**PR đề xuất:** `docs/requirements-spec` • `docs/architecture-contract` • `docs/ai-test-plan`.
-
-**Checkpoint:** 3 thành viên hiểu rõ MVP; ít nhất 1 luồng use case và hợp đồng API được review. **Không bắt đầu backend/AI dựa trên các field tự đoán.**
-
-### Tuần 02 — P01: Khởi tạo monorepo và dev environment (6 commits; 3 PR)
-
-**P01.1 — App skeleton**
-
-- [ ] **W02-01 [BE]** Tạo FastAPI, `GET /health`, settings bằng biến môi trường, `.env.example`. Commit: `feat(api): bootstrap FastAPI application`.
-- [ ] **W02-02 [FE]** Tạo React/Vite/TypeScript và route shell. Commit: `feat(web): initialize frontend application`.
-- [ ] **W02-03 [AI]** Tạo package `services/transcription` và abstract interface/provider stub để dễ mock. Commit: `feat(asr): define transcription provider contract`.
-
-**P01.2 — Shared development tools**
-
-- [ ] **W02-04 [BE]** Thiết lập SQLAlchemy/Alembic, kết nối PostgreSQL, migration cơ bản. Commit: `feat(db): configure database and migrations`.
-- [ ] **W02-05 [FE]** Tạo API client, error/loading component, trang landing placeholder. Commit: `feat(web): add API client and page shell`.
-- [ ] **W02-06 [AI]** Thiết lập pytest fixtures/mocks cho AI service, smoke tests, GitHub Actions lint/test tối thiểu (phối hợp BE). Commit: `ci: add backend smoke tests and checks`.
-
-**PR đề xuất:** `feature/backend-foundation` • `feature/frontend-foundation` • `feature/ai-foundation`.
-
-**Checkpoint:** chạy frontend và backend local; `/health` trả OK; migration tạo được database; CI cơ bản chạy qua. Docker Compose có thể bổ sung vào PR backend nếu không vượt scope.
-
-### Tuần 03 — P02: Meeting CRUD và file upload (6 commits; 3 PR)
-
-**P02.1 — Meeting metadata & storage**
-
-- [ ] **W03-01 [BE]** Model/schema và endpoint tạo/lấy meeting; unit test validation. Commit: `feat(meetings): add meeting create and detail API`.
-- [ ] **W03-02 [FE]** Meeting form: title, anchor date, participants, validation. Commit: `feat(meetings): add meeting creation form`.
-- [ ] **W03-03 [AI]** Audio inspection/metadata utility (`ffprobe`/FFmpeg) trả duration, codecs, sample rate. Commit: `feat(audio): inspect uploaded audio metadata`.
-
-**P02.2 — Audio ingest**
-
-- [ ] **W03-04 [BE]** API upload multipart + định dạng/dung lượng + storage path an toàn; tests file hợp lệ/file rỗng/file lỗi. Commit: `feat(audio): implement validated audio upload`.
-- [ ] **W03-05 [FE]** File picker + drag/drop + lỗi upload + dung lượng/duration hiển thị. Commit: `feat(audio): build upload component`.
-- [ ] **W03-06 [AI]** Chuẩn bị audio fixtures có quyền sử dụng, mẫu WAV/MP3/WebM và audio lỗi (không chứa dữ liệu cá nhân). Commit: `test(audio): add ingestion test fixtures`.
-
-**PR đề xuất:** `feature/meeting-crud` • `feature/audio-upload-api` • `feature/audio-upload-ui`.
-
-**Checkpoint:** tạo meeting rồi upload file thành công; reload vẫn xem được metadata và file gốc.
-
-### Tuần 04 — P03: Browser recorder, audio preview, preprocessing (6 commits; 3 PR)
-
-**P03.1 — In-browser recording**
-
-- [ ] **W04-01 [FE]** `getUserMedia()` + `MediaRecorder` start/stop, xin quyền microphone và kiểm tra MIME hỗ trợ. Commit: `feat(recording): capture microphone audio in browser`.
-- [ ] **W04-02 [FE]** Pause/resume, timer, audio preview, nút upload recording. Commit: `feat(recording): add controls and recording preview`.
-- [ ] **W04-03 [BE]** Endpoint stream/serve audio cho meeting, trả lỗi file không tồn tại, test header/content type. Commit: `feat(audio): expose meeting audio playback endpoint`.
-
-**P03.2 — Audio normalization**
-
-- [ ] **W04-04 [AI]** FFmpeg normalize input thành định dạng do ASR provider yêu cầu; test thời lượng giữ hợp lý. Commit: `feat(audio): normalize recordings for transcription`.
-- [ ] **W04-05 [AI]** Thêm test codec/định dạng và phản hồi lỗi `ffmpeg` rõ ràng. Commit: `test(audio): cover media conversion failures`.
-- [ ] **W04-06 [BE]** Quản lý storage key, chống path traversal, xoá file tạm sau xử lý/lỗi; tests. Commit: `fix(storage): harden audio file lifecycle`.
-
-**PR đề xuất:** `feature/browser-recording` • `feature/audio-playback` • `feature/audio-preprocessing`.
-
-**Checkpoint:** người dùng thu → stop → nghe lại → upload; audio MP3/M4A/WAV/WebM được chuẩn hóa hoặc trả lỗi rõ ràng.
-
-### Tuần 05 — P04: Job queue + ASR baseline (6 commits; 3 PR)
-
-**P04.1 — Async jobs & model integration**
-
-- [ ] **W05-01 [BE]** `ProcessingJob` model, `POST /process`, `GET /jobs/{id}`, trạng thái chuẩn. Commit: `feat(jobs): add meeting processing job API`.
-- [ ] **W05-02 [BE]** Redis/RQ worker, job enqueue, worker startup và Docker Compose dependencies. Commit: `feat(jobs): run transcription in background worker`.
-- [ ] **W05-03 [AI]** Tích hợp provider ASR được chốt trong ADR, trả transcript segments với timestamps. Commit: `feat(asr): implement baseline speech transcription`.
-
-**P04.2 — Store & display transcript**
-
-- [ ] **W05-04 [AI]** Chuẩn hóa output ASR: `start_sec`, `end_sec`, `text`, text encoding, lỗi model; tests adapter. Commit: `feat(asr): normalize transcript segments`.
-- [ ] **W05-05 [FE]** Job status screen (queued/processing/ready/failed) và polling có cleanup. Commit: `feat(web): display transcription progress`.
-- [ ] **W05-06 [FE]** Transcript inspector v1: list segment, timestamp, empty/error state. Commit: `feat(transcript): render timestamped segments`.
-
-**PR đề xuất:** `feature/processing-jobs` • `feature/asr-transcription` • `feature/transcript-view`.
-
-**Checkpoint / Milestone M1:** **Upload → Process → Transcript** chạy end-to-end trên audio tiếng Việt ngắn; worker lỗi không làm backend HTTP bị treo.
-
-### Tuần 06 — P05: Audio dài, stitching và tra cứu transcript (6 commits; 3 PR)
-
-**P05.1 — Long-audio resilience**
-
-- [ ] **W06-01 [AI]** Chia chunk theo giới hạn provider với overlap được cấu hình. Commit: `feat(asr): split long recordings into chunks`.
-- [ ] **W06-02 [AI]** Stitch transcript, chuyển offset về audio gốc, loại trùng vùng overlap; unit tests. Commit: `feat(asr): merge chunk transcripts and timestamps`.
-- [ ] **W06-03 [BE]** Retry/backoff giới hạn, mã lỗi ổn định, tránh enqueue job trùng trên cùng request. Commit: `feat(jobs): add retry and idempotency guards`.
-
-**P05.2 — Usability & integration tests**
-
-- [ ] **W06-04 [BE]** Test integration file dài, worker timeout/restart, partial result policy. Commit: `test(jobs): cover long-audio failure cases`.
-- [ ] **W06-05 [FE]** Search/filter từ khóa trong transcript, highlight kết quả. Commit: `feat(transcript): add transcript search`.
-- [ ] **W06-06 [FE]** Gắn timestamps với audio player và phát từ giây được chọn. Commit: `feat(transcript): seek audio by segment timestamp`.
-
-**PR đề xuất:** `feature/long-audio-processing` • `feature/job-resilience` • `feature/transcript-inspector`.
-
-**Checkpoint:** file dài được chia/ghép đúng; `start_sec/end_sec` vẫn tương ứng vị trí trong audio gốc; có test kiểm tra overlap. Lưu mẫu benchmark baseline đầu tiên dù chưa có báo cáo cuối.
-
-### Tuần 07 — P06: Speaker diarization và speaker mapping (6 commits; 3 PR)
-
-**P06.1 — Speaker inference**
-
-- [ ] **W07-01 [AI]** Tích hợp diarization adapter (ví dụ pyannote) và output các speaker turns. Commit: `feat(diarization): detect speaker turns`.
-- [ ] **W07-02 [AI]** Align speaker turns với ASR segments; overlap/unknown fallback + unit tests. Commit: `feat(diarization): align speakers with transcript`.
-- [ ] **W07-03 [BE]** Model/API `Speaker`, mapping với participant; lưu speaker ID trên segment. Commit: `feat(speakers): persist speaker labels and mapping`.
-
-**P06.2 — Human correction**
-
-- [ ] **W07-04 [BE]** PATCH speaker rename/mapping API, validate ID thuộc meeting. Commit: `feat(speakers): support speaker label corrections`.
-- [ ] **W07-05 [FE]** Transcript badges theo speaker, trạng thái `unknown`, màu nhất quán. Commit: `feat(transcript): display speaker labels`.
-- [ ] **W07-06 [FE]** UI đổi tên/gán Speaker 1 → tên participant và persist sau reload. Commit: `feat(speakers): add speaker mapping editor`.
-
-**PR đề xuất:** `feature/speaker-diarization` • `feature/speaker-api` • `feature/speaker-ui`.
-
-**Checkpoint:** file có 2–3 speaker cho ra nhãn, nhãn có thể sửa bằng tay; không tự coi speaker label là danh tính đã xác thực.
-
-### Tuần 08 — P07: LLM Extraction I — Summary, Action Items (6 commits; 3 PR)
-
-**P07.1 — Artifact contracts**
-
-- [ ] **W08-01 [BE]** Pydantic schema cho 6 artifact types và `MeetingArtifact` persistence. Commit: `feat(minutes): define structured artifact schemas`.
-- [ ] **W08-02 [BE]** API read/write generated artifacts + status/review metadata. Commit: `feat(minutes): expose generated minutes API`.
-- [ ] **W08-03 [AI]** LLM adapter, prompt versioning, JSON schema validation, xử lý output thiếu field. Commit: `feat(extraction): create validated LLM extraction service`.
-
-**P07.2 — Core business outputs**
-
-- [ ] **W08-04 [AI]** Summary + Action Items prompts; mỗi item có `source_segment_ids` nếu tìm được bằng chứng. Commit: `feat(extraction): generate summary and action items`.
-- [ ] **W08-05 [FE]** Trang meeting result với Summary, loading/empty/error states. Commit: `feat(minutes): display meeting summary`.
-- [ ] **W08-06 [FE]** Bảng Action Items: task, owner, deadline, trạng thái cần xác minh. Commit: `feat(minutes): display action item table`.
-
-**PR đề xuất:** `feature/minutes-data-contract` • `feature/summary-actions-extraction` • `feature/minutes-core-ui`.
-
-**Checkpoint / Milestone M2:** **Audio → transcript → summary + action items** với output JSON hợp lệ. Thiếu người phụ trách/deadline thì `null`, không tự suy diễn.
-
-### Tuần 09 — P08: LLM Extraction II — 4 module còn lại (6 commits; 3 PR)
-
-**P08.1 — Business modules**
-
-- [ ] **W09-01 [AI]** Decision Log và Open Issues prompts, phân biệt quyết định đã chốt với đề xuất. Commit: `feat(extraction): add decisions and open issues`.
-- [ ] **W09-02 [AI]** Follow-up Items và Timeline events prompts, raw temporal expressions. Commit: `feat(extraction): add followups and timeline events`.
-- [ ] **W09-03 [BE]** Artifact evidence relation (`artifact_id → segment_id`) và API trả source references. Commit: `feat(minutes): persist evidence segment references`.
-
-**P08.2 — Present six modules**
-
-- [ ] **W09-04 [BE]** Validate/reference-check artifact payload, từ chối segment ID ngoài meeting. Commit: `test(minutes): validate artifact evidence integrity`.
-- [ ] **W09-05 [FE]** Decision/Open Issue/Follow-up cards, states khi không có kết quả. Commit: `feat(minutes): display decision and followup sections`.
-- [ ] **W09-06 [FE]** Project Timeline component, hiển thị event không rõ ngày như `needs_review` thay vì tự chọn ngày. Commit: `feat(timeline): render project milestones`.
-
-**PR đề xuất:** `feature/remaining-extraction` • `feature/artifact-evidence` • `feature/minutes-extra-ui`.
-
-**Checkpoint:** cả 6 module đều có schema, UI và dữ liệu kiểm thử. Quyết định chỉ được ghi nhận khi có bằng chứng đã thống nhất.
-
-### Tuần 10 — P09: Temporal resolution + manual review (6 commits; 3 PR)
-
-**P09.1 — Time interpretation**
-
-- [ ] **W10-01 [AI]** Resolve các cụm “thứ Sáu này”, “tuần sau”, “cuối tháng” dựa trên `anchor_date`; ngày mơ hồ → `null/needs_review`. Commit: `feat(temporal): resolve relative Vietnamese dates`.
-- [ ] **W10-02 [AI]** Unit tests ngày cuối tháng, qua năm, timezone, câu mơ hồ + negative extraction tests. Commit: `test(temporal): cover date boundaries and ambiguity`.
-- [ ] **W10-03 [BE]** PATCH transcript segment text/speaker, optimistic version check để tránh ghi đè. Commit: `feat(transcript): support manual segment edits`.
-
-**P09.2 — Review generated content**
-
-- [ ] **W10-04 [BE]** PATCH minutes artifact và `review_status`; xác định rule regeneration không ghi đè nội dung đã sửa. Commit: `feat(minutes): support reviewed artifact updates`.
-- [ ] **W10-05 [FE]** Transcript inline editor, save/cancel, lỗi validation, trạng thái saved. Commit: `feat(transcript): add inline text editor`.
-- [ ] **W10-06 [FE]** Editor cho action items, decisions, date/timeline; cảnh báo khi regenerate. Commit: `feat(minutes): add human review controls`.
-
-**PR đề xuất:** `feature/temporal-resolution` • `feature/review-api` • `feature/review-ui`.
-
-**Checkpoint / Milestone M3:** toàn bộ biên bản có thể sửa và lưu lại; date resolution có test; người dùng biết phần nào AI chưa chắc chắn.
-
-### Tuần 11 — P10: Evidence, audit, export (6 commits; 3 PR)
-
-**P10.1 — Traceability & audit**
-
-- [ ] **W11-01 [BE]** Append-only `AuditEvent` khi sửa transcript/minutes; API đọc lịch sử thay đổi. Commit: `feat(audit): record manual edits and history`.
-- [ ] **W11-02 [AI]** Validator để artifact trỏ đúng segment nguồn, kiểm thử khi transcript đã edit. Commit: `test(extraction): verify source evidence after edits`.
-- [ ] **W11-03 [FE]** Click source timestamp trong từng artifact → seek audio + highlight source segment. Commit: `feat(minutes): jump from artifact to source audio`.
-
-**P10.2 — Export & quality**
-
-- [ ] **W11-04 [BE]** Export Markdown/structured JSON từ **phiên bản đã review**, unit tests định dạng. Commit: `feat(export): generate reviewed minutes as markdown and json`.
-- [ ] **W11-05 [FE]** Download Markdown/JSON, copy quick summary, hiển thị lỗi export. Commit: `feat(export): add meeting export actions`.
-- [ ] **W11-06 [AI]** Bộ test sample noisy audio và baseline WER/CER; lưu phép đo có thể tái lập. Commit: `test(asr): add noisy-audio benchmark baseline`.
-
-**PR đề xuất:** `feature/audit-history` • `feature/source-navigation` • `feature/export`.
-
-**Checkpoint / Milestone M4:** click evidence nghe được audio, sửa rồi export ra nội dung mới nhất, edit history kiểm tra được, có kết quả benchmark ban đầu.
-
-### Tuần 12 — P11: Harden, release và demo (6 commits; 3 PR + release PR)
-
-**P11.1 — Quality gates**
-
-- [ ] **W12-01 [AI]** Báo cáo WER/CER, speaker diarization edge cases, hạn chế model trong `docs/benchmark-report.md`. Commit: `docs(ai): publish speech evaluation results`.
-- [ ] **W12-02 [AI]** Negative tests: speaker overlap, LLM thiếu owner/deadline, retry timeout, bad structured JSON. Commit: `test(ai): cover ambiguous and failure scenarios`.
-- [ ] **W12-03 [BE]** API tests về missing/invalid IDs, upload abuse, expired temp files, log không lộ secret; CI hoàn chỉnh. Commit: `test(api): harden validation and failure handling`.
-
-**P11.2 — User acceptance & release**
-
-- [ ] **W12-04 [BE]** Docker Compose one-command setup, health/readiness, database migrate instructions. Commit: `chore(dev): finalize reproducible local setup`.
-- [ ] **W12-05 [FE]** Playwright happy path `create → upload → process(mock) → edit → export`, fix lỗi UX nghiêm trọng. Commit: `test(e2e): cover complete meeting workflow`.
-- [ ] **W12-06 [FE]** README final, screenshot/test evidence, demo script, release checklist. Commit: `docs: prepare MVP demo and usage guide`.
-
-**PR đề xuất:** `feature/release-test-suite` • `fix/release-stability` (chỉ nếu có lỗi thực tế) • `docs/release-documentation`. Cuối cùng mở PR **`develop → main`** và tag release, ví dụ `v0.1.0`, **sau khi** nhóm review & tests đạt.
-
-**Checkpoint / Milestone M5:** một người mới clone repo, làm theo README và chạy được demo từ đầu đến cuối; các lỗi chặn demo được xử lý.
-
----
-
-## 4. Bảng tổng hợp để theo dõi mỗi tuần
-
-| Tuần | Phase | 3 ưu tiên phải hoàn thành | Số commit gợi ý | Kết quả demo |
-|---|---|---|---:|---|
-| 01 | P00 | SRS, API contract, ADR & test plan | 6 | Review tài liệu |
-| 02 | P01 | App skeleton, DB, CI | 6 | Frontend gọi `/health` |
-| 03 | P02 | Tạo meeting, upload, validate | 6 | Upload thành công |
-| 04 | P03 | Browser recorder, FFmpeg, playback | 6 | Ghi âm rồi upload |
-| 05 | P04 | Job queue, ASR, transcript UI | 6 | **M1: Audio → transcript** |
-| 06 | P05 | Chunking, retry, transcript search | 6 | File dài xử lý đúng |
-| 07 | P06 | Diarization, speaker mapping | 6 | 2–3 speakers có thể sửa nhãn |
-| 08 | P07 | Summary, action items | 6 | **M2: AI minutes cơ bản** |
-| 09 | P08 | 4 module còn lại, evidence | 6 | Xem đủ 6 module |
-| 10 | P09 | Temporal tests, editor | 6 | **M3: Human review** |
-| 11 | P10 | Evidence seek, export, audit | 6 | **M4: Biên bản kiểm chứng được** |
-| 12 | P11 | Benchmarks, E2E, docs, release | 6 | **M5: Demo/release** |
-| **Tổng** | **12 phase / 24 mini-phase** | **72 task gợi ý** | **~72** | **5 milestone** |
-
-**Nhịp làm việc gợi ý trong một tuần:**
-
-- **Thứ Hai:** chọn 3 Issues/PR scopes, kéo `develop` mới nhất, thống nhất API của tuần; mỗi người tạo branch riêng.
-- **Thứ Ba–Tư:** mỗi người hoàn thành commit logic đầu tiên (code + test liên quan), push để backup và dễ review.
-- **Thứ Năm:** mỗi người thêm commit thứ hai cho phần bổ sung/edge cases; mở PR vào `develop`.
-- **Thứ Sáu–Cuối tuần:** review chéo, sửa theo feedback, chạy test, squash merge; ghi log tiến độ và screenshot demo cho giảng viên.
-- Nếu có blocker, tạo issue/ghi chú blocker thay vì đưa code dở vào `develop`.
-
-### Mẫu weekly progress log (copy vào Issue/Discussion)
-
-```md
-## Week XX — YYYY-MM-DD → YYYY-MM-DD
-- Goal:
-- Owner FE:
-  - [ ] Task WXX-...
-- Owner BE:
-  - [ ] Task WXX-...
-- Owner AI:
-  - [ ] Task WXX-...
-- Commits: [commit URL], [commit URL]
-- PRs: [PR URL]
-- Demo evidence: [screenshot/video/test output]
-- Tests run:
-- Blockers/risks:
-- Next-week handoff:
-```
-
----
-
-## 5. Cách chia Issue → Branch → Commit → Push → PR
-
-### 5.1. Tuân thủ quy tắc sẵn có ở `CONTRIBUTING.md`
-
-- `main` là bản ổn định; `develop` là nhánh tích hợp.
-- Không push trực tiếp lên `main` hay `develop`.
-- Branch hợp lệ: `feature/*`, `fix/*`, `docs/*`, `refactor/*`, `hotfix/*`; **không tự tạo** `chore/*` nếu `CONTRIBUTING.md` không cho phép.
-- Khi Issue đã được tạo, tên branch bắt buộc chứa **GitHub Issue số thật**: `feature/<issue-id>-audio-upload` (ví dụ `feature/12-audio-upload` **chỉ khi thực sự có Issue #12**).
-- Nếu chưa có Issue, dùng `feature/audio-upload`, `docs/requirements-spec`, v.v.; không bịa số Issue.
-- Commit theo Conventional Commits: `feat(audio): ...`, `fix(api): ...`, `docs: ...`, `test(asr): ...`, `ci: ...`.
-- PR nhỏ, một mục tiêu; ít nhất **một thành viên khác** approve; tests xanh; feature/docs/fix PR vào `develop` và **Squash and Merge**.
-- Release PR `develop → main` dùng merge commit theo `CONTRIBUTING.md`.
-
-### 5.2. Minh họa một task có 2 commit hợp lý
-
-Ví dụ Issue thật có số `#12` và liên quan audio upload:
+Ví dụ task P02-04, nếu chưa có Issue:
 
 ```bash
 git switch develop
 git pull --ff-only origin develop
-git switch -c feature/12-audio-upload
+git switch -c feature/audio-upload-api
 
-# Hoàn thành validation + tests
-git add backend/app/api backend/tests
-git commit -m "feat(audio): validate uploaded media files"
-git push -u origin feature/12-audio-upload
+# Hoàn thành upload và test liên quan
+git add backend/app backend/tests
+git diff --cached
+git commit -m "feat(audio): implement validated audio upload"
+git push -u origin feature/audio-upload-api
 
-# Hoàn thành lưu file + tests, tiếp tục trên branch đó
-git add backend/app/services/audio backend/tests
-git commit -m "feat(audio): store validated meeting recordings"
-git push
-
-# Mở PR: feature/12-audio-upload -> develop
+# Mở PR vào develop, ghi task P02-04 và kết quả kiểm tra
 ```
 
-Hai commit phải là hai bước tiến **có thể giải thích rõ thay đổi và kiểm thử**, không phải 2 commit chỉ để tăng số lượng. Không nhất thiết mỗi commit phải deploy được, nhưng **PR cuối cùng phải chạy và qua tests**.
+Nếu có Issue thật, branch phải chứa số Issue theo quy định repo, ví dụ `feature/12-audio-upload-api` khi Issue #12 tồn tại. Không dùng số task P02-04 thay cho số Issue GitHub. Commit bằng tiếng Anh theo Conventional Commits.
 
-### 5.3. Đừng nhầm số commit với lịch sử trên `develop`
-
-Theo quy định repo, feature PR **Squash and Merge**: ví dụ 3 commit trên feature branch sau merge sẽ thành **một squash commit** trên `develop`. Giáo viên xem lịch sử PR/nhánh và các commit bên trong PR sẽ thấy các lần push/commit thực tế; trên log `develop` chỉ thấy commit squash. Nên lưu **link Issues, PRs và weekly log** để minh chứng, không cố thay đổi merge strategy trái quy định.
-
-### 5.4. Mẫu PR description
+**Mẫu Issue ngắn:**
 
 ```md
-## Goal
-Implement [scope], related to #[real-issue-number].
-
-## Changes
-- [ ] Change A
-- [ ] Change B
-
-## Test evidence
-- [ ] Relevant unit tests passed
-- [ ] Integration tests/manual check performed
-- [ ] No secrets or private audio in Git
-
-## Screenshot / Sample output
-[link or description]
-
-## Known limitations / Follow-up
-[details]
+Task: Pxx-yy — [tên task]
+Owner: [thành viên]
+Depends on: [task/PR cần có trước]
+Output: [API, màn hình hoặc artifact cụ thể]
+Acceptance: [cách kiểm tra và kết quả mong đợi]
+Commit/PR: [link khi có]
 ```
 
-### 5.5. Mẫu Definition of Done cho Issue/PR
+**Trước khi merge:** kiểm tra đúng scope, test liên quan, docs/schema đồng bộ, không có secrets/audio riêng tư; reviewer khác approve và xử lý comment quan trọng. Không cần tạo Issue cho từng commit nếu một Issue bao trùm một đầu ra logic.
 
-- [ ] Có mục tiêu và acceptance criteria cụ thể.
-- [ ] Chạy được luồng chức năng được thay đổi (hoặc có mock hợp lệ nếu dependency chưa xong).
-- [ ] Tests liên quan chạy thành công, có dẫn chứng khi cần.
-- [ ] API schema/data migrations đồng bộ với frontend và backend.
-- [ ] Không lộ API key, token, private audio hoặc dữ liệu cá nhân.
-- [ ] Docs/README cập nhật khi hành vi public thay đổi.
-- [ ] Một reviewer khác approve và các comment quan trọng đã xử lý.
-- [ ] PR được merge đúng branch và linked Issue chuyển sang Done.
+Squash merge có thể gộp nhiều commit thành một commit trên `develop`; lưu link PR và commit của task để theo dõi tiến độ, không đánh giá tiến độ chỉ bằng số commit trên nhánh đích.
 
----
+## 7. Kiểm tra tối thiểu trước khi đánh dấu hoàn thành
 
-## 6. Phụ thuộc giữa các nhóm việc
-
-```mermaid
-flowchart LR
-    P00[P00 Requirements] --> P01[P01 Foundation]
-    P01 --> P02[P02 Upload]
-    P02 --> P03[P03 Record + Prepare]
-    P02 --> P04[P04 ASR]
-    P03 --> P04
-    P04 --> P05[P05 Long Audio]
-    P04 --> P06[P06 Diarization]
-    P04 --> P07[P07 Summary + Actions]
-    P07 --> P08[P08 Other Modules]
-    P08 --> P09[P09 Date + Review]
-    P06 --> P09
-    P09 --> P10[P10 Evidence + Export + Audit]
-    P05 --> P11[P11 Quality + Release]
-    P10 --> P11
-```
-
-**Các việc có thể làm song song bằng mock:** UI meeting form có thể làm trước khi có DB; transcript UI dùng JSON fixture trước khi ASR hoàn chỉnh; minutes UI dùng fixture Pydantic JSON trước khi prompt LLM hoàn thiện. Mỗi mock phải có kế hoạch thay bằng API thật, không để mock lẫn vào production.
-
----
-
-## 7. Bộ test tối thiểu nên giữ xuyên suốt
-
-| Mã test | Kịch bản | Mốc nên có |
+| Phần | Cách kiểm tra | Phase |
 |---|---|---|
-| T-01 | Tạo meeting thiếu `title` hoặc `anchor_date` | W03 |
-| T-02 | Upload file hợp lệ, file rỗng, MIME giả, sai extension, quá giới hạn | W03–W04 |
-| T-03 | Record: không được cấp quyền microphone, pause/resume, stop | W04 |
-| T-04 | ASR trả segment timestamp có thứ tự và nằm trong duration | W05 |
-| T-05 | Audio chunk overlap không trùng text/timestamp sau stitch | W06 |
-| T-06 | Job timeout/retry không tạo 2 transcript/artifacts trùng | W06 |
-| T-07 | 2–3 speakers, overlap, unknown, manual mapping | W07 |
-| T-08 | LLM không bịa deadline/owner khi transcript không nêu | W08–W09 |
-| T-09 | Decision khác proposal; open issue khác follow-up | W09 |
-| T-10 | Date resolution: thứ Sáu này/tuần sau/cuối tháng, tháng 12 → tháng 1 | W10 |
-| T-11 | Sửa transcript/minutes rồi reload không mất dữ liệu | W10 |
-| T-12 | Source link seek đúng audio timestamp | W11 |
-| T-13 | Audit lưu before/after và không ghi đè edit thủ công âm thầm | W11 |
-| T-14 | Export đúng dữ liệu đã review; không xuất dữ liệu cũ | W11 |
-| T-15 | WER/CER trên sample tiếng Việt rõ & nhiễu, có gold transcript | W11–W12 |
-| T-16 | End-to-end: create → upload → process → review → export | W12 |
+| Metadata/upload | Thiếu ngày/title, đủ bốn định dạng, file rỗng/MIME sai, reload | P02 |
+| ASR | Segment và word timestamp có thứ tự, trong duration; lỗi provider rõ ràng | P03 |
+| Recording | Quyền microphone, waveform/timer, pause/resume, upload và process thật | P04 |
+| Chunk/job | Dung lượng chunk, overlap, offset segment/word, retry/restart, không lưu trùng | P05 |
+| Speaker | 2–3 người, overlap, ID speaker qua chunk, unknown; tách kết quả tự động và sửa tay | P06 |
+| Extraction | Đủ sáu schema; decision khác proposal; follow-up khác open issue; owner/deadline không bị bịa | P07 |
+| Temporal | Ngày đúng từ anchor, qua tháng/năm; câu mơ hồ không bị ép thành ngày | P08 |
+| Nguồn | Item tham chiếu đúng segment cùng meeting và seek đúng audio gốc | P09 |
+| Export/review | Đủ module, đúng tiếng Việt/ngày và dữ liệu mới nhất; sửa được lưu nếu có review | P10 |
+| Nghiệm thu | UI E2E mock và E2E provider thật có kết quả tách biệt; chạy lại từ setup sạch | P11 |
 
-**Lưu ý test dữ liệu:** trước khi đo WER/CER, định nghĩa rõ cách chuẩn hóa tiếng Việt (viết hoa, dấu câu, số, tách từ). Benchmark có bảng tên fixture, duration, đặc tính nhiễu, model/config, tham số đo và kết quả; không tự đặt target độ chính xác khi chưa có baseline.
+Đánh giá AI dùng audio/transcript/artifacts có đáp án đối chiếu; ghi model/config, cách chuẩn hóa tiếng Việt, thời gian xử lý và số lần lỗi/retry. Báo WER/CER cho ASR; tỷ lệ gán speaker đúng trên đoạn gán nhãn; precision/recall item trích xuất và độ đúng owner/deadline/nguồn; độ đúng ngày trên case có ngày rõ. Chốt ngưỡng sau baseline với nhóm, giữ bộ nghiệm thu riêng với mẫu dùng chỉnh prompt; không lấy một audio demo làm kết luận chất lượng chung.
 
----
+## 8. Theo dõi tiến độ và bước tiếp theo
 
-## 8. Rủi ro và phương án dự phòng
-
-| Rủi ro | Ảnh hưởng | Phương án |
+| Milestone | Kết quả kiểm chứng | Phase |
 |---|---|---|
-| ASR chạy chậm/thiếu GPU | Trễ demo | Test sớm W02/W05; provider adapter; dùng file demo ngắn; cân nhắc cloud API khi có ngân sách và consent |
-| Diarization chưa đủ chính xác | Sai Speaker 1/2 | `unknown`, manual mapping, benchmark riêng |
-| Transcript nhiều chunk bị trùng/lệch | Source timestamp sai | Overlap tests + offset & de-dup logic |
-| LLM trả JSON lỗi/hallucination | Action item, deadline sai | Pydantic validation, retry hợp lý, evidence segment, human review |
-| Dự án quá nhiều chức năng | PR lớn, trễ tiến độ | Giữ P0; dời P2; giảm UI hiệu ứng trước khi bỏ test |
-| Thành viên chờ API của nhau | Chặn nhau | Chốt schema W01; FE mock API; contract tests |
-| File audio/keys bị push lên GitHub | Rủi ro bảo mật | `.gitignore`, `.env.example`, secret review, mẫu audio được phép |
-| Giảng viên cần lịch sử commit hàng tuần | Khó minh chứng sau squash | Weekly log kèm link commit/PR, tạo PR thường xuyên đúng workflow |
+| M1 | Audio ngắn → transcript + summary/actions bằng provider thật | P03 |
+| M2 | Đủ sáu module trên API, có validation và nguồn | P07 |
+| M3 | Biên bản đủ sáu block, speaker, ngày và click-to-play | P09 |
+| M4 | Export đủ phạm vi; review cơ bản nếu nhóm nhận triển khai | P10 |
+| M5 | Setup lại được, kiểm thử tổng thể và demo có bằng chứng | P11 |
 
----
+Trước mỗi đợt làm việc: chọn phase/task sẵn sàng, gán owner và hạn dự kiến, tạo Issues cần thiết. Cuối đợt: ghi task đã xong, link commit/PR, kết quả kiểm tra và blocker; chọn đầu ra tiếp theo. Không đánh dấu task đã xong chỉ vì đã push file hoặc có scaffold.
 
-## 9. Danh sách ưu tiên nếu deadline ngắn hơn 12 tuần
-
-### Bản 8 tuần (MVP gọn)
-
-- **Tuần 1:** gộp P00 + P01 (requirements/skeleton tối thiểu).
-- **Tuần 2:** P02 + cắt bớt P03 (upload ưu tiên, record để sau).
-- **Tuần 3:** P04 (ASR ngắn, transcript timestamps).
-- **Tuần 4:** P05 rút gọn + P06 fallback thủ công cho speaker.
-- **Tuần 5:** P07 (summary/actions).
-- **Tuần 6:** P08 + temporal cơ bản (hoặc giảm độ chi tiết các module phụ).
-- **Tuần 7:** P09 + P10 (editor, export Markdown, audit cơ bản).
-- **Tuần 8:** P11 (tests, docs, demo, release).
-
-**Không được hy sinh:** API validation, bảo vệ dữ liệu ghi âm, khả năng sửa kết quả AI, ít nhất một E2E test, benchmark có nguồn và lịch sử PR đáng kiểm chứng.
-
-### Definition of Release
-
-- [ ] `develop` ổn định, mọi PR đã review.
-- [ ] Không còn P0 blocker ảnh hưởng demo.
-- [ ] Các đường dẫn API công khai khớp docs.
-- [ ] Ít nhất 1 luồng end-to-end được chạy lại từ máy mới hoặc clean environment.
-- [ ] Có 1–2 file demo được phép sử dụng + transcript chuẩn để đối chiếu.
-- [ ] README có các lệnh setup/start/test và biến môi trường cần thiết.
-- [ ] Có video/screenshots/demo script, các kết quả test, giới hạn biết trước.
-- [ ] PR `develop → main` và tag phát hành sau review.
-
----
-
-## 10. Next actions — bắt đầu ngay với tuần 01
-
-1. Đưa tài liệu này vào repo tại `docs/implementation-roadmap.md` bằng **một PR documentation**, không push thẳng `main/develop`.
-2. Tạo GitHub Project board (`Todo → In Progress → In Review → Done`) và 3–6 Issues của **tuần hiện tại**, không nhất thiết tạo cả 72 Issues ngay.
-3. Gán các vai trò `FE`, `BE`, `AI` theo thành viên, mỗi người nhận 2 task nhỏ/tuần; bảo đảm ít nhất một task có đầu ra review được.
-4. Chốt mẫu audio kiểm thử có consent/quyền sử dụng, ASR provider và cách chạy local.
-5. Review `CONTRIBUTING.md`; liên kết Issues ↔ branches ↔ PRs ↔ weekly log để giảng viên kiểm tra minh bạch.
-
-> **Quy tắc cuối:** “Commit đều” tốt nhất là hệ quả của **chia việc nhỏ, có test và review thường xuyên**. Mỗi commit nên kể được một thay đổi có ích; mỗi PR nên giao được một chức năng/khả năng có thể kiểm chứng.
+**Bắt đầu với P00:** chốt deadline/nhân lực, khả năng sử dụng Whisper/diarization, yêu cầu HTML/PDF, bộ audio kiểm thử và schema. Sau đó triển khai P01–P03 để phát hiện rủi ro tích hợp sớm.
