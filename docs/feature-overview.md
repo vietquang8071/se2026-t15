@@ -20,32 +20,24 @@ flowchart TD
 
 ---
 
-**Phân công:** Sơn phụ trách audio API độc lập; Việt Quang phụ trách LLM; thành viên App phụ trách giao diện/meeting và thông báo. Đầu vào chỉ upload, không có task microphone/MediaRecorder. Xem [Audio service API](audio-service-api.md) cho upload theo `audio_id`, retention 30/60 ngày và `expires_at`; chưa cần nối các phần ngay.
+## Feature Card 1: Audio Upload & Ingestion (Tải lên & Tiền xử lý Audio)
 
-Triển khai audio hiện tại ở `services/audio`; xem [Audio validation](audio-validation.md). Các checkbox dưới mô tả yêu cầu toàn sản phẩm, không thay thế kiểm thử tích hợp App/LLM.
-
-## Feature Card 1: Audio Ingestion & Input Capture (Thu nhận & Tiền xử lý Audio)
-
-- **Mục tiêu:** Cho phép người dùng đưa âm thanh cuộc họp vào hệ thống chỉ qua upload file có sẵn (audio hoặc MP4 có tiếng), đồng thời thu thập ngày họp (Anchor Date) làm mốc thời gian.
-- **User Story:** _"Là người dùng, tôi muốn upload file audio hoặc MP4 cuộc họp và nhập ngày họp, để hệ thống có dữ liệu xử lý bóc tách."_
+* **Mục tiêu:** Cho phép người dùng tải file audio cuộc họp đã có lên hệ thống và nhập ngày họp (Anchor Date) làm mốc thời gian.
+* **User Story:** *"Là người dùng, tôi muốn tải file audio cuộc họp và nhập ngày họp để hệ thống tạo transcript và biên bản."*
 
 ### Danh sách Tasks kỹ thuật:
 
 - [ ] **Task 1.1: Audio Upload Component & Validation**
-  - Hỗ trợ các định dạng phổ biến: `.mp3`, `.m4a`, `.wav`, `.webm`, `.mp4`; tối đa 100 MB / 60 phút.
-  - Validate định dạng file, hiển thị dung lượng file và độ dài (duration).
-- [ ] **Task 1.2: MP4 Audio Extraction**
-  - Kiểm tra container MP4, có đúng một audio track và giải mã được; từ chối video không tiếng/nhiều audio track.
-  - Tách thành WAV PCM 16-bit, mono/16 kHz ở file riêng; giữ nguyên MP4 gốc.
-  - Giữ offset bắt đầu audio để timestamp transcript về đúng timeline video; dọn output dở khi lỗi.
-- [ ] **Task 1.3: Audio Pre-processing & Chunking Service (>25MB)**
-  - Xử lý giới hạn 25MB của OpenAI Whisper API.
-  - Tích hợp công cụ cắt file audio (dùng `ffmpeg` / `pydub`) thành các chunk theo dung lượng sau encode, có overlap cấu hình được để không mất chữ ở điểm cắt.
-- [ ] **Task 1.4: Meeting Metadata Capture Form**
+  - Hỗ trợ các định dạng phổ biến: `.mp3`, `.m4a`, `.wav`, `.webm`.
+  - Giới hạn mỗi file ở 100 MB; validate định dạng, hiển thị dung lượng file và độ dài (duration).
+- [ ] **Task 1.2: Meeting Metadata Capture Form**
   - Thu thập thông tin bối cảnh cuộc họp:
     - Tiêu đề cuộc họp (`title`)
     - Ngày họp (`anchor_date` - bắt buộc để tính toán Timeline)
     - Danh sách người tham gia (`participants` - hỗ trợ gán nhãn người nói).
+- [ ] **Task 1.3: Audio Pre-processing & Chunking Service (>25MB)**
+  - Xử lý giới hạn 25MB của OpenAI Whisper API.
+  - Tích hợp công cụ cắt file audio (dùng `ffmpeg` / `pydub`) thành các chunk nhỏ (ví dụ 10–15 phút/chunk) có 5-10s overlap để không mất chữ ở điểm cắt.
 
 ---
 
