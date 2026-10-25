@@ -68,6 +68,52 @@ export async function generateAudioFixtures(directory) {
     "aac",
     fixtures.multiAudio,
   ]);
+  fixtures.mp4 = join(directory, "video.mp4");
+  await ffmpeg([
+    "-f",
+    "lavfi",
+    "-i",
+    "color=black:size=16x16:rate=10:duration=0.5",
+    "-f",
+    "lavfi",
+    "-i",
+    "sine=frequency=440:sample_rate=16000:duration=0.5",
+    "-c:v",
+    "libx264",
+    "-c:a",
+    "aac",
+    "-shortest",
+    fixtures.mp4,
+  ]);
+  fixtures.noAudioMp4 = join(directory, "no-audio.mp4");
+  await ffmpeg([
+    "-f",
+    "lavfi",
+    "-i",
+    "color=black:size=16x16:rate=10:duration=0.2",
+    "-c:v",
+    "libx264",
+    fixtures.noAudioMp4,
+  ]);
+  fixtures.offsetMp4 = join(directory, "offset.mp4");
+  await ffmpeg([
+    "-f",
+    "lavfi",
+    "-i",
+    "color=black:size=16x16:rate=10:duration=1",
+    "-itsoffset",
+    "0.25",
+    "-f",
+    "lavfi",
+    "-i",
+    "sine=frequency=440:sample_rate=16000:duration=0.5",
+    "-c:v",
+    "libx264",
+    "-c:a",
+    "aac",
+    "-shortest",
+    fixtures.offsetMp4,
+  ]);
   return fixtures;
 }
 
