@@ -2,7 +2,7 @@
 
 - **Dự án:** Meeting Minutes Assistant tiếng Việt (AI-05 — AI / Speech)
 - **Repository:** https://github.com/vietquang8071/se2026-t15
-- **Phiên bản:** 1.1 — 24/10/2026
+- **Phiên bản:** 1.2 — 25/10/2026
 - **Vị trí trong repo:** `docs/implementation-roadmap.md`
 - **Mục đích:** Chia đề tài thành các phase, task và phạm vi commit rõ ràng để nhóm dễ triển khai, review và theo dõi tiến độ.
 
@@ -10,7 +10,7 @@
 
 ## 1. Cách dùng breakdown
 
-- Đây là **kế hoạch đề xuất**; danh sách task không phải bằng chứng tính năng đã được triển khai. Tại lần rà soát 24/10/2026, repo có README, CONTRIBUTING và hai tài liệu mô tả; chưa có frontend/backend.
+- Đây là **kế hoạch triển khai**; danh sách task không phải bằng chứng tính năng đã hoàn thành. Tại lần rà soát source ngày 25/10/2026, repo đã có bộ khung Next.js, NestJS và Prisma/PostgreSQL. Chưa có API meeting/upload hay pipeline AI; lượt cập nhật tài liệu này chưa xác minh build/runtime.
 - Có **12 phase, 72 task gợi ý**. Phase thể hiện thứ tự phụ thuộc, **không mặc định một phase bằng một tuần**. Nhóm chốt deadline và năng lực trước khi gán lịch.
 - Mỗi task hướng đến **một thay đổi có thể review và kiểm tra**, thường tương ứng một commit logic. Có thể gộp task nhỏ hoặc chia task lớn; không tạo commit chỉ để đủ số lượng.
 - Mỗi phase có 2 nhóm việc, đầu vào và đầu ra cụ thể. Kiểm thử liên quan đi cùng chức năng; task test riêng dành cho kịch bản tích hợp hoặc lỗi phức tạp.
@@ -20,7 +20,7 @@
 
 ## 2. Phạm vi cần giữ theo đề tài
 
-Nguồn đối chiếu: `docs/product-description.md` v1.1, `docs/feature-overview.md` v1.0 và `CONTRIBUTING.md`. Đây là breakdown để thực hiện các tài liệu đó; những thay đổi phạm vi cần nhóm thống nhất và cập nhật tài liệu gốc.
+Nguồn đối chiếu: [Product Description](product-description.md) v1.1, [Feature Cards](feature-overview.md) v1.0, [CONTRIBUTING](../CONTRIBUTING.md), [README](../README.md) và source hiện tại. Các quyết định ở mục 2.1 là phạm vi đã được người phụ trách xác nhận cho đợt triển khai này; khi có khác biệt với mô tả cũ, dùng quyết định mới bên dưới cho các task tương ứng.
 
 | Feature Card hiện có | Đầu ra cần có trong MVP | Phase chính |
 |---|---|---|
@@ -31,26 +31,39 @@ Nguồn đối chiếu: `docs/product-description.md` v1.1, `docs/feature-overvi
 
 **Sáu module bắt buộc:** Meeting Summary, Action Items, Decision Log, Open Issues / Questions, Follow-up Items, Timeline / Event Extraction. Summary/actions ở P03 chỉ là bản tích hợp ban đầu; không thay thế bốn module còn lại.
 
-**Cần chốt trước khi triển khai:**
+**Các ràng buộc và lưu ý triển khai:**
 
 - **ASR:** giữ OpenAI Whisper API (`whisper-1`) theo đề tài. Dùng `response_format="verbose_json"` và `timestamp_granularities=["segment", "word"]`; kiểm tra response thật, lưu cả hai mức timestamp. Whisper transcription và speaker diarization là hai bước riêng. Tham khảo [API transcription](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create).
 - **Vòng đời provider:** hướng dẫn OpenAI hiện ghi `whisper-1` deprecated, hỗ trợ timestamp cho tích hợp hiện có đến 26/02/2027. P00 phải kiểm tra quyền sử dụng thực tế và thời hạn dự án; nếu cần đổi provider, nhóm cập nhật yêu cầu trước, giữ hợp đồng timestamp và speaker. Chưa coi quyền truy cập API là đã xác minh. Nguồn: [Speech-to-text — Timestamps](https://developers.openai.com/api/docs/guides/speech-to-text#timestamps).
 - **File lớn:** giới hạn hiện tại là 25 MB/request; kiểm tra dung lượng **file chunk sau encode**, không chỉ số phút. Giới hạn upload của ứng dụng cần cho phép file lớn hơn để đi qua chunking. Nguồn: [Speech-to-text — Longer inputs](https://developers.openai.com/api/docs/guides/speech-to-text#longer-inputs).
 - **Speaker:** phải có bước suy luận nhãn người nói từ audio hoặc phương án attribution được nhóm chấp thuận. `unknown` và sửa nhãn là fallback; chỉ gán tay không chứng minh tính năng tự động đã hoàn thành. Không dùng nội dung LLM suy đoán làm danh tính người nói đã xác thực.
-- **Export:** Markdown/copy summary là đầu ra rõ trong FC4; JSON là dữ liệu cấu trúc và có thể cho tải thêm. Product description còn nhắc HTML/PDF, nên P00 phải chốt có cần file HTML/PDF khi nghiệm thu. Nếu cần, bổ sung task P10; không tự bỏ yêu cầu hoặc mặc định đã có PDF.
+- **Export:** đã chốt MVP xuất Markdown và copy summary. JSON là dữ liệu cấu trúc nội bộ; download JSON, HTML/PDF là phần mở rộng. Quyết định này thu hẹp định dạng bàn giao so với các chỗ còn nhắc PDF trong Product Description/Feature Cards; không coi PDF là điều kiện hoàn thành P10.
 - **Ngày tháng:** với `anchor_date=2026-10-05`, “thứ Sáu này” là **2026-10-09**; `2026-10-08` là thứ Năm. “Tuần sau” chỉ xác định tuần nếu chưa có ngày cụ thể: giữ khoảng ngày/`needs_review`, không tự tạo deadline thứ Hai. P00 đồng bộ các ví dụ sai trong tài liệu gốc.
 
 **Phần bổ sung, cần phân biệt với yêu cầu gốc:** sửa transcript/biên bản và cảnh báo khi tạo lại là cải thiện hữu ích, đặt tại P10. Audit history đầy đủ, xử lý xung đột nhiều người sửa và phân quyền phức tạp là phần mở rộng, không chặn MVP khi nhóm chưa đưa vào yêu cầu.
 
 **Ngoài MVP theo đề tài:** live streaming transcription, bot tham gia Zoom/Meet/Teams, đồng bộ Calendar/Jira/Trello và voiceprint training.
 
+### 2.1. Quyết định đã chốt ngày 25/10/2026
+
+| Nội dung | Phạm vi triển khai |
+|---|---|
+| Metadata | `title` và `anchor_date` bắt buộc; `anchor_date` có dạng `YYYY-MM-DD` |
+| Người tham gia | `participants` là danh sách tên, không bắt buộc; bỏ qua thì trả `[]`; chưa có tài khoản/email |
+| API đầu tiên | POST `/api/meetings` và GET `/api/meetings/{id}`; list/update/delete để phase sau |
+| Tên trường | API dùng `anchor_date`, `created_at`, `updated_at`; ánh xạ rõ sang `anchorDate`, `createdAt`, `updatedAt` của Prisma |
+| Nghiệp vụ | Giữ đủ sáu module; thiếu thông tin thì đánh dấu cần xác nhận |
+| Export/phần mở rộng | MVP: Markdown + copy summary. PDF, audit history đầy đủ và tải thêm định dạng khác để mở rộng |
+
+Chi tiết request/response, validation và mã lỗi nằm trong `docs/api-contract.md`. Đây là contract để triển khai P02, chưa phải endpoint đã chạy. Đợt công việc hiện tại chỉ sửa tài liệu, không thay đổi schema/code.
+
 ## 3. Ghi chú triển khai tối thiểu
 
 Luồng chính: **Meeting + audio → kiểm tra/chia audio → Whisper transcript → speaker attribution → LLM trích xuất + xử lý ngày → giao diện + export**.
 
-- React/TypeScript và FastAPI/Pydantic là **stack đề xuất**, chưa phải ràng buộc từ đề tài. Chốt trong P00, không biến lựa chọn công cụ thành tính năng sản phẩm.
-- Dùng database và lưu audio trên local volume cho bản dev. Chỉ tạo model, endpoint và thư mục khi có task sử dụng; chưa cần nhiều lớp abstraction để dự phòng.
-- P03 xử lý nền có trạng thái để HTTP trả về sớm. P05 bổ sung độ bền khi restart/retry; cân nhắc Redis/RQ nếu cần queue riêng, chưa bắt buộc dựng từ P01.
+- **Stack hiện tại:** pnpm/Turborepo và TypeScript; Next.js App Router trong `apps/web/`, NestJS trong `apps/api/`, Prisma và PostgreSQL client chung trong `packages/database/`. Tiếp tục trên stack này, dùng DTO và validation ở NestJS theo contract; không khởi tạo lại frontend/backend hoặc chuyển sang FastAPI.
+- **Database/dev:** Docker Compose hiện chỉ chạy PostgreSQL; web/API chạy local theo README. Prisma đã có model `Meeting` tối thiểu. Chưa có trường participants hay migration được commit. Lưu audio trên local volume khi làm P02, chưa cần nhiều lớp storage abstraction.
+- P03 xử lý nền có trạng thái để HTTP trả về sớm. P05 bổ sung độ bền khi restart/retry; chỉ chọn queue riêng khi cần, phù hợp với NestJS/TypeScript. Chưa thêm Redis hoặc Python worker vào bộ khung.
 - Dữ liệu tối thiểu: meeting, participants, audio, job, transcript segments/words, speakers và sáu loại artifacts. Artifact tham chiếu segment trong cùng meeting; các field chi tiết bám schema tài liệu gốc.
 - Thiếu owner/deadline/rationale thì để `null` hoặc đánh dấu cần xác nhận; không tự bịa. JSON hợp lệ chưa đồng nghĩa nội dung đúng.
 - API key và audio riêng tư không đưa vào Git; fixture phải có quyền sử dụng. Bản deploy công khai cần bảo vệ quyền truy cập meeting/audio phù hợp.
@@ -64,26 +77,26 @@ Luồng chính: **Meeting + audio → kiểm tra/chia audio → Whisper transcri
 | Task | Vai trò | Phần việc / đầu ra | Commit gợi ý |
 |---|---|---|---|
 | P00-01 | FE | Viết user flow upload/record → transcript → biên bản → export; phác thảo màn hình | `docs(requirements): define meeting user flows` |
-| P00-02 | BE | Chốt yêu cầu bắt buộc, giới hạn file/thời lượng, định dạng export; xác nhận deadline và ưu tiên phần mở rộng | `docs(requirements): define MVP acceptance criteria` |
+| P00-02 | BE | Giữ sáu module; export Markdown/copy đã chốt. Còn xác nhận giới hạn file/thời lượng, deadline và ưu tiên phần mở rộng | `docs(requirements): define MVP acceptance criteria` |
 | P00-03 | AI | Kiểm tra khả năng dùng Whisper và diarization, ngân sách, tài nguyên; ghi quyết định provider và rủi ro vòng đời | `docs(ai): record speech provider constraints` |
-| P00-04 | BE | Thống nhất stack, schema meeting/transcript/artifacts, API và trạng thái xử lý ban đầu | `docs(api): define meeting data contracts` |
+| P00-04 | BE | Giữ stack hiện có; chốt contract create/detail meeting tại `docs/api-contract.md`, ánh xạ Prisma; bổ sung contract audio/transcript/artifacts ở phase tương ứng | `docs(api): define meeting data contracts` |
 | P00-05 | AI | Chọn audio có quyền sử dụng và gold transcript/artifacts; mô tả cách đo và dự kiến tiêu chí chất lượng | `docs(test): define AI evaluation cases` |
 | P00-06 | FE | Đồng bộ ví dụ ngày tháng, link tương đối, README và liên kết roadmap với tài liệu gốc | `docs: align project planning documents` |
 
-**Hoàn thành khi:** nhóm phân biệt được yêu cầu bắt buộc và mở rộng; chốt export/provider, sample kiểm thử và hợp đồng dữ liệu để bắt đầu code. Nếu provider bị chặn, ghi blocker và quyết định thay thế trước khi tích hợp.
+**Hoàn thành khi:** nhóm phân biệt được yêu cầu bắt buộc và mở rộng; chốt sample kiểm thử và các hợp đồng cần cho phần code tiếp theo. Export và contract metadata đã được xác định; provider, ngân sách, deadline và benchmark vẫn cần kiểm tra, nên chưa đánh dấu toàn bộ P00 hoàn thành. Blocker provider phải được giải quyết trước P03.
 
-### P01 — Khởi tạo ứng dụng
+### P01 — Hoàn thiện và xác minh bộ khung ứng dụng
 
 **Phụ thuộc:** P00. **Nhóm A:** ứng dụng (01–03). **Nhóm B:** nền tảng kiểm tra (04–06).
 
 | Task | Vai trò | Phần việc / đầu ra | Commit gợi ý |
 |---|---|---|---|
-| P01-01 | BE | Tạo backend, `/health`, settings, `.env.example`, `.gitignore` | `feat(api): bootstrap backend application` |
-| P01-02 | FE | Tạo frontend, route và layout cơ bản | `feat(web): initialize frontend application` |
-| P01-03 | AI | Tạo hàm chuyển response ASR về schema chung và fixture segment/word, chưa cần nhiều provider | `feat(asr): define transcript normalization` |
-| P01-04 | BE | Kết nối database, migration/schema ban đầu và cấu hình thư mục lưu audio | `feat(db): configure meeting persistence` |
-| P01-05 | FE | API client và trạng thái loading/error dùng chung; gọi `/health` thật | `feat(web): connect backend health endpoint` |
-| P01-06 | BE | Thêm smoke test, CI lint/test/build tối thiểu và lệnh chạy local | `ci: add application smoke checks` |
+| P01-01 | BE | NestJS, `/health`, `.env.example`, `.gitignore` đã có; kiểm tra cấu hình và bổ sung phần còn thiếu | `chore(api): verify backend configuration` |
+| P01-02 | FE | Next.js đã có trang mẫu; thay nội dung mẫu bằng layout ứng dụng tối thiểu | `feat(web): add meeting application shell` |
+| P01-03 | AI | Định nghĩa type TypeScript và hàm chuyển response ASR về schema chung; fixture segment/word, chưa cần nhiều provider | `feat(asr): define transcript normalization` |
+| P01-04 | BE | Prisma client và PostgreSQL Compose đã có; xác minh kết nối và bổ sung migration khởi tạo. Participants thuộc P02-01 | `chore(db): verify initial database setup` |
+| P01-05 | FE | API client và trạng thái loading/error; gọi `/health` thật từ web 3000 sang API 3001 qua CORS/proxy được cấu hình | `feat(web): connect backend health endpoint` |
+| P01-06 | BE | Chạy build/lint/typecheck có sẵn; thêm smoke test và CI tối thiểu. Repo hiện chưa có test script/suite hoặc CI | `ci: add application smoke checks` |
 
 **Hoàn thành khi:** frontend gọi được backend; database khởi tạo được; người khác chạy local theo README. Không cần tạo sẵn các thư mục chưa dùng.
 
@@ -93,8 +106,8 @@ Luồng chính: **Meeting + audio → kiểm tra/chia audio → Whisper transcri
 
 | Task | Vai trò | Phần việc / đầu ra | Commit gợi ý |
 |---|---|---|---|
-| P02-01 | BE | API tạo/lấy meeting, title, anchor date và participants; validation | `feat(meetings): add meeting metadata API` |
-| P02-02 | FE | Form tạo meeting, validate và điều hướng tới trang chi tiết | `feat(meetings): add meeting creation form` |
+| P02-01 | BE | Thêm participants vào Prisma và migration; triển khai POST `/api/meetings`, GET `/api/meetings/{id}` theo `docs/api-contract.md`; DTO validation và tests | `feat(meetings): add meeting metadata API` |
+| P02-02 | FE | Form title/ngày họp bắt buộc, participants chỉ nhập tên và có thể bỏ trống; nối create/detail API và lỗi theo contract | `feat(meetings): add meeting creation form` |
 | P02-03 | AI | Dùng FFprobe/FFmpeg đọc duration, codec và kiểm tra audio giải mã được | `feat(audio): inspect audio metadata` |
 | P02-04 | BE | Upload multipart WAV/MP3/M4A/WebM, kiểm tra file rỗng/MIME/dung lượng và storage path | `feat(audio): implement validated audio upload` |
 | P02-05 | FE | Chọn/kéo thả file, hiển thị metadata và lỗi upload | `feat(audio): add meeting audio uploader` |
@@ -213,14 +226,14 @@ Luồng chính: **Meeting + audio → kiểm tra/chia audio → Whisper transcri
 
 | Task | Vai trò | Phần việc / đầu ra | Commit gợi ý |
 |---|---|---|---|
-| P10-01 | BE | Sinh Markdown đủ sáu module từ dữ liệu đang hiển thị; JSON download nếu đã chọn, HTML/PDF nếu P00 xác nhận | `feat(export): generate meeting document downloads` |
+| P10-01 | BE | Sinh Markdown đủ sáu module từ dữ liệu đang hiển thị; download JSON/HTML/PDF là task mở rộng khi nhóm chọn thêm | `feat(export): generate meeting document downloads` |
 | P10-02 | FE | Download Markdown và copy quick summary; lỗi download/clipboard rõ ràng | `feat(export): add download and summary copy actions` |
 | P10-03 | BE | Kiểm tra export tiếng Việt, ngày tháng, speaker/source, module rỗng và nội dung mới nhất | `test(export): verify meeting document content` |
 | P10-04 | BE | API sửa text/speaker và artifacts cơ bản; giữ bản gốc, đánh dấu kết quả phụ thuộc cũ khi sửa transcript | `feat(review): save corrected meeting content` |
 | P10-05 | FE | Form edit/save/cancel, yêu cầu xác nhận trước khi regenerate nội dung đã sửa | `feat(review): add meeting correction controls` |
 | P10-06 | FE | Kiểm tra sửa → reload → export; không ghi đè âm thầm, timestamp từ gốc không giả lập alignment sau sửa text | `test(review): verify corrected content persistence` |
 
-**Hoàn thành khi — M4:** Markdown/copy hoạt động và các định dạng đã chốt ở P00 có đủ; nếu triển khai review thì export đúng phiên bản đã lưu. Audit history và chỉnh sửa đồng thời chỉ thêm sau khi nhóm nhận task riêng; không cần dựng trước.
+**Hoàn thành khi — M4:** Markdown/copy hoạt động; nếu triển khai review thì export đúng phiên bản đã lưu. PDF, audit history và chỉnh sửa đồng thời chỉ thêm sau khi nhóm nhận task riêng; không chặn MVP đã chốt.
 
 ### P11 — Kiểm thử tổng thể và bàn giao
 
@@ -274,7 +287,7 @@ git pull --ff-only origin develop
 git switch -c feature/audio-upload-api
 
 # Hoàn thành upload và test liên quan
-git add backend/app backend/tests
+git add apps/api/src
 git diff --cached
 git commit -m "feat(audio): implement validated audio upload"
 git push -u origin feature/audio-upload-api
@@ -328,4 +341,4 @@ Squash merge có thể gộp nhiều commit thành một commit trên `develop`;
 
 Trước mỗi đợt làm việc: chọn phase/task sẵn sàng, gán owner và hạn dự kiến, tạo Issues cần thiết. Cuối đợt: ghi task đã xong, link commit/PR, kết quả kiểm tra và blocker; chọn đầu ra tiếp theo. Không đánh dấu task đã xong chỉ vì đã push file hoặc có scaffold.
 
-**Bắt đầu với P00:** chốt deadline/nhân lực, khả năng sử dụng Whisper/diarization, yêu cầu HTML/PDF, bộ audio kiểm thử và schema. Sau đó triển khai P01–P03 để phát hiện rủi ro tích hợp sớm.
+**Việc tiếp theo:** dùng contract create/detail đã chốt để làm P02-01 sau khi xác minh setup và các phần P01 còn thiếu. Song song hoàn tất deadline/nhân lực, khả năng sử dụng Whisper/diarization và bộ audio kiểm thử của P00. Giữ mục tiêu P03 chạy thật sớm; chưa mở rộng sang list/update/delete meeting, PDF hoặc audit.
