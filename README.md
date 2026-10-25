@@ -2,6 +2,17 @@
 
 Turborepo monorepo for the Meeting Minutes Assistant MVP.
 
+## Current input scope
+
+Input is **file upload only**: WAV, MP3, M4A, WebM and MP4 video, up to
+100 MB / 60 minutes. There is no in-browser recording feature. MP4 audio can be
+extracted to a separate WAV while retaining the original file.
+
+The audio component is developed and tested independently before App/LLM integration.
+Whisper will use an external service. Media retention is planned for 30 or 60 days;
+the App owns expiry notifications. See [Audio service API plan](docs/audio-service-api.md)
+for responsibilities and implementation status.
+
 ## Workspace
 
 - `apps/web`: Next.js App Router frontend.
