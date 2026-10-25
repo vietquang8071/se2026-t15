@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "dotenv -e ../../.env -- next dev --webpack",
+    "dev": "dotenv -e ../../.env -- next dev --webpack --port 3000",
     "build": "next build --webpack",
-    "start": "dotenv -e ../../.env -- next start",
+    "start": "dotenv -e ../../.env -- next start --port 3000",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit"
   },
