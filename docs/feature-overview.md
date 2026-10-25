@@ -20,27 +20,23 @@ flowchart TD
 
 ---
 
-## Feature Card 1: Audio Ingestion & Input Capture (Thu nhận & Tiền xử lý Audio)
+## Feature Card 1: Audio Upload & Ingestion (Tải lên & Tiền xử lý Audio)
 
-* **Mục tiêu:** Cho phép người dùng đưa âm thanh cuộc họp vào hệ thống thông qua upload file có sẵn hoặc thu âm trực tiếp từ trình duyệt, đồng thời thu thập ngày họp (Anchor Date) làm mốc thời gian.
-* **User Story:** *"Là người dùng, tôi muốn upload file ghi âm hoặc thu âm trực tiếp cuộc họp và nhập ngày họp, để hệ thống có dữ liệu xử lý bóc tách."*
+* **Mục tiêu:** Cho phép người dùng tải file audio cuộc họp đã có lên hệ thống và nhập ngày họp (Anchor Date) làm mốc thời gian.
+* **User Story:** *"Là người dùng, tôi muốn tải file audio cuộc họp và nhập ngày họp để hệ thống tạo transcript và biên bản."*
 
 ### Danh sách Tasks kỹ thuật:
 - [ ] **Task 1.1: Audio Upload Component & Validation**
   - Hỗ trợ các định dạng phổ biến: `.mp3`, `.m4a`, `.wav`, `.webm`.
-  - Validate định dạng file, hiển thị dung lượng file và độ dài (duration).
-- [ ] **Task 1.2: In-browser Audio Recorder (MediaRecorder API)**
-  - Tích hợp thu âm trực tiếp từ microphone qua HTML5/MediaRecorder.
-  - Hiển thị waveform âm thanh, thời gian thu âm thực tế (timer), nút Start/Pause/Stop.
-  - Tự động convert audio thu âm sang định dạng chuẩn (`.wav` hoặc `.webm`) sẵn sàng upload.
-- [ ] **Task 1.3: Audio Pre-processing & Chunking Service (>25MB)**
-  - Xử lý giới hạn 25MB của OpenAI Whisper API.
-  - Tích hợp công cụ cắt file audio (dùng `ffmpeg` / `pydub`) thành các chunk nhỏ (ví dụ 10–15 phút/chunk) có 5-10s overlap để không mất chữ ở điểm cắt.
-- [ ] **Task 1.4: Meeting Metadata Capture Form**
+  - Giới hạn mỗi file ở 100 MB; validate định dạng, hiển thị dung lượng file và độ dài (duration).
+- [ ] **Task 1.2: Meeting Metadata Capture Form**
   - Thu thập thông tin bối cảnh cuộc họp:
     - Tiêu đề cuộc họp (`title`)
     - Ngày họp (`anchor_date` - bắt buộc để tính toán Timeline)
     - Danh sách người tham gia (`participants` - hỗ trợ gán nhãn người nói).
+- [ ] **Task 1.3: Audio Pre-processing & Chunking Service (>25MB)**
+  - Xử lý giới hạn 25MB của OpenAI Whisper API.
+  - Tích hợp công cụ cắt file audio (dùng `ffmpeg` / `pydub`) thành các chunk nhỏ (ví dụ 10–15 phút/chunk) có 5-10s overlap để không mất chữ ở điểm cắt.
 
 ---
 
