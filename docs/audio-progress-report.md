@@ -121,14 +121,14 @@ hoặc đánh giá chất lượng ASR/speaker trong repo hiện tại.
 
 ## Bàn giao Git
 
-5 commit audio hiện tại có thể gom thành một PR về `develop`, mô tả đúng phạm vi
-helper + tests + tài liệu. Tiêu đề đề xuất:
+Theo yêu cầu mới của Sơn ngày 25/10/2026, nhánh audio đã được gộp vào nhánh
+`docs/son-requirements-scope`, giữ cả contract meeting và các thay đổi audio.
+Nhánh hợp nhất được đổi tên thành **`son_branch`**.
 
-`feat(audio): validate uploaded media and extract timestamped MP4 audio`
-
-Trước khi mở PR audio, GitHub có PR #7
-(`docs/son-requirements-scope` → `develop`). PR audio cần bao gồm helper, tests,
-tài liệu phạm vi và báo cáo này; bổ sung link PR khi bàn giao. Không merge thay reviewer.
+Từ đây chỉ làm việc trên `son_branch`, mở PR vào `main` và giữ nhánh sau merge.
+PR #7 đã đóng; PR #8 (audio → develop) được thay thế bằng PR hợp nhất mới.
+Quy ước được ghi tại [AGENTS.md](../AGENTS.md); áp dụng riêng cho công việc của
+Sơn, thay cho workflow nhánh chung trong CONTRIBUTING. Không merge thay reviewer.
 
 Tài liệu đối chiếu:
 [Audio ingestion](audio-ingestion.md),
