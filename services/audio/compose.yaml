@@ -1,0 +1,41 @@
+services:
+  audio-postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: meeting_minutes_audio
+      POSTGRES_USER: ${POSTGRES_USER:-meeting_minutes}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-meeting_minutes}
+    volumes:
+      - audio_database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d meeting_minutes_audio"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  audio:
+    build:
+      context: ../..
+      dockerfile: services/audio/Dockerfile
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      AUDIO_DATABASE_URL: postgresql://${POSTGRES_USER:-meeting_minutes}:${POSTGRES_PASSWORD:-meeting_minutes}@audio-postgres:5432/meeting_minutes_audio?schema=public
+      AUDIO_HOST: 0.0.0.0
+      AUDIO_PORT: 3002
+      AUDIO_STORAGE_DIR: /data/audio
+    ports:
+      - "127.0.0.1:${AUDIO_PORT:-3002}:3002"
+    volumes:
+      - audio_media:/data/audio
+    depends_on:
+      audio-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+volumes:
+  audio_database:
+  audio_media:

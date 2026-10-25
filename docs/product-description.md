@@ -1,9 +1,9 @@
 # Product Description: Meeting Minutes Assistant (MVP)
 
-**Document Version:** 1.1  
-**Status:** Approved / In Progress  
-**Target Milestone:** Minimum Viable Product (MVP)  
-**Repository:** `se2026-t15`
+- **Document Version:** 1.2
+- **Status:** Approved / In Progress
+- **Target Milestone:** Minimum Viable Product (MVP)
+- **Repository:** `se2026-t15`
 
 ---
 

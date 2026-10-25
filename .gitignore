@@ -8,3 +8,6 @@ coverage/
 .env.*
 !.env.example
 packages/database/generated/
+data/
+artifacts/private/
+services/audio/src/generated/

@@ -1,0 +1,16 @@
+{
+  "started_at": "2026-10-25T19:16:33.527702+07:00",
+  "completed_at": "2026-10-25T19:16:36.742636+07:00",
+  "node": "v25.8.2",
+  "postgres": "17-alpine (isolated disposable container)",
+  "characterization_unit_tests": 11,
+  "integration_tests": 6,
+  "passed": 17,
+  "failed": 0,
+  "stored_revision_count": 1,
+  "limitations": [
+    "HTTP harness is not NestJS production app",
+    "Minutes response is a seeded fixture; jobs are in memory",
+    "No real vendor, production rollout, production schema migration, or load 709 test"
+  ]
+}

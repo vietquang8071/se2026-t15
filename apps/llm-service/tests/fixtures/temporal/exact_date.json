@@ -1,0 +1,10 @@
+{
+  "status": "exact_date",
+  "resolved_date": "2026-10-09",
+  "start_date": null,
+  "end_date": null,
+  "needs_review": false,
+  "source_segment_ids": [
+    "seg-001"
+  ]
+}

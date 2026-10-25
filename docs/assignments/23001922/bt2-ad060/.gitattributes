@@ -1,0 +1,4 @@
+*.pdf binary
+evidence/source-numbered.txt whitespace=-blank-at-eol
+PROMPT_BT2_23001922_AD-060.md whitespace=-blank-at-eol
+report/BT2_23001922_AD-060.md whitespace=-blank-at-eol

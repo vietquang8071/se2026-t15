@@ -1,0 +1,47 @@
+{
+  "contract_version": "1.0",
+  "request_id": "req-summary-actions-01",
+  "meeting": {
+    "id": "meeting-43",
+    "title": "Planning",
+    "anchor_date": "2026-10-05",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "duration_seconds": 30.0,
+    "participants": [
+      {
+        "id": "participant-alex",
+        "display_name": "Alex",
+        "speaker_ids": [
+          "speaker_1"
+        ]
+      }
+    ]
+  },
+  "transcript": {
+    "revision_id": "transcript-r1",
+    "language": "vi",
+    "segments": [
+      {
+        "id": "seg-a1",
+        "start": 12.5,
+        "end": 18.2,
+        "speaker_id": "speaker_1",
+        "text": "Tôi sẽ gửi bản ghi chú vào thứ Sáu này."
+      },
+      {
+        "id": "seg-a2",
+        "start": 18.3,
+        "end": 22.0,
+        "speaker_id": "speaker_1",
+        "text": "Hôm nay chủ yếu rà lại tiến độ."
+      }
+    ]
+  },
+  "extraction": {
+    "output_language": "vi",
+    "requested_modules": [
+      "meeting_summary",
+      "action_items"
+    ]
+  }
+}

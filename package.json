@@ -7,14 +7,18 @@
   },
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --filter=@meeting-minutes/web --filter=@meeting-minutes/api",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "db:generate": "pnpm --filter @meeting-minutes/database db:generate",
     "db:migrate": "pnpm --filter @meeting-minutes/database db:migrate",
     "db:studio": "pnpm --filter @meeting-minutes/database db:studio",
-    "format": "prettier --write \"{apps,packages}/**/*.{ts,tsx,mjs,css,json,md}\" \"{README,AGENTS}.md\" package.json turbo.json pnpm-workspace.yaml",
-    "format:check": "prettier --check \"{apps,packages}/**/*.{ts,tsx,mjs,css,json,md}\" \"{README,AGENTS}.md\" package.json turbo.json pnpm-workspace.yaml"
+    "format": "prettier --write \"{apps,packages,services}/**/*.{ts,tsx,mjs,css,json,md}\" \"{README,AGENTS}.md\" package.json turbo.json pnpm-workspace.yaml",
+    "format:check": "prettier --check \"{apps,packages,services}/**/*.{ts,tsx,mjs,css,json,md}\" \"{README,AGENTS}.md\" package.json turbo.json pnpm-workspace.yaml",
+    "audio:dev": "pnpm --filter @meeting-minutes/audio dev",
+    "audio:build": "pnpm --filter @meeting-minutes/audio build",
+    "audio:db:deploy": "pnpm --filter @meeting-minutes/audio db:deploy",
+    "audio:file": "node --env-file=.env services/audio/scripts/process-file.mjs"
   },
   "devDependencies": {
     "dotenv-cli": "^11.0.0",

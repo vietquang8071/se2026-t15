@@ -1,0 +1,54 @@
+{
+  "contract_version": "1.0",
+  "request_id": "req-empty-lists-01",
+  "status": "completed",
+  "meeting_id": "meeting-44",
+  "transcript_revision_id": "transcript-r1",
+  "requested_modules": [
+    "meeting_summary",
+    "action_items",
+    "decision_log",
+    "open_issues",
+    "follow_up_items",
+    "timeline_events"
+  ],
+  "modules": {
+    "meeting_summary": {
+      "title": "Status review",
+      "date": "2026-10-05",
+      "duration_minutes": 0.33,
+      "participants": [],
+      "overview": "Cuộc họp trao đổi tình hình chung; transcript không ghi nhận công việc, quyết định, câu hỏi còn mở, follow-up hoặc mốc dự án được chốt.",
+      "key_topics": [
+        {
+          "topic": "Tình hình chung",
+          "brief_discussion": "Người nói nêu rằng cuộc họp chủ yếu trao đổi tình hình chung.",
+          "source_segment_ids": [
+            "seg-e1"
+          ],
+          "needs_review": false,
+          "review_reasons": []
+        }
+      ],
+      "source_segment_ids": [
+        "seg-e1"
+      ],
+      "needs_review": false,
+      "review_reasons": []
+    },
+    "action_items": [],
+    "decision_log": [],
+    "open_issues": [],
+    "follow_up_items": [],
+    "timeline_events": []
+  },
+  "processing": {
+    "provider": "example-provider",
+    "model_id": "example-model",
+    "prompt_version": "extract-v1.0",
+    "evidence_prompt_version": "evidence-v1.0",
+    "started_at": "2026-10-05T09:00:00Z",
+    "completed_at": "2026-10-05T09:00:01Z",
+    "token_usage": null
+  }
+}

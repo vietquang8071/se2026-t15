@@ -1,0 +1,10 @@
+{
+  "status": "date_range",
+  "resolved_date": null,
+  "start_date": "2026-10-12",
+  "end_date": "2026-10-18",
+  "needs_review": true,
+  "source_segment_ids": [
+    "seg-003"
+  ]
+}
