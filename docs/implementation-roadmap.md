@@ -55,7 +55,7 @@ Nguồn đối chiếu: [Product Description](product-description.md) v1.1, [Fea
 | Nghiệp vụ | Giữ đủ sáu module; thiếu thông tin thì đánh dấu cần xác nhận |
 | Export/phần mở rộng | MVP: Markdown + copy summary. PDF, audit history đầy đủ và tải thêm định dạng khác để mở rộng |
 
-Chi tiết request/response, validation và mã lỗi nằm trong `docs/api-contract.md`. Đây là contract để triển khai P02, chưa phải endpoint đã chạy. Đợt công việc hiện tại chỉ sửa tài liệu, không thay đổi schema/code.
+Chi tiết request/response, validation và mã lỗi nằm trong [Meeting API Contract](api-contract.md). Đây là contract để triển khai P02, chưa phải endpoint đã chạy. Đợt công việc hiện tại chỉ sửa tài liệu, không thay đổi schema/code.
 
 ## 3. Ghi chú triển khai tối thiểu
 
