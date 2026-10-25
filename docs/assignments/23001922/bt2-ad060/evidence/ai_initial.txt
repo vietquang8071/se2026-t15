@@ -1,0 +1,7 @@
+Đề xuất sơ bộ của AI trước khảo sát source — 2026-10-25
+Giả định cần kiểm chứng: API đã có use case quản lý transcript và schema lưu transcript; cấu hình Compose thể hiện ranh giới triển khai hiện tại.
+1. Lấy module transcript của API làm điểm xuất phát, bổ sung adapter nhận payload vendor giả định V-Transcript v1 và chuẩn hóa thành TranscriptInput.
+2. Tạm ưu tiên triển khai adapter cùng API để giảm chi phí vận hành và giữ một transaction khi ghi transcript; rollback bằng phiên bản image API trước đó và cờ cấu hình tắt nguồn mới. Cần kiểm tra khả năng cô lập lỗi của cách này so với chức năng lõi.
+3. Đề xuất invariant: một bản ghi transcript cho mỗi cặp meetingId + externalId, cưỡng chế unique constraint; cần đối chiếu mô hình dữ liệu và ownership thực tế trước khi chọn khóa cuối cùng.
+4. Hàm before minh họa sẽ trộn validation, rule và persistence; bước refactoring đầu chỉ extract các hàm nội bộ để giữ hành vi, còn idempotency/triển khai riêng là thay đổi thiết kế sau đó.
+Đây là đầu ra sơ bộ thực của AI, chưa được sinh viên xác nhận, không phải mô tả repository.
