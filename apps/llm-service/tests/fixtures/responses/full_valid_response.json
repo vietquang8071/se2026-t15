@@ -1,0 +1,228 @@
+{
+  "contract_version": "1.0",
+  "request_id": "req-20261005-001",
+  "status": "completed",
+  "meeting_id": "meeting-42",
+  "transcript_revision_id": "transcript-r3",
+  "requested_modules": [
+    "meeting_summary",
+    "action_items",
+    "decision_log",
+    "open_issues",
+    "follow_up_items",
+    "timeline_events"
+  ],
+  "modules": {
+    "meeting_summary": {
+      "title": "Sprint planning",
+      "date": "2026-10-05",
+      "duration_minutes": 31.68,
+      "participants": [
+        "Alex",
+        "Maria"
+      ],
+      "overview": "Nhóm rà soát kế hoạch demo, triển khai và chất lượng diarization. Nhóm thống nhất lựa chọn được nêu trong cuộc họp; ngày deploy mới được xác định trong phạm vi tuần kế tiếp.",
+      "key_topics": [
+        {
+          "topic": "Kế hoạch demo và deploy",
+          "brief_discussion": "Nhóm dự kiến demo vào thứ Sáu và deploy bản thử nghiệm trong tuần kế tiếp.",
+          "source_segment_ids": [
+            "seg-003",
+            "seg-007"
+          ],
+          "needs_review": true,
+          "review_reasons": [
+            "date_range_needs_confirmation"
+          ]
+        },
+        {
+          "topic": "Đánh giá diarization",
+          "brief_discussion": "Nhóm nêu câu hỏi về hai người nói đồng thời và dự kiến kiểm tra lại sau khi có bộ dữ liệu.",
+          "source_segment_ids": [
+            "seg-005",
+            "seg-006"
+          ],
+          "needs_review": false,
+          "review_reasons": []
+        }
+      ],
+      "source_segment_ids": [
+        "seg-002",
+        "seg-003",
+        "seg-005",
+        "seg-006",
+        "seg-007"
+      ],
+      "needs_review": false,
+      "review_reasons": []
+    },
+    "action_items": [
+      {
+        "id": "ACT-001",
+        "task": "Hoàn thiện bản OpenAPI",
+        "owner": "Alex",
+        "due_date": "2026-10-09",
+        "raw_due_expression": "thứ Sáu này",
+        "due_date_resolution": {
+          "status": "exact_date",
+          "resolved_date": "2026-10-09",
+          "start_date": null,
+          "end_date": null,
+          "needs_review": false,
+          "source_segment_ids": [
+            "seg-001"
+          ]
+        },
+        "priority": null,
+        "source_timestamp": "00:14:12.000",
+        "context": null,
+        "source_segment_ids": [
+          "seg-001"
+        ],
+        "needs_review": false,
+        "review_reasons": []
+      }
+    ],
+    "decision_log": [
+      {
+        "id": "DEC-001",
+        "decision": "Dùng whisper-1 cho bản MVP",
+        "rationale": "Có timestamp và nhóm cho rằng triển khai nhanh.",
+        "alternatives_considered": null,
+        "source_timestamp": "00:14:18.000",
+        "source_segment_ids": [
+          "seg-002"
+        ],
+        "needs_review": false,
+        "review_reasons": []
+      }
+    ],
+    "open_issues": [
+      {
+        "id": "ISS-001",
+        "issue_or_question": "Chưa xác định diarization xử lý hai người nói đồng thời như thế nào.",
+        "raised_by": "Alex",
+        "blocker_severity": null,
+        "status": "Unresolved",
+        "source_timestamp": "00:18:40.000",
+        "source_segment_ids": [
+          "seg-005"
+        ],
+        "needs_review": false,
+        "review_reasons": []
+      }
+    ],
+    "follow_up_items": [
+      {
+        "id": "FLW-001",
+        "item": "Kiểm tra lại độ chính xác diarization sau khi có bộ dữ liệu.",
+        "responsible_party": null,
+        "target_trigger_or_date": "Tuần sau, sau khi có bộ dữ liệu",
+        "target_temporal_resolution": {
+          "status": "date_range",
+          "resolved_date": null,
+          "start_date": "2026-10-12",
+          "end_date": "2026-10-18",
+          "needs_review": true,
+          "source_segment_ids": [
+            "seg-006"
+          ]
+        },
+        "source_timestamp": "00:19:10.000",
+        "source_segment_ids": [
+          "seg-006"
+        ],
+        "needs_review": true,
+        "review_reasons": [
+          "date_range_needs_confirmation",
+          "owner_unconfirmed"
+        ]
+      }
+    ],
+    "timeline_events": [
+      {
+        "id": "EVT-001",
+        "event": "Demo bản MVP cho nhóm",
+        "resolved_date": "2026-10-09",
+        "event_type": "demo",
+        "raw_statement": "Thứ Sáu này demo bản MVP cho nhóm.",
+        "temporal_resolution": {
+          "status": "exact_date",
+          "resolved_date": "2026-10-09",
+          "start_date": null,
+          "end_date": null,
+          "needs_review": false,
+          "source_segment_ids": [
+            "seg-007"
+          ]
+        },
+        "source_timestamp": "00:20:00.000",
+        "source_segment_ids": [
+          "seg-007"
+        ],
+        "needs_review": false,
+        "review_reasons": []
+      },
+      {
+        "id": "EVT-002",
+        "event": "Deploy bản thử nghiệm",
+        "resolved_date": null,
+        "event_type": "milestone",
+        "raw_statement": "Tuần sau deploy bản thử nghiệm.",
+        "temporal_resolution": {
+          "status": "date_range",
+          "resolved_date": null,
+          "start_date": "2026-10-12",
+          "end_date": "2026-10-18",
+          "needs_review": true,
+          "source_segment_ids": [
+            "seg-003"
+          ]
+        },
+        "source_timestamp": "00:15:00.000",
+        "source_segment_ids": [
+          "seg-003"
+        ],
+        "needs_review": true,
+        "review_reasons": [
+          "date_range_needs_confirmation"
+        ]
+      },
+      {
+        "id": "EVT-003",
+        "event": "Gửi báo cáo chất lượng",
+        "resolved_date": "2026-10-31",
+        "event_type": "deadline",
+        "raw_statement": "Cuối tháng gửi báo cáo chất lượng.",
+        "temporal_resolution": {
+          "status": "exact_date",
+          "resolved_date": "2026-10-31",
+          "start_date": null,
+          "end_date": null,
+          "needs_review": false,
+          "source_segment_ids": [
+            "seg-004"
+          ]
+        },
+        "source_timestamp": "00:18:20.000",
+        "source_segment_ids": [
+          "seg-004"
+        ],
+        "needs_review": false,
+        "review_reasons": []
+      }
+    ]
+  },
+  "processing": {
+    "provider": "example-provider",
+    "model_id": "example-model",
+    "prompt_version": "extract-v1.0",
+    "evidence_prompt_version": "evidence-v1.0",
+    "started_at": "2026-10-05T09:00:00Z",
+    "completed_at": "2026-10-05T09:00:03Z",
+    "token_usage": {
+      "input_tokens": 1200,
+      "output_tokens": 500
+    }
+  }
+}

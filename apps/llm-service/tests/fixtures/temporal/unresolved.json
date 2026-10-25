@@ -1,0 +1,10 @@
+{
+  "status": "unresolved",
+  "resolved_date": null,
+  "start_date": null,
+  "end_date": null,
+  "needs_review": true,
+  "source_segment_ids": [
+    "seg-005"
+  ]
+}

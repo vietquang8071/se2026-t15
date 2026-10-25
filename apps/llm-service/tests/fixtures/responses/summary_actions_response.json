@@ -1,0 +1,79 @@
+{
+  "contract_version": "1.0",
+  "request_id": "req-summary-actions-01",
+  "status": "completed",
+  "meeting_id": "meeting-43",
+  "transcript_revision_id": "transcript-r1",
+  "requested_modules": [
+    "meeting_summary",
+    "action_items"
+  ],
+  "modules": {
+    "meeting_summary": {
+      "title": "Planning",
+      "date": "2026-10-05",
+      "duration_minutes": 0.5,
+      "participants": [
+        "Alex"
+      ],
+      "overview": "Cuộc họp rà soát tiến độ và ghi nhận cam kết gửi bản ghi chú.",
+      "key_topics": [
+        {
+          "topic": "Rà soát tiến độ",
+          "brief_discussion": "Nhóm rà lại tiến độ hiện tại.",
+          "source_segment_ids": [
+            "seg-a2"
+          ],
+          "needs_review": false,
+          "review_reasons": []
+        }
+      ],
+      "source_segment_ids": [
+        "seg-a1",
+        "seg-a2"
+      ],
+      "needs_review": false,
+      "review_reasons": []
+    },
+    "action_items": [
+      {
+        "id": "ACT-001",
+        "task": "Gửi bản ghi chú",
+        "owner": "Alex",
+        "due_date": "2026-10-09",
+        "raw_due_expression": "thứ Sáu này",
+        "due_date_resolution": {
+          "status": "exact_date",
+          "resolved_date": "2026-10-09",
+          "start_date": null,
+          "end_date": null,
+          "needs_review": false,
+          "source_segment_ids": [
+            "seg-a1"
+          ]
+        },
+        "priority": null,
+        "source_timestamp": "00:00:12.500",
+        "context": null,
+        "source_segment_ids": [
+          "seg-a1"
+        ],
+        "needs_review": false,
+        "review_reasons": []
+      }
+    ],
+    "decision_log": null,
+    "open_issues": null,
+    "follow_up_items": null,
+    "timeline_events": null
+  },
+  "processing": {
+    "provider": "example-provider",
+    "model_id": "example-model",
+    "prompt_version": "extract-v1.0",
+    "evidence_prompt_version": "evidence-v1.0",
+    "started_at": "2026-10-05T09:00:00Z",
+    "completed_at": "2026-10-05T09:00:02Z",
+    "token_usage": null
+  }
+}

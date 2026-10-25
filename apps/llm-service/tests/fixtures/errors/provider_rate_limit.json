@@ -1,0 +1,9 @@
+{
+  "statusCode": 503,
+  "code": "PROVIDER_RATE_LIMIT",
+  "message": "LLM provider tạm thời giới hạn request.",
+  "request_id": "req-20261005-001",
+  "retryable": true,
+  "retry_after_seconds": 15,
+  "errors": []
+}
