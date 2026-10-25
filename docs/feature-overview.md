@@ -20,7 +20,9 @@ flowchart TD
 
 ---
 
-**Phân công:** Sơn phụ trách audio API độc lập; Việt Quang phụ trách LLM; thành viên App phụ trách giao diện/meeting và thông báo. Đầu vào chỉ upload, không có task microphone/MediaRecorder. Xem [Audio service API plan](audio-service-api.md) cho upload theo `audio_id`, retention 30/60 ngày và `expires_at`; chưa cần nối các phần ngay.
+**Phân công:** Sơn phụ trách audio API độc lập; Việt Quang phụ trách LLM; thành viên App phụ trách giao diện/meeting và thông báo. Đầu vào chỉ upload, không có task microphone/MediaRecorder. Xem [Audio service API](audio-service-api.md) cho upload theo `audio_id`, retention 30/60 ngày và `expires_at`; chưa cần nối các phần ngay.
+
+Triển khai audio hiện tại ở `services/audio`; xem [Audio validation](audio-validation.md). Các checkbox dưới mô tả yêu cầu toàn sản phẩm, không thay thế kiểm thử tích hợp App/LLM.
 
 ## Feature Card 1: Audio Ingestion & Input Capture (Thu nhận & Tiền xử lý Audio)
 
@@ -60,7 +62,7 @@ flowchart TD
   - Cơ chế retry khi gặp rate-limit hoặc timeout.
 - [ ] **Task 2.2: Speaker Diarization / Turn-Taking Attribution**
   - Phân tách giọng nói của từng speaker (Speaker 1, Speaker 2,... hoặc tên thành viên).
-  - Ghép speaker turns từ dịch vụ diarization ngoài vào transcript theo timestamp; chưa chốt provider, không coi tên do LLM đoán là danh tính đã xác thực.
+  - Ghép speaker turns từ dịch vụ diarization ngoài vào transcript theo timestamp; dùng OpenAI `gpt-4o-transcribe-diarize`, không coi nhãn suy luận là danh tính đã xác thực.
 - [ ] **Task 2.3: Multi-chunk Transcript Stitcher**
   - Ghép nối kết quả transcript từ các chunk audio (nếu file > 25MB) thành một chuỗi transcript hoàn chỉnh duy nhất, hiệu chỉnh lại offset thời gian (timestamp offset).
 - [ ] **Task 2.4: Transcript Structured Storage**

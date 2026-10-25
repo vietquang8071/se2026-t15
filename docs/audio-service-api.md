@@ -1,64 +1,142 @@
-# Audio service — API và vòng đời dự kiến
+# Audio service API — độc lập với App
 
-## 1. Trạng thái và phạm vi
+Implementation: [`services/audio`](../services/audio/README.md), NestJS riêng,
+port 3002 mặc định. App API vẫn ở `apps/api`/3001. Audio có Prisma schema/database,
+storage và worker riêng; không phụ thuộc meeting_id hoặc LLM.
 
-Tài liệu này là **kế hoạch API**, không phải endpoint đang hoạt động. Hiện đã có helper kiểm tra audio, tách MP4 sang WAV và tests. HTTP upload/storage/job/retention chưa được triển khai; `GET /health` ở NestJS vẫn là endpoint hiện có của bộ khung.
+## Xác thực và endpoint
 
-Phần audio phát triển độc lập trước khi tích hợp App và LLM. Đầu vào **chỉ upload** WAV/MP3/M4A/WebM/MP4, tối đa 100 MB / 60 phút. Không có thu âm microphone/trình duyệt. MP4 phải có một audio track hợp lệ; giữ video nguồn và tạo WAV riêng. Xem [Audio ingestion](audio-ingestion.md) cho policy và code đã có.
+`GET /health` không cần key: 200 `{ "status": "ok", "service": "audio" }`,
+503 nếu mất DB/worker lock. Mọi route dưới cần header `X-API-Key: <AUDIO_API_KEY>`.
+Đây là key cho service nội bộ; App phải kiểm tra quyền sở hữu của người dùng.
+Không trả filesystem path, storage key, checkpoint hoặc raw provider error ra API.
 
-ASR sẽ dùng **Whisper qua dịch vụ bên ngoài**, không chạy Whisper local hoặc yêu cầu GPU local. Chưa gọi API thật trong task upload/MP4. Diarization qua dịch vụ ngoài cần chốt provider riêng; không mặc định Whisper trả được speaker labels.
+| Method | Route                                            | Kết quả                                                                                 |
+| ------ | ------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| POST   | `/api/audio`                                     | Multipart `file` + `retention_days` (30/60), 201 metadata                               |
+| GET    | `/api/audio/{audio_id}`                          | Metadata, trạng thái, job_id                                                            |
+| POST   | `/api/audio/{audio_id}/process`                  | 202 + job_id; gọi lặp trả cùng ID; failed cho retry có giới hạn                         |
+| GET    | `/api/audio/jobs/{job_id}`                       | Stage/progress/error, attempts/provider_calls                                           |
+| GET    | `/api/audio/{audio_id}/transcript`               | Transcript có segment/word timestamps và speaker; 409 nếu chưa có                       |
+| PATCH  | `/api/audio/{audio_id}/speakers/{speaker_id}`    | JSON `{ "name": "Sơn" }`, trả danh sách speaker; tên 1–100 ký tự, không control/newline |
+| GET    | `/api/audio/{audio_id}/media?variant=source`     | Nguồn, hỗ trợ single HTTP Range 206/416                                                 |
+| GET    | `/api/audio/{audio_id}/media?variant=normalized` | WAV khi job completed; 409 nếu chưa sẵn sàng                                            |
+| GET    | `/api/audio/{audio_id}/export?format=json`       | Download json/txt/srt/md/xlsx/pdf; mặc định json                                        |
+| DELETE | `/api/audio/{audio_id}`                          | 204 sau khi xóa media/transcript/checkpoint/job; 404 nếu không tồn tại                  |
 
-## 2. Các API sẽ triển khai
+## Upload
 
-Audio service có base URL riêng khi chạy độc lập. Đây là các route tương đối dự kiến, chưa thay đổi API meeting của App:
+WAV/MP3/M4A/WebM/MP4, tối đa 100.000.000 bytes / 3.600 giây, đúng một audio
+track giải mã được. Chỉ upload, không thu âm trình duyệt. Thiếu/sai retention
+bị từ chối; không mặc định. Tối đa hai upload đồng thời, stream xuống disk.
+MP4 không tiếng/nhiều track bị từ chối. Nguồn không bị overwrite.
 
-| Method | Route                              | Kết quả dự kiến                                                                                                        |
-| ------ | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/api/audio`                       | Multipart `file` và `retention_days` bắt buộc (30 hoặc 60); 201 sau khi lưu/kiểm tra metadata thành công, trả audio_id |
-| GET    | `/api/audio/{audio_id}`            | Metadata, trạng thái xử lý và expires_at; 404 với ID không tồn tại                                                     |
-| DELETE | `/api/audio/{audio_id}`            | Xóa media nguồn/dẫn xuất/chunk theo cùng audio_id; xử lý job đang chạy an toàn; không xóa meeting/LLM artifacts        |
-| POST   | `/api/audio/{audio_id}/process`    | Phase tiếp theo: 202 + job_id cho normalization/chunk/ASR/diarization, không chờ model trong HTTP request              |
-| GET    | `/api/audio/jobs/{job_id}`         | Phase tiếp theo: stage/progress/error/result references                                                                |
-| GET    | `/api/audio/{audio_id}/transcript` | Phase tiếp theo: segment/word timestamps, speaker labels, offset về nguồn                                              |
-
-Job được lưu trạng thái thay vì chỉ giữ trong RAM; retry không tạo transcript/chunk trùng. Audio_id độc lập meeting_id, giúp kiểm thử audio service trước khi App nối vào. Auth/storage adapter cụ thể được thiết kế khi triển khai API; helper local hiện tại không đồng nghĩa service đã sẵn sàng public.
-
-Response metadata dự kiến, chưa phải output HTTP thật:
+Response minh họa:
 
 ```json
 {
-  "audio_id": "audio-example-001",
+  "audio_id": "00000000-0000-0000-0000-000000000001",
   "status": "uploaded",
-  "source_format": "mp4",
-  "source_size_bytes": 6041,
-  "source_duration_sec": 0.75,
-  "audio_start_sec": 0.186,
+  "source": {
+    "format": "mp4",
+    "mime_type": "video/mp4",
+    "size_bytes": 6041,
+    "duration_sec": 0.75,
+    "codec": "aac",
+    "sample_rate": 16000,
+    "channels": 1,
+    "audio_start_sec": 0.186
+  },
   "retention_days": 30,
   "created_at": "2026-10-25T09:00:00.000Z",
-  "expires_at": "2026-11-24T09:00:00.000Z"
+  "expires_at": "2026-11-24T09:00:00.000Z",
+  "job_id": null
 }
 ```
 
-Upload không có nghĩa ASR đã xong. MP4 có thể được tách ở job preprocessing sau upload; chỉ trả trạng thái prepared khi file dẫn xuất đã kiểm tra được. Không trả absolute path ra HTTP response.
+Upload chưa gọi provider. POST process trả
+`{ "audio_id": "...", "job_id": "...", "status": "queued" }`.
+Mỗi audio có một job; các request đồng thời được serialize bằng row lock.
 
-## 3. Chính sách lưu 30/60 ngày
+## Job và khôi phục
 
-- retention_days chỉ nhận **30 hoặc 60**, caller chọn rõ khi upload; chưa mặc định âm thầm nếu thiếu.
-- expires_at = created_at + retention_days × 24 giờ, tính bằng UTC từ lúc upload được chấp nhận/persist. Upload/validation lỗi không tạo asset hợp lệ hay thời hạn lưu giả.
-- Bản gốc, WAV dẫn xuất và các chunk dùng cùng hạn gốc. Xem/tải/xử lý lại không tự gia hạn; tính năng gia hạn nếu cần sẽ là task riêng.
-- Metadata expiry phải được lưu bền vững. API từ chối đọc/xử lý media đã hết hạn ngay cả khi job cleanup vật lý chưa chạy.
-- Cleanup của audio service sẽ dọn nguồn và dẫn xuất, phối hợp với job đang chạy để không tạo lại media sau khi xóa; file tạm thất bại được dọn sớm, không chờ 30/60 ngày.
-- **App** đọc expires_at và gửi thông báo gần hạn. Audio service chưa gửi email/push và chưa tự chọn số ngày nhắc trước. App cần bảo đảm người dùng biết hạn lưu ngay từ khi upload.
-- Audio retention chỉ áp dụng media; không tự xóa transcript, biên bản hoặc meeting của App/LLM nếu chưa có chính sách riêng.
+GET job trả `job_id`, `audio_id`, `status`, `stage`, `progress`, `attempts`,
+`provider_calls`, `error`, `created_at`, `updated_at`, `transcript_url`.
+Ngày giờ UTC ISO 8601. Stages: queued/recovered → preparing → transcribing →
+diarizing → completed hoặc failed. Progress theo stage, không phải ETA.
 
-## 4. Thứ tự task tiếp theo
+Một worker xử lý tuần tự. DB lưu checkpoint từng chunk/diarization; restart
+khôi phục running thành queued. Mỗi job tối đa ba lượt chạy; từng request provider
+tối đa ba attempt cho network/429/5xx, không retry auth/quota/request sai.
+`provider_calls` đếm mọi attempt; crash trước persist checkpoint có thể cần gọi lại.
+Không có cam kết exactly-once phía provider. Không có chế độ provider mock qua API.
 
-1. Đóng API upload/storage độc lập với audio_id và retention metadata; test HTTP bằng file tổng hợp.
-2. Job preprocessing: tách MP4, chuẩn hóa audio, giữ source offset; helper tách MP4 đã có, cần nối vào job.
-3. Chunking theo dung lượng sau encode; ghép segment/word timestamps về nguồn.
-4. Whisper external API, job/retry và lưu transcript; benchmark tiếng Việt bằng provider thật.
-5. Diarization external provider và ghép nhãn người nói; không thay thế bằng phỏng đoán danh tính từ LLM.
-6. Cleanup media 30/60 ngày và API xóa có test; bàn giao expires_at cho App làm thông báo.
-7. Hoàn thiện contract/test audio service rồi mới nối App + audio + LLM.
+## Transcript và timestamp
 
-Mỗi task có commit riêng. Không đánh dấu HTTP upload, ASR hoặc retention hoàn thành chỉ vì helper/contract đã có.
+JSON trả `schema_version`, `audio_id`, `language`, `timeline`,
+`source_audio_start_sec`, `duration_sec`, `text`, `speakers`, `segments`,
+`warnings`, `models`. Segment ví dụ:
+
+```json
+{
+  "id": "SEG-0001",
+  "start": 1.25,
+  "end": 2.5,
+  "speaker": "speaker_1",
+  "text": "Xin chào",
+  "words": [
+    { "word": "Xin", "start": 1.25, "end": 1.8, "speaker": "speaker_1" },
+    { "word": "chào", "start": 1.8, "end": 2.5, "speaker": "speaker_1" }
+  ]
+}
+```
+
+Timestamps tính bằng giây trên **file nguồn**, đã cộng chunk offset và MP4 audio
+offset. Seek nguồn dùng trực tiếp `start`; seek normalized WAV trừ
+`source_audio_start_sec`. SRT cũng theo timeline nguồn.
+
+Whisper cung cấp từ/timing; segment cuối được nhóm lại theo speaker, khoảng nghỉ
+và độ dài (~20 giây), không giả danh segmentation gốc của Whisper. Diarization
+gọi trên toàn audio MP3 nén để giữ speaker ID nhất quán giữa chunk ASR.
+Vùng mơ hồ/chồng tiếng dùng `unknown`. Speaker không phải danh tính xác thực.
+PATCH chỉ đổi tên hiển thị, không sửa timing hoặc nhãn tự động.
+
+Mọi export dùng transcript hiện tại sau sửa tên. Excel có Transcript/Words/Metadata;
+PDF render từ cùng Markdown do service tạo. Đây là bản chép lời, chưa phải biên bản LLM.
+
+## Retention và xóa
+
+- `expires_at = created_at + retention_days × 24 giờ` UTC, không tự gia hạn.
+- Quyết định mới: xóa **cả transcript/checkpoint** cùng nguồn/WAV/chunk; không xóa
+  meeting/biên bản của App/LLM. App sở hữu thông báo gần hạn.
+- Hết hạn trả 410 ngay cho đọc/xử lý, dù chưa cleanup; sau khi xóa DB trả 404.
+- Cleanup chạy startup và mỗi tick (~1 giây), retry nếu IO/DB lỗi.
+- DELETE tombstone trước để cấm đọc, hủy/chờ job đang chạy rồi xóa file và DB row
+  (cascade jobs). Nếu IO lỗi, không trả thành công; tombstone để cleanup thử lại.
+- Restart dọn incoming và thư mục không có asset DB; xử lý lại derived files,
+  tái dùng checkpoint đã persist. Service chỉ chạy một instance cho một database/storage.
+- Bản client đã download nằm ngoài khả năng cleanup của server.
+
+## Lỗi
+
+Lỗi nghiệp vụ: `{ "error": { "code": "..." } }`. Auth/parser/framework có thể
+dùng envelope NestJS. Lỗi worker nằm trong `job.error`, không đổi HTTP response
+202 đã trả. Không biến lỗi provider thành kết quả thành công giả.
+
+| HTTP | Code tiêu biểu                                                                                                                                                                                       |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 400  | FILE_REQUIRED, INVALID_RETENTION_DAYS, INVALID_SPEAKER_NAME, INVALID_EXPORT_FORMAT, INVALID_MEDIA_VARIANT, INVALID_AUDIO_PATH, EMPTY_AUDIO, lỗi multipart                                            |
+| 401  | Thiếu/sai service key                                                                                                                                                                                |
+| 404  | AUDIO_NOT_FOUND, JOB_NOT_FOUND, SPEAKER_NOT_FOUND, MEDIA_NOT_FOUND                                                                                                                                   |
+| 409  | TRANSCRIPT_NOT_READY, MEDIA_NOT_READY, JOB_RETRY_LIMIT, JOB_CONFIGURATION_CHANGED                                                                                                                    |
+| 410  | AUDIO_EXPIRED                                                                                                                                                                                        |
+| 413  | AUDIO_TOO_LARGE                                                                                                                                                                                      |
+| 415  | UNSUPPORTED_AUDIO_FORMAT                                                                                                                                                                             |
+| 416  | Range không hợp lệ                                                                                                                                                                                   |
+| 422  | INVALID_AUDIO, AUDIO_TOO_LONG, PROVIDER_FILE_TOO_LARGE                                                                                                                                               |
+| 429  | UPLOAD_BUSY                                                                                                                                                                                          |
+| 502  | PROVIDER_AUTH_FAILED, PROVIDER_REQUEST_REJECTED, PROVIDER_INVALID_RESPONSE, PROVIDER_INVALID_TRANSCRIPT, PROVIDER_INVALID_TIMESTAMPS, PROVIDER_WORD_TIMESTAMPS_MISSING, PROVIDER_INVALID_DIARIZATION |
+| 503  | OPENAI_KEY_MISSING, PROVIDER_QUOTA_EXHAUSTED, PROVIDER_UNAVAILABLE, AUDIO_TOOL_UNAVAILABLE, AUDIO_INSPECTION_TIMEOUT, AUDIO_PROCESSING_TIMEOUT, AUDIO_PROCESSING_FAILED, PDF_FONT_UNAVAILABLE        |
+
+Xem [README service](../services/audio/README.md) về cấu hình, giới hạn chất lượng,
+model/provider lifecycle, chạy Docker và kiểm thử thực tế.

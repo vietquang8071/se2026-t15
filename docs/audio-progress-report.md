@@ -1,6 +1,20 @@
 # Báo cáo tiến độ audio — 25/10/2026
 
-## Hiện tại repo đang làm gì?
+## Cập nhật: service audio độc lập
+
+Audio đã chuyển sang `services/audio`, port 3002, có database/storage/API key riêng.
+Đã triển khai upload, job/checkpoint, chuẩn hóa/chunking, OpenAI Whisper + diarization,
+transcript/speaker, playback, xóa/expiry (cả transcript) và export JSON/TXT/SRT/MD/XLSX/PDF.
+App/LLM chưa tích hợp. Chỉ làm việc trên `son_branch`.
+
+- Setup/giới hạn: [README audio](../services/audio/README.md).
+- Endpoint và schema: [Audio API](audio-service-api.md).
+- Kiểm thử và chất lượng thật: [Audio validation](audio-validation.md).
+
+Các mục còn lại dưới đây giữ lại **snapshot trước triển khai service**, tại
+`aac19dd`; đường dẫn/lệnh và danh sách chưa triển khai trong snapshot là lịch sử.
+
+## Snapshot trước triển khai: repo đang làm gì?
 
 Meeting Minutes Assistant hướng tới chuyển file họp thành transcript có timestamp,
 nhãn người nói và biên bản gồm sáu module nghiệp vụ. Repo hiện ở giai đoạn dựng

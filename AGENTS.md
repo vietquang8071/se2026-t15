@@ -7,6 +7,9 @@ This repository contains the MVP workspace for **Meeting Minutes Assistant**, wh
 - `apps/web/`: Next.js App Router frontend.
 - `apps/api/`: NestJS API.
 - `packages/database/`: Prisma schema and shared PostgreSQL client.
+- `services/audio/`: independent audio API, worker, Prisma schema and exports;
+  runs on port 3002 with its own database, storage and service API key. Keep
+  audio endpoints out of `apps/api`; App integrates by HTTP in a later task.
 - `docker-compose.yml`: local PostgreSQL service.
 - `docs/`: product scope, output schemas, and feature breakdown.
 

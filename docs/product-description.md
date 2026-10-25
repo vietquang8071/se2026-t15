@@ -56,11 +56,11 @@ By leveraging speech-to-text (OpenAI Whisper API), speaker diarization/labeling,
 
 ### 2.2 Audio service boundary and retention
 
-The audio component is built as an independently testable API before App/LLM integration. It owns upload, validation, storage, MP4 audio extraction and future audio processing. The App later links `audio_id` to meeting metadata; the LLM consumes transcript output. The following full pipeline describes the integration target, not features already implemented.
+The audio component runs as an independent API in `services/audio` (port 3002), with its own database and storage. It owns upload, validation, normalization/chunking, OpenAI ASR/diarization, transcript exports and cleanup. The App later links `audio_id` to meeting metadata; the LLM consumes transcript output. The following full pipeline describes the integration target, not features already implemented.
 
-Media retention is **30 or 60 days**, selected explicitly using `retention_days`; the future storage API exposes `created_at` and `expires_at` in UTC. Source and derived audio share the same expiry. Audio-service cleanup will remove expired media; the **App** schedules user notifications before expiry. Reads/reprocessing do not extend retention. Transcript/minutes retention must be agreed separately with the App; audio expiry must not silently delete meetings or LLM artifacts.
+Media retention is **30 or 60 days**, selected explicitly using `retention_days`; the storage API exposes `created_at` and `expires_at` in UTC. Source and derived audio share the same expiry. Audio-service cleanup removes expired media and transcripts/checkpoints; the **App** schedules user notifications before expiry. Reads/reprocessing do not extend retention. The user explicitly chose to delete transcripts with media. Audio expiry does not delete App meetings or LLM artifacts.
 
-Currently implemented: local file inspection and MP4 extraction helpers/tests. HTTP upload, persistent retention/cleanup and notifications are not yet implemented. See [Audio service API plan](audio-service-api.md).
+Implemented in the independent service: upload, persistent jobs/checkpoints, normalization/chunking, OpenAI provider integration, transcript/speaker output, playback, JSON/TXT/SRT/Markdown/Excel/PDF exports and cleanup. App notifications and App/LLM integration remain separate. See [Audio service API](audio-service-api.md) and [validation evidence](audio-validation.md); implemented behavior is distinct from measured model quality.
 
 ### 2.3 Out-of-Scope (Post-MVP Considerations)
 
@@ -279,7 +279,7 @@ To avoid ambiguity, ensure consistent extraction, and provide high utility, the 
 
 1. **OpenAI Whisper API:**
    - Uses Whisper (`/v1/audio/transcriptions` with `verbose_json`) for high-fidelity speech-to-text and segment-level timestamps.
-   - _Diarization:_ Pair Whisper timestamps with a separately selected external diarization service. Whisper transcription alone is not speaker labeling; do not infer verified identities from LLM text.
+   - _Diarization:_ Pair Whisper timestamps with OpenAI `gpt-4o-transcribe-diarize` through a separate full-recording request. Whisper transcription alone is not speaker labeling; do not infer verified identities from LLM text.
 2. **Temporal Resolution Engine:**
    - Prompts provide the current meeting date (`anchor_date`) to the LLM.
    - The LLM applies temporal parsing rules (ISO 8601 date resolution) for Vietnamese and English expressions (e.g., _"thứ 6 này"_, _"tuần sau"_, _"cuối tháng"_, _"next Tuesday"_).

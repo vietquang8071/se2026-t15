@@ -10,7 +10,7 @@
 
 ## 1. Cách dùng breakdown
 
-- Đây là **kế hoạch triển khai**; danh sách task không phải bằng chứng tính năng đã được triển khai. Tại lần rà soát 25/10/2026, repo đã có bộ khung Next.js/NestJS/Prisma và helper kiểm tra/tách MP4 audio; HTTP upload, ASR và retention tự động chưa được triển khai.
+- Đây là **kế hoạch triển khai**; danh sách task không phải bằng chứng tính năng đã được triển khai. Tại lần rà soát 25/10/2026, repo có bộ khung App và service audio độc lập tại `services/audio`: upload, normalization/chunk, job/checkpoint, OpenAI ASR/diarization, playback/export và cleanup. Kết quả thực tế và giới hạn tại [Audio validation](audio-validation.md); chưa nối App/LLM.
 - Có **12 phase, 72 task gợi ý**. Phase thể hiện thứ tự phụ thuộc, **không mặc định một phase bằng một tuần**. Nhóm chốt deadline và năng lực trước khi gán lịch.
 - Mỗi task hướng đến **một thay đổi có thể review và kiểm tra**, thường tương ứng một commit logic. Có thể gộp task nhỏ hoặc chia task lớn; không tạo commit chỉ để đủ số lượng.
 - Mỗi phase có 2 nhóm việc, đầu vào và đầu ra cụ thể. Kiểm thử liên quan đi cùng chức năng; task test riêng dành cho kịch bản tích hợp hoặc lỗi phức tạp.
@@ -63,7 +63,7 @@ Chi tiết request/response, validation và mã lỗi nằm trong [Meeting API C
 - Sơn phát triển upload/preprocessing/audio API độc lập; Việt Quang làm LLM; App nối audio_id với meeting và làm thông báo gần hạn. Chưa nối các thành phần ngay.
 - Metadata meeting vẫn thuộc App: title và anchor_date bắt buộc (YYYY-MM-DD), participants là danh sách tên có thể bỏ trống. Quyết định upload độc lập không thay đổi contract metadata đã chốt trước đó.
 - ASR tiếp tục dùng Whisper qua dịch vụ ngoài; không thêm model Whisper local hoặc yêu cầu GPU local. Provider diarization bên ngoài cần chốt riêng khi tới P06.
-- Chọn retention_days **30 hoặc 60** khi upload; audio API sẽ trả expires_at UTC. Bản gốc và audio dẫn xuất cùng hạn, App quyết định thời điểm/cách thông báo. Chưa có storage scheduler/notification trong code hiện tại.
+- Chọn retention_days **30 hoặc 60** khi upload; audio API trả expires_at UTC. Bản gốc và audio dẫn xuất cùng hạn, App quyết định thời điểm/cách thông báo. Service có cleanup media và transcript; notification vẫn thuộc App.
 - Kế hoạch endpoint độc lập và ranh giới trách nhiệm: [Audio service API plan](audio-service-api.md). Tài liệu này giữ các phase App/LLM làm ngữ cảnh tích hợp sau; hiện ưu tiên P02/P04 thuộc audio.
 
 ## 3. Ghi chú triển khai tối thiểu
@@ -123,7 +123,7 @@ Luồng chính: **Meeting + audio → kiểm tra/chia audio → Whisper transcri
 | P02-05 | FE      | Chọn/kéo thả file, hiển thị metadata và lỗi upload                                                                                                        | `feat(audio): add meeting audio uploader`             |
 | P02-06 | Audio   | Test audio API độc lập: upload → đọc metadata; file lỗi, MP4 không tiếng, ID và retention không hợp lệ. App test meeting khi tích hợp sau                 | `test(audio): cover independent media upload`         |
 
-**Hoàn thành phần audio P02 khi:** audio API upload/đọc metadata độc lập chạy được cho cả năm định dạng; file hỏng bị từ chối, retention metadata lưu đúng và path an toàn. Helper hiện tại chưa đáp ứng toàn bộ checkpoint API. Meeting/form/reload thuộc App và kiểm tra sau khi tích hợp.
+**Hoàn thành phần audio P02 khi:** audio API upload/đọc metadata độc lập chạy được cho cả năm định dạng; file hỏng bị từ chối, retention metadata lưu đúng và path an toàn. API độc lập đã có; xem kiểm thử tại Audio validation. Meeting/form/reload thuộc App và kiểm tra sau khi tích hợp.
 
 ### P03 — Luồng AI đầu tiên chạy thật
 
@@ -355,6 +355,6 @@ Squash merge có thể gộp nhiều commit thành một commit trên `develop`;
 
 Trước mỗi đợt làm việc: chọn phase/task sẵn sàng, gán owner và hạn dự kiến, tạo Issues cần thiết. Cuối đợt: ghi task đã xong, link commit/PR, kết quả kiểm tra và blocker; chọn đầu ra tiếp theo. Không đánh dấu task đã xong chỉ vì đã push file hoặc có scaffold.
 
-**Việc tiếp theo của audio:** đóng API upload/storage theo audio_id và retention_days 30/60, sau đó job chuẩn hóa/tách MP4, chunking, Whisper external và diarization external. Giữ App/LLM tách biệt tới khi audio API có contract và tests đủ để tích hợp.
+**Việc tiếp theo của audio:** review kết quả/giới hạn tại [Audio validation](audio-validation.md), bàn giao HTTP contract từ service độc lập `services/audio` cho App/LLM. Không đánh dấu milestone M1/M3 toàn hệ thống hoàn thành khi chưa tích hợp App/LLM và kiểm tra seek/UI thật.
 
 **App khi tích hợp:** dùng contract create/detail đã chốt để làm P02-01 sau khi xác minh setup và các phần P01 còn thiếu. Song song hoàn tất deadline/nhân lực, khả năng sử dụng Whisper/diarization và bộ audio kiểm thử của P00. Giữ mục tiêu P03 chạy thật sớm; chưa mở rộng sang list/update/delete meeting, PDF hoặc audit.
