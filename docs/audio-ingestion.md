@@ -10,16 +10,16 @@ Phần audio của P02 cung cấp `inspectAudio` cho App gọi sau khi lưu file
 
 ## 2. Quy tắc đã chốt
 
-| Nội dung | Quy tắc |
-|---|---|
-| Định dạng | WAV, MP3, M4A, WebM; kiểm tra extension và container thực, không tin filename/MIME riêng lẻ |
-| Dung lượng | Tối đa **100 MB = 100.000.000 bytes**, tính từ file thật; file rỗng bị từ chối |
-| Thời lượng | Lớn hơn 0, tối đa **3.600 giây**; từ chối file không xác định được duration |
-| Nội dung | Một audio stream, không có video stream; đọc được codec/sample rate/channels và giải mã được toàn bộ audio |
-| Nơi lưu | Local trên máy chạy API; đường dẫn nằm trong thư mục upload do App cấu hình |
-| File/meeting | Một file, chưa thay thế; App kiểm tra/chặn upload lần hai, kể cả request đồng thời |
-| Luồng | Tạo meeting → upload ở trang chi tiết; upload lỗi giữ meeting và cho thử lại |
-| Sau reload | App đọc metadata từ database; không phụ thuộc state của form |
+| Nội dung     | Quy tắc                                                                                                    |
+| ------------ | ---------------------------------------------------------------------------------------------------------- |
+| Định dạng    | WAV, MP3, M4A, WebM; kiểm tra extension và container thực, không tin filename/MIME riêng lẻ                |
+| Dung lượng   | Tối đa **100 MB = 100.000.000 bytes**, tính từ file thật; file rỗng bị từ chối                             |
+| Thời lượng   | Lớn hơn 0, tối đa **3.600 giây**; từ chối file không xác định được duration                                |
+| Nội dung     | Một audio stream, không có video stream; đọc được codec/sample rate/channels và giải mã được toàn bộ audio |
+| Nơi lưu      | Local trên máy chạy API; đường dẫn nằm trong thư mục upload do App cấu hình                                |
+| File/meeting | Một file, chưa thay thế; App kiểm tra/chặn upload lần hai, kể cả request đồng thời                         |
+| Luồng        | Tạo meeting → upload ở trang chi tiết; upload lỗi giữ meeting và cho thử lại                               |
+| Sau reload   | App đọc metadata từ database; không phụ thuộc state của form                                               |
 
 MIME thường gặp: WAV `audio/wav`, `audio/x-wav`, `audio/wave`, `audio/vnd.wave`; MP3 `audio/mpeg`, `audio/mp3`; M4A `audio/mp4`, `audio/x-m4a`, `audio/m4a`; WebM `audio/webm`. MIME thiếu hoặc `application/octet-stream` có thể được chấp nhận **sau kiểm tra nội dung**. MIME khai báo cụ thể nhưng không khớp extension/container bị từ chối. Không nhận file video có phần âm thanh chỉ bằng cách đổi đuôi.
 
@@ -27,14 +27,14 @@ Với M4A, chấp nhận container MP4-family có audio AAC hoặc ALAC; WebM d�
 
 ## 3. Giao diện bàn giao cho App
 
-Hàm `inspectAudio(input, uploadDirectory)` nhận:
+Hàm [`inspectAudio(input, uploadDirectory)`](../apps/api/src/audio/audio-inspection.ts) nhận:
 
-| Tham số | Ý nghĩa |
-|---|---|
-| `input.filePath` | File tạm local đã lưu, tên do server tạo; không truyền URL hoặc đường dẫn lấy trực tiếp từ client |
-| `input.originalName` | Tên gốc từ upload, chỉ dùng xác định extension |
-| `input.mimeType` | MIME client khai báo, có thể bỏ qua; dùng như thông tin đối chiếu |
-| `uploadDirectory` | Thư mục local được phép đọc, do server cấu hình |
+| Tham số              | Ý nghĩa                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------- |
+| `input.filePath`     | File tạm local đã lưu, tên do server tạo; không truyền URL hoặc đường dẫn lấy trực tiếp từ client |
+| `input.originalName` | Tên gốc từ upload, chỉ dùng xác định extension                                                    |
+| `input.mimeType`     | MIME client khai báo, có thể bỏ qua; dùng như thông tin đối chiếu                                 |
+| `uploadDirectory`    | Thư mục local được phép đọc, do server cấu hình                                                   |
 
 Kết quả dự kiến:
 
@@ -52,16 +52,18 @@ Kết quả dự kiến:
 
 `mime_type` là MIME chuẩn của format đã xác minh. Thời lượng tính bằng giây, không làm tròn thành phút. Không trả absolute path, không xóa/chuyển đổi file của caller và không đưa filename riêng tư vào lỗi trả về.
 
-| Mã lỗi | HTTP gợi ý cho App | Ý nghĩa |
-|---|---|---|
-| `INVALID_AUDIO_PATH` | 400 | File thiếu, không phải file thường hoặc nằm ngoài thư mục upload |
-| `EMPTY_AUDIO` | 400 | File không có dữ liệu |
-| `AUDIO_TOO_LARGE` | 413 | Vượt 100 MB |
-| `UNSUPPORTED_AUDIO_FORMAT` | 415 | Extension, MIME, container hoặc codec không phù hợp |
-| `INVALID_AUDIO` | 422 | Không đọc/giải mã được audio, metadata sai, có video hoặc nhiều audio stream |
-| `AUDIO_TOO_LONG` | 422 | Vượt 60 phút |
-| `AUDIO_INSPECTION_TIMEOUT` | 503 | Công cụ xử lý vượt thời gian cho phép |
-| `AUDIO_TOOL_UNAVAILABLE` | 503 | Chưa cài FFprobe/FFmpeg hoặc cấu hình công cụ lỗi |
+FFprobe có timeout mặc định 10 giây; bước giải mã FFmpeg là 60 giây. Có thể cấu hình qua tham số thứ ba `AudioInspectionOptions` (`probeTimeoutMs`, `decodeTimeoutMs`, `ffprobePath`, `ffmpegPath`), chỉ lấy cấu hình từ server. Inspector không phải NestJS controller/provider nên App có thể import hàm trực tiếp, chưa cần thay `AppModule`.
+
+| Mã lỗi                     | HTTP gợi ý cho App | Ý nghĩa                                                                      |
+| -------------------------- | ------------------ | ---------------------------------------------------------------------------- |
+| `INVALID_AUDIO_PATH`       | 400                | File thiếu, không phải file thường hoặc nằm ngoài thư mục upload             |
+| `EMPTY_AUDIO`              | 400                | File không có dữ liệu                                                        |
+| `AUDIO_TOO_LARGE`          | 413                | Vượt 100 MB                                                                  |
+| `UNSUPPORTED_AUDIO_FORMAT` | 415                | Extension, MIME, container hoặc codec không phù hợp                          |
+| `INVALID_AUDIO`            | 422                | Không đọc/giải mã được audio, metadata sai, có video hoặc nhiều audio stream |
+| `AUDIO_TOO_LONG`           | 422                | Vượt 60 phút                                                                 |
+| `AUDIO_INSPECTION_TIMEOUT` | 503                | Công cụ xử lý vượt thời gian cho phép                                        |
+| `AUDIO_TOOL_UNAVAILABLE`   | 503                | Chưa cài FFprobe/FFmpeg hoặc cấu hình công cụ lỗi                            |
 
 Hàm ném `AudioInspectionError` có `code`, `statusCode` và `message`; App ánh xạ sang envelope lỗi của endpoint upload khi thiết kế API. Các HTTP status trên chưa xác nhận endpoint đã tồn tại.
 

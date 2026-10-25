@@ -14,6 +14,10 @@ Turborepo monorepo for the Meeting Minutes Assistant MVP.
 
 Node.js 22.18 or newer (24 LTS recommended), pnpm 11, and Docker Compose.
 
+Audio inspection additionally needs `ffmpeg` and `ffprobe` available on `PATH`.
+The audio helper and App integration responsibilities are documented in
+[Audio ingestion](docs/audio-ingestion.md).
+
 ## Run locally
 
 ```sh
@@ -34,6 +38,7 @@ pnpm dev            # Start both apps
 pnpm build          # Build all workspace packages
 pnpm lint           # Lint workspace packages
 pnpm typecheck      # Type-check workspace packages
+pnpm --filter @meeting-minutes/api test:audio # Check audio inspection
 pnpm db:generate    # Regenerate Prisma Client
 pnpm db:migrate     # Apply/create a development migration
 pnpm db:studio      # Open Prisma Studio
