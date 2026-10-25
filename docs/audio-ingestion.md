@@ -83,3 +83,18 @@ Hàm ném `AudioInspectionError` có `code`, `statusCode` và `message`; App án
 - Path ngoài upload root, symlink trỏ ra ngoài và tên chứa ký tự shell không được làm chạy lệnh ngoài ý muốn.
 - Thiếu công cụ hoặc timeout phải báo lỗi rõ, không gọi là upload thành công.
 - Đây là kiểm tra audio ingestion; không dùng kết quả này để kết luận chất lượng ASR/diarization.
+
+### Chạy bộ test
+
+Yêu cầu Node/pnpm theo README, `ffmpeg` và `ffprobe` trên PATH. Sau `pnpm install`:
+
+```sh
+pnpm --filter @meeting-minutes/api test:audio
+pnpm --filter @meeting-minutes/api lint
+```
+
+Tests dùng Node test runner có sẵn, không thêm thư viện test. Script compile riêng module audio nên không cần database, Prisma Client đã generate hay API key để chạy test audio.
+
+Fixture được tạo bằng sine tone/ảnh màu từ FFmpeg trong thư mục tạm và xóa sau test; không commit binary/audio người thật. WAV ở ranh giới 100 MB/60 phút dùng sparse file chứa silence, không cần file ghi âm dài. Case timeout/malformed probe dùng tool giả cục bộ; bốn định dạng hợp lệ, video, nhiều stream, container đổi đuôi và AAC bị hỏng dùng FFmpeg/FFprobe thật.
+
+Lần xác minh ngày 25/10/2026 trên FFmpeg/FFprobe 6.1.1: **21 test pass**, lint API và build API/database pass. Chưa chạy luồng HTTP upload/database/storage của App.
