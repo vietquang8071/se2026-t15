@@ -1,0 +1,27 @@
+{
+  "name": "meeting-minutes-assistant",
+  "private": true,
+  "packageManager": "pnpm@11.1.1",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "db:generate": "pnpm --filter @meeting-minutes/database db:generate",
+    "db:migrate": "pnpm --filter @meeting-minutes/database db:migrate",
+    "db:studio": "pnpm --filter @meeting-minutes/database db:studio",
+    "format": "prettier --write \"{apps,packages}/**/*.{ts,tsx,mjs,css,json,md}\" \"{README,AGENTS}.md\" package.json turbo.json pnpm-workspace.yaml",
+    "format:check": "prettier --check \"{apps,packages}/**/*.{ts,tsx,mjs,css,json,md}\" \"{README,AGENTS}.md\" package.json turbo.json pnpm-workspace.yaml"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^11.0.0",
+    "eslint": "^9.39.5",
+    "prettier": "^3.9.10",
+    "turbo": "^2.11.10",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.0"
+  }
+}
