@@ -39,8 +39,9 @@ There is no shared test suite or coverage threshold yet. When adding product beh
 
 At Son's explicit request, all future work for Son in this repository MUST use
 the single persistent branch `son_branch`. Do not create new feature/docs/fix
-branches for this work. Open pull requests from `son_branch` into `main`, and
-keep `son_branch` after merging. This overrides the general branch workflow in
+branches for this work. Commit and push to `son_branch`. Do not create pull
+requests unless Son explicitly asks; if requested, target `main` and retain
+`son_branch` after merging. This overrides the general branch workflow in
 `CONTRIBUTING.md` for Son's work only. Do not modify other contributors' branches.
 
 The short Git history uses messages such as `add: document about product description and feature overview` and `update README`; no strict convention is established. Write concise, descriptive commit subjects and keep changes focused.

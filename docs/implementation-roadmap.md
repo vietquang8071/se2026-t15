@@ -287,8 +287,8 @@ flowchart LR
 
 ## 6. Issue → Branch → Commit → PR
 
-**Quy ước riêng của Sơn (đã chốt):** chỉ làm trên `son_branch`, mở PR từ
-`son_branch` vào `main`. Giữ nhánh sau khi merge; không tạo nhánh feature/docs
+**Quy ước riêng của Sơn (đã chốt):** chỉ làm và commit/push trên `son_branch`;
+không tự tạo PR. Chỉ khi Sơn yêu cầu mới mở PR vào `main`, giữ nhánh sau merge; không tạo nhánh feature/docs
 mới. Workflow bên dưới là quy trình chung của nhóm, không áp dụng cho nhánh Sơn.
 
 Workflow thông thường theo `CONTRIBUTING.md`: tạo branch từ `develop`, PR về `develop`, reviewer khác approve và Squash and Merge; release dùng PR `develop → main`. Không push trực tiếp lên `main`/`develop`.
