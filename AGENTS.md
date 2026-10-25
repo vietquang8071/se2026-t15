@@ -32,6 +32,14 @@ There is no shared test suite or coverage threshold yet. When adding product beh
 
 ## Commit & Pull Request Guidelines
 
+### Son's fixed branch workflow
+
+At Son's explicit request, all future work for Son in this repository MUST use
+the single persistent branch `son_branch`. Do not create new feature/docs/fix
+branches for this work. Open pull requests from `son_branch` into `main`, and
+keep `son_branch` after merging. This overrides the general branch workflow in
+`CONTRIBUTING.md` for Son's work only. Do not modify other contributors' branches.
+
 The short Git history uses messages such as `add: document about product description and feature overview` and `update README`; no strict convention is established. Write concise, descriptive commit subjects and keep changes focused.
 
 In pull requests, explain what changed and why, reference affected feature cards or issues when available, and state validation performed. Include screenshots when rendered layout changes need visual review.

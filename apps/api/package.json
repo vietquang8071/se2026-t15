@@ -7,8 +7,9 @@
     "dev": "dotenv -e ../../.env -- nest start --watch",
     "build": "nest build",
     "start": "dotenv -e ../../.env -- node dist/main.js",
-    "lint": "eslint src",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "lint": "eslint src test",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test:audio": "tsc -p tsconfig.audio-test.json && node --test test/audio/*.test.mjs"
   },
   "dependencies": {
     "@meeting-minutes/database": "workspace:*",

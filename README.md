@@ -2,6 +2,17 @@
 
 Turborepo monorepo for the Meeting Minutes Assistant MVP.
 
+## Current input scope
+
+Input is **file upload only**: WAV, MP3, M4A, WebM and MP4 video, up to
+100 MB / 60 minutes. There is no in-browser recording feature. MP4 audio can be
+extracted to a separate WAV while retaining the original file.
+
+The audio component is developed and tested independently before App/LLM integration.
+Whisper will use an external service. Media retention is planned for 30 or 60 days;
+the App owns expiry notifications. See [Audio service API plan](docs/audio-service-api.md)
+for responsibilities and implementation status.
+
 ## Workspace
 
 - `apps/web`: Next.js App Router frontend.
@@ -13,6 +24,10 @@ Turborepo monorepo for the Meeting Minutes Assistant MVP.
 ## Requirements
 
 Node.js 22.18 or newer (24 LTS recommended), pnpm 11, and Docker Compose.
+
+Audio inspection additionally needs `ffmpeg` and `ffprobe` available on `PATH`.
+The audio helper and App integration responsibilities are documented in
+[Audio ingestion](docs/audio-ingestion.md).
 
 ## Run locally
 
@@ -34,6 +49,7 @@ pnpm dev            # Start both apps
 pnpm build          # Build all workspace packages
 pnpm lint           # Lint workspace packages
 pnpm typecheck      # Type-check workspace packages
+pnpm --filter @meeting-minutes/api test:audio # Check audio inspection
 pnpm db:generate    # Regenerate Prisma Client
 pnpm db:migrate     # Apply/create a development migration
 pnpm db:studio      # Open Prisma Studio
