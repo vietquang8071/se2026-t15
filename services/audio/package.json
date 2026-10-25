@@ -1,0 +1,42 @@
+{
+  "name": "@meeting-minutes/audio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --env-file=../../.env node_modules/@nestjs/cli/bin/nest.js start --watch",
+    "build": "pnpm db:generate && nest build",
+    "start": "node --env-file=../../.env dist/main.js",
+    "lint": "eslint src test --ignore-pattern 'src/generated/**'",
+    "typecheck": "pnpm db:generate && tsc --noEmit -p tsconfig.json",
+    "test:audio": "pnpm db:generate && tsc -p tsconfig.audio-test.json && node --test test/audio/*.test.mjs",
+    "test:http": "tsc -p tsconfig.json && node --env-file=../../.env --test test/http/*.test.mjs",
+    "db:generate": "prisma generate --config prisma.config.ts",
+    "db:deploy": "prisma migrate deploy --config prisma.config.ts"
+  },
+  "dependencies": {
+    "@nestjs/common": "^12.2.0",
+    "@nestjs/core": "^12.2.0",
+    "@nestjs/platform-express": "^12.2.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "multer": "^2.5.0",
+    "pg": "^8.23.1",
+    "exceljs": "^4.4.0",
+    "pdfkit": "^0.20.2",
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.10.1",
+    "dotenv": "^18.0.9"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^12.0.10",
+    "@nestjs/schematics": "^12.0.10",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.19.2",
+    "typescript": "^6.0.3",
+    "@types/multer": "^2.3.0",
+    "@types/pg": "^8.23.1",
+    "@types/pdfkit": "^0.17.7",
+    "prisma": "^7.10.1"
+  }
+}

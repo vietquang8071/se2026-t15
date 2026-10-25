@@ -7,6 +7,9 @@ This repository contains the MVP workspace for **Meeting Minutes Assistant**, wh
 - `apps/web/`: Next.js App Router frontend.
 - `apps/api/`: NestJS API.
 - `packages/database/`: Prisma schema and shared PostgreSQL client.
+- `services/audio/`: independent audio API, worker, Prisma schema and exports;
+  runs on port 3002 with its own database, storage and service API key. Keep
+  audio endpoints out of `apps/api`; App integrates by HTTP in a later task.
 - `docker-compose.yml`: local PostgreSQL service.
 - `docs/`: product scope, output schemas, and feature breakdown.
 
@@ -31,6 +34,15 @@ Preserve established schema names such as `anchor_date` and `source_timestamp`, 
 There is no shared test suite or coverage threshold yet. When adding product behavior, add tests in the owning app and document its test command. For documentation changes, inspect tables and Mermaid diagrams, check links, and validate JSON examples. Cross-check scope and schemas between both product documents, and verify calendar calculations in temporal-resolution examples.
 
 ## Commit & Pull Request Guidelines
+
+### Son's fixed branch workflow
+
+At Son's explicit request, all future work for Son in this repository MUST use
+the single persistent branch `son_branch`. Do not create new feature/docs/fix
+branches for this work. Commit and push to `son_branch`. Do not create pull
+requests unless Son explicitly asks; if requested, target `main` and retain
+`son_branch` after merging. This overrides the general branch workflow in
+`CONTRIBUTING.md` for Son's work only. Do not modify other contributors' branches.
 
 The short Git history uses messages such as `add: document about product description and feature overview` and `update README`; no strict convention is established. Write concise, descriptive commit subjects and keep changes focused.
 

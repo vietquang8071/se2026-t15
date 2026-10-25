@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="325" viewBox="0 0 700 325"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="#334155"/></marker></defs><rect width="100%" height="100%" fill="white"/>
+<rect x="160" y="10" width="355" height="220" rx="6" fill="#f7fafc" stroke="#64748b" stroke-dasharray="5,3"/>
+<text x="337" y="29" text-anchor="middle" font-family="DejaVu Sans" font-size="12" fill="#17324d">API deployment [Mở rộng từ NestJS]</text>
+<rect x="8" y="50" width="130" height="52" rx="6" fill="#eef5fb" stroke="#64748b" />
+<text x="73.0" y="69" text-anchor="middle" font-family="DejaVu Sans" font-size="12" fill="#17324d">Web [H → M]</text>
+<text x="73.0" y="85" text-anchor="middle" font-family="DejaVu Sans" font-size="12" fill="#17324d">UI + read minutes</text>
+<rect x="180" y="50" width="150" height="52" rx="6" fill="#eef5fb" stroke="#64748b" />
+<text x="255.0" y="69" text-anchor="middle" font-family="DejaVu Sans" font-size="12" fill="#17324d">ImportController [M]</text>
+<text x="255.0" y="85" text-anchor="middle" font-family="DejaVu Sans" font-size="12" fill="#17324d">HTTP + orchestration</text>
+<rect x="350" y="50" width="145" height="52" rx="6" fill="#eef5fb" stroke="#64748b" />
+<text x="422.5" y="69" text-anchor="middle" font-family="DejaVu Sans" font-size="12" fill="#17324d">ImportService [M]</text>
+<text x="422.5" y="85" text-anchor="middle" font-family="DejaVu Sans" font-size="12" fill="#17324d">quyền + import</text>
+<rect x="350" y="145" width="145" height="62" rx="6" fill="#eef5fb" stroke="#64748b" />
+<text x="422.5" y="164" text-anchor="middle" font-family="DejaVu Sans" font-size="12" fill="#17324d">Domain / Ports [M]</text>
+<text x="422.5" y="180" text-anchor="middle" font-family="DejaVu Sans" font-size="12" fill="#17324d">TranscriptInput v1</text>
+<text x="422.5" y="196" text-anchor="middle" font-family="DejaVu Sans" font-size="12" fill="#17324d">TranscriptRepository</text>
+<rect x="180" y="145" width="150" height="62" rx="6" fill="#eef5fb" stroke="#64748b" />
+<text x="255.0" y="164" text-anchor="middle" font-family="DejaVu Sans" font-size="12" fill="#17324d">RepositoryAdapter [M]</text>
+<text x="255.0" y="180" text-anchor="middle" font-family="DejaVu Sans" font-size="12" fill="#17324d">PrismaService [H]</text>
+<text x="255.0" y="196" text-anchor="middle" font-family="DejaVu Sans" font-size="12" fill="#17324d">PostgreSQL access</text>
+<rect x="180" y="275" width="150" height="42" rx="6" fill="#eef5fb" stroke="#64748b" />
+<text x="255.0" y="294" text-anchor="middle" font-family="DejaVu Sans" font-size="12" fill="#17324d">PostgreSQL [H → M]</text>
+<rect x="545" y="50" width="145" height="68" rx="6" fill="#fff2df" stroke="#64748b" />
+<text x="617.5" y="69" text-anchor="middle" font-family="DejaVu Sans" font-size="12" fill="#17324d">Transcript Gateway [M]</text>
+<text x="617.5" y="85" text-anchor="middle" font-family="DejaVu Sans" font-size="12" fill="#17324d">Vendor adapter</text>
+<text x="617.5" y="101" text-anchor="middle" font-family="DejaVu Sans" font-size="12" fill="#17324d">deployment riêng</text>
+<rect x="545" y="165" width="145" height="52" rx="6" fill="#f1f5f9" stroke="#64748b" />
+<text x="617.5" y="184" text-anchor="middle" font-family="DejaVu Sans" font-size="12" fill="#17324d">Contract package [M]</text>
+<text x="617.5" y="200" text-anchor="middle" font-family="DejaVu Sans" font-size="12" fill="#17324d">schema v1</text>
+<polyline points="138,76 180,76" fill="none" stroke="#334155" stroke-width="1.3" />
+<polygon points="180,76 173.0,79.0 173.0,73.0" fill="#334155"/>
+<polyline points="330,76 350,76" fill="none" stroke="#334155" stroke-width="1.3" />
+<polygon points="350,76 343.0,79.0 343.0,73.0" fill="#334155"/>
+<polyline points="422,102 422,145" fill="none" stroke="#334155" stroke-width="1.3" />
+<polygon points="422,145 419.0,138.0 425.0,138.0" fill="#334155"/>
+<polyline points="330,88 340,88 340,127 530,127 530,85 545,85" fill="none" stroke="#334155" stroke-width="1.3" />
+<polygon points="545,85 538.0,88.0 538.0,82.0" fill="#334155"/>
+<text x="460" y="122" text-anchor="middle" font-family="DejaVu Sans" font-size="11.5" fill="#17324d">GatewayClient</text>
+<polyline points="330,175 350,175" fill="none" stroke="#334155" stroke-width="1.3" stroke-dasharray="5,3"/>
+<polygon points="350,175 343.0,178.0 343.0,172.0" fill="#334155"/>
+<text x="341" y="139" text-anchor="middle" font-family="DejaVu Sans" font-size="11.5" fill="#17324d">implements</text>
+<polyline points="255,207 255,275" fill="none" stroke="#334155" stroke-width="1.3" />
+<polygon points="255,275 252.0,268.0 258.0,268.0" fill="#334155"/>
+<polyline points="617,118 617,165" fill="none" stroke="#334155" stroke-width="1.3" />
+<polygon points="617,165 614.0,158.0 620.0,158.0" fill="#334155"/>
+<polyline points="495,182 545,190" fill="none" stroke="#334155" stroke-width="1.3" />
+<polygon points="545,190 537.613944073263,191.8563883880034 538.5618870799032,185.9317445965032" fill="#334155"/>
+<text x="521" y="173" text-anchor="middle" font-family="DejaVu Sans" font-size="11.5" fill="#17324d">types</text>
+<text x="8" y="242" text-anchor="start" font-family="DejaVu Sans" font-size="11" fill="#17324d">[H] hiện hữu; [M] mở rộng cá nhân; H → M: mở rộng từ skeleton.</text>
+<text x="8" y="260" text-anchor="start" font-family="DejaVu Sans" font-size="11" fill="#17324d">Mũi tên: dependency A dùng B; nét đứt “implements” trỏ về port.</text>
+<text x="375" y="294" text-anchor="start" font-family="DejaVu Sans" font-size="11" fill="#17324d">Module logic không tự thành service.</text>
+<text x="375" y="311" text-anchor="start" font-family="DejaVu Sans" font-size="11" fill="#17324d">Gateway không có DB credentials.</text>
+</svg>
