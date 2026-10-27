@@ -16,7 +16,7 @@ services:
   audio:
     build:
       context: ../..
-      dockerfile: services/audio/Dockerfile
+      dockerfile: apps/audio/Dockerfile
     restart: unless-stopped
     env_file: ../../.env
     environment:

@@ -6,7 +6,7 @@
 - **Việt Quang — LLM:** nhận transcript để trích xuất nghiệp vụ ở giai đoạn tích hợp sau.
 - **App:** giao diện/meeting, ánh xạ audio_id vào meeting, thông báo gần hạn lưu trữ; chưa nối App vào audio trong đợt này.
 
-**Đầu vào chỉ là file upload**, không thu âm trực tiếp trong trình duyệt. Helper và tests đã chuyển sang `services/audio`; service này có HTTP upload, media theo audio_id, job/checkpoint, ASR, diarization, export và cleanup. Xem [Audio service API](audio-service-api.md) và [kết quả kiểm tra](audio-validation.md); thông báo thuộc App.
+**Đầu vào chỉ là file upload**, không thu âm trực tiếp trong trình duyệt. Helper và tests đã chuyển sang `apps/audio`; service này có HTTP upload, media theo audio_id, job/checkpoint, ASR, diarization, export và cleanup. Xem [Audio service API](audio-service-api.md) và [kết quả kiểm tra](audio-validation.md); thông báo thuộc App.
 
 ## 2. Quy tắc file
 
@@ -21,13 +21,13 @@
 | Bản MP4 dẫn xuất       | WAV PCM 16-bit, mono, 16 kHz, tên/thư mục do server tạo                                                                                                 |
 | Giới hạn file dẫn xuất | Không áp lại giới hạn upload 100 MB: WAV 60 phút ở cấu hình trên có thể khoảng 115,2 MB; vẫn giới hạn thời lượng và dung lượng đầu ra theo cấu hình này |
 
-MIME chuẩn: WAV `audio/wav`, MP3 `audio/mpeg`, M4A `audio/mp4`, WebM `audio/webm`, MP4 `video/mp4`. Alias được kiểm soát trong [source](../services/audio/src/audio/audio-inspection.ts). MIME thiếu hoặc `application/octet-stream` chỉ được chấp nhận sau xác minh nội dung. Với MP4, chấp nhận thêm MIME `audio/mp4`/`application/mp4`; container MP4 chỉ có audio cũng dùng được. Không nhận WAV/MKV đổi đuôi thành MP4/WebM.
+MIME chuẩn: WAV `audio/wav`, MP3 `audio/mpeg`, M4A `audio/mp4`, WebM `audio/webm`, MP4 `video/mp4`. Alias được kiểm soát trong [source](../apps/audio/src/audio/audio-inspection.ts). MIME thiếu hoặc `application/octet-stream` chỉ được chấp nhận sau xác minh nội dung. Với MP4, chấp nhận thêm MIME `audio/mp4`/`application/mp4`; container MP4 chỉ có audio cũng dùng được. Không nhận WAV/MKV đổi đuôi thành MP4/WebM.
 
 M4A dùng audio AAC/ALAC; MP3 dùng MP3; WebM dùng Opus/Vorbis và phải có EBML DocType WebM. MP4/WAV chấp nhận audio codec mà FFmpeg giải mã được. MP4 chỉ kiểm tra/giải mã phần âm thanh, không cam kết video phát được hoặc được chuyển mã.
 
 ## 3. Hàm kiểm tra file nguồn
 
-[`inspectAudio(input, uploadDirectory, options?)`](../services/audio/src/audio/audio-inspection.ts) nhận file local đã lưu:
+[`inspectAudio(input, uploadDirectory, options?)`](../apps/audio/src/audio/audio-inspection.ts) nhận file local đã lưu:
 
 | Tham số              | Ý nghĩa                                                                  |
 | -------------------- | ------------------------------------------------------------------------ |

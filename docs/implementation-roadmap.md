@@ -10,7 +10,7 @@
 
 ## 1. Cách dùng breakdown
 
-- Đây là **kế hoạch triển khai**; danh sách task không phải bằng chứng tính năng đã được triển khai. Tại lần rà soát 25/10/2026, repo có bộ khung App và service audio độc lập tại `services/audio`: upload, normalization/chunk, job/checkpoint, OpenAI ASR/diarization, playback/export và cleanup. Kết quả thực tế và giới hạn tại [Audio validation](audio-validation.md); chưa nối App/LLM.
+- Đây là **kế hoạch triển khai**; danh sách task không phải bằng chứng tính năng đã được triển khai. Tại lần rà soát 25/10/2026, repo có bộ khung App và service audio độc lập tại `apps/audio`: upload, normalization/chunk, job/checkpoint, OpenAI ASR/diarization, playback/export và cleanup. Kết quả thực tế và giới hạn tại [Audio validation](audio-validation.md); chưa nối App/LLM.
 - Có **12 phase, 72 task gợi ý**. Phase thể hiện thứ tự phụ thuộc, **không mặc định một phase bằng một tuần**. Nhóm chốt deadline và năng lực trước khi gán lịch.
 - Mỗi task hướng đến **một thay đổi có thể review và kiểm tra**, thường tương ứng một commit logic. Có thể gộp task nhỏ hoặc chia task lớn; không tạo commit chỉ để đủ số lượng.
 - Mỗi phase có 2 nhóm việc, đầu vào và đầu ra cụ thể. Kiểm thử liên quan đi cùng chức năng; task test riêng dành cho kịch bản tích hợp hoặc lỗi phức tạp.
@@ -355,6 +355,6 @@ Squash merge có thể gộp nhiều commit thành một commit trên `develop`;
 
 Trước mỗi đợt làm việc: chọn phase/task sẵn sàng, gán owner và hạn dự kiến, tạo Issues cần thiết. Cuối đợt: ghi task đã xong, link commit/PR, kết quả kiểm tra và blocker; chọn đầu ra tiếp theo. Không đánh dấu task đã xong chỉ vì đã push file hoặc có scaffold.
 
-**Việc tiếp theo của audio:** review kết quả/giới hạn tại [Audio validation](audio-validation.md), bàn giao HTTP contract từ service độc lập `services/audio` cho App/LLM. Không đánh dấu milestone M1/M3 toàn hệ thống hoàn thành khi chưa tích hợp App/LLM và kiểm tra seek/UI thật.
+**Việc tiếp theo của audio:** review kết quả/giới hạn tại [Audio validation](audio-validation.md), bàn giao HTTP contract từ service độc lập `apps/audio` cho App/LLM. Không đánh dấu milestone M1/M3 toàn hệ thống hoàn thành khi chưa tích hợp App/LLM và kiểm tra seek/UI thật.
 
 **App khi tích hợp:** dùng contract create/detail đã chốt để làm P02-01 sau khi xác minh setup và các phần P01 còn thiếu. Song song hoàn tất deadline/nhân lực, khả năng sử dụng Whisper/diarization và bộ audio kiểm thử của P00. Giữ mục tiêu P03 chạy thật sớm; chưa mở rộng sang list/update/delete meeting, PDF hoặc audit.

@@ -53,9 +53,9 @@ chưa phải hệ thống worker phân tán.
 Từ root repo:
 
 ```sh
-docker compose --env-file .env -f services/audio/compose.yaml up --build -d
-docker compose --env-file .env -f services/audio/compose.yaml logs -f audio
-docker compose --env-file .env -f services/audio/compose.yaml down
+docker compose --env-file .env -f apps/audio/compose.yaml up --build -d
+docker compose --env-file .env -f apps/audio/compose.yaml logs -f audio
+docker compose --env-file .env -f apps/audio/compose.yaml down
 ```
 
 Compose này chạy **audio + PostgreSQL riêng**, không khởi động App. Có volume

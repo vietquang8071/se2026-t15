@@ -1,6 +1,0 @@
-AI tự review sau khảo sát source — 2026-10-25
-1. Sửa điểm xuất phát: không có transcript use case trong API. app.module.ts chỉ khai báo AppController và PrismaService; schema.prisma chỉ có Meeting. Chọn PrismaService/package database làm module thật, còn importTranscript là phần mở rộng riêng trong scenario/.
-2. Sửa ranh giới triển khai: đề xuất sơ bộ đặt adapter cùng API giảm vận hành, nhưng architecture document §§1.2–2.1 đặt Audio Processing tách biệt và Web Backend điều phối. Với AD-060 tập trung cô lập lỗi/rollback, chọn Transcript Gateway stateless độc lập cho nguồn transcript mới; API vẫn sở hữu DB. Đây là đề xuất bài cá nhân, Compose gốc chưa có các app containers.
-3. Sửa invariant chống trùng: meetingId + externalId chưa phân biệt nhiều nguồn hoặc revision. Contract LLM §2.5 và §3 dùng transcript.revision_id, có retry và revision bất biến. Chọn (meetingId, sourceId, externalId), trong đó adapter tạo externalId từ [document, revision]. Khóa là đề xuất mới, không phải schema đã có. Nội dung thay đổi cùng khóa phải trả 409, muốn sửa dùng revision mới.
-4. Giữ extract function trước khi di chuyển deployment. Không gọi việc chuyển process, thêm HTTP validation, timeout hoặc job lifecycle là refactoring giữ behavior.
-Các bước trên do AI đối chiếu file bằng công cụ; chưa có xác nhận của sinh viên hoặc nhóm.

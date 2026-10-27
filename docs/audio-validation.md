@@ -1,8 +1,24 @@
 # Audio — kết quả kiểm tra 25/10/2026
 
+## Kiểm tra sau khi chuyển vào apps — 27/10/2026
+
+- Audio service được chuyển từ `services/audio` vào `apps/audio`; API, database
+  và storage vẫn độc lập, chưa nối frontend hoặc LLM.
+- Build, lint, typecheck, 40 test audio và 12 test HTTP đều pass. Test HTTP dùng
+  PostgreSQL thật và provider giả; không coi đó là kiểm tra provider thật.
+- Kiểm tra riêng với provider thật trên 60 giây đầu của mẫu VietMed ghép mô tả
+  bên dưới: job hoàn thành trong khoảng 47 giây, 2 provider calls; transcript
+  có 17 segment, 261 word timestamps và không có word timestamp ngoài khoảng
+  audio. Một số từ có speaker `unknown`.
+- Đã tải được JSON, TXT, SRT, Markdown, XLSX và PDF; đọc lại các sheet Excel và
+  trích được chữ từ PDF. Kết quả là transcript, không phải biên bản LLM.
+- Đây là một lần chạy trên một mẫu ghép, không chứng minh độ ổn định hoặc chất
+  lượng tổng quát. Kết quả riêng lưu tại `artifacts/private/audio-move-check-result`,
+  không đưa transcript vào Git.
+
 ## Phạm vi đã triển khai
 
-Service độc lập `services/audio`, port 3002, database `meeting_minutes_audio`,
+Service độc lập `apps/audio`, port 3002, database `meeting_minutes_audio`,
 schema/migration và storage riêng. App API không chứa endpoint audio.
 
 Đã có upload 5 định dạng, kiểm tra metadata/decode, chuẩn hóa/chunking, job có
@@ -51,14 +67,14 @@ split dev, dataset card khai báo MIT; [repo tác giả](https://github.com/ledu
 - Manifest từng clip, gold text/speaker/timeline và toàn bộ kết quả ở
   `artifacts/private`, đã gitignore. Không commit recording/transcript thật.
 
-Script tái tạo: `services/audio/scripts/prepare-vietmed.py` (Python với
-numpy/pyarrow/soundfile). Đánh giá: `services/audio/scripts/evaluate-vietmed.py`.
+Script tái tạo: `apps/audio/scripts/prepare-vietmed.py` (Python với
+numpy/pyarrow/soundfile). Đánh giá: `apps/audio/scripts/evaluate-vietmed.py`.
 Đường dẫn mặc định chạy từ root repo:
 
 ```sh
-python3 services/audio/scripts/prepare-vietmed.py
+python3 apps/audio/scripts/prepare-vietmed.py
 pnpm audio:file artifacts/private/vietmed/conversation-10min.wav artifacts/private/audio-result
-python3 services/audio/scripts/evaluate-vietmed.py
+python3 apps/audio/scripts/evaluate-vietmed.py
 ```
 
 ## Kết quả chất lượng mẫu này

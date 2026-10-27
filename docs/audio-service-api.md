@@ -1,6 +1,6 @@
 # Audio service API — độc lập với App
 
-Implementation: [`services/audio`](../services/audio/README.md), NestJS riêng,
+Implementation: [`apps/audio`](../apps/audio/README.md), NestJS riêng,
 port 3002 mặc định. App API vẫn ở `apps/api`/3001. Audio có Prisma schema/database,
 storage và worker riêng; không phụ thuộc meeting_id hoặc LLM.
 
@@ -138,5 +138,5 @@ dùng envelope NestJS. Lỗi worker nằm trong `job.error`, không đổi HTTP 
 | 502  | PROVIDER_AUTH_FAILED, PROVIDER_REQUEST_REJECTED, PROVIDER_INVALID_RESPONSE, PROVIDER_INVALID_TRANSCRIPT, PROVIDER_INVALID_TIMESTAMPS, PROVIDER_WORD_TIMESTAMPS_MISSING, PROVIDER_INVALID_DIARIZATION |
 | 503  | OPENAI_KEY_MISSING, PROVIDER_QUOTA_EXHAUSTED, PROVIDER_UNAVAILABLE, AUDIO_TOOL_UNAVAILABLE, AUDIO_INSPECTION_TIMEOUT, AUDIO_PROCESSING_TIMEOUT, AUDIO_PROCESSING_FAILED, PDF_FONT_UNAVAILABLE        |
 
-Xem [README service](../services/audio/README.md) về cấu hình, giới hạn chất lượng,
+Xem [README service](../apps/audio/README.md) về cấu hình, giới hạn chất lượng,
 model/provider lifecycle, chạy Docker và kiểm thử thực tế.

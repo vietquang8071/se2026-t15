@@ -7,11 +7,11 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
 COPY packages/database/package.json packages/database/package.json
-COPY services/audio services/audio
+COPY apps/audio apps/audio
 RUN pnpm install --frozen-lockfile --filter @meeting-minutes/audio \
     && pnpm --filter @meeting-minutes/audio build \
-    && mkdir -p /data/audio && chown -R node:node /data /workspace/services/audio
-WORKDIR /workspace/services/audio
+    && mkdir -p /data/audio && chown -R node:node /data /workspace/apps/audio
+WORKDIR /workspace/apps/audio
 ENV AUDIO_HOST=0.0.0.0 AUDIO_PORT=3002 AUDIO_STORAGE_DIR=/data/audio
 USER node
 EXPOSE 3002

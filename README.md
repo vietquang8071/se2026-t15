@@ -8,18 +8,19 @@ Input is **file upload only**: WAV, MP3, M4A, WebM and MP4 video, up to
 100 MB / 60 minutes. There is no in-browser recording feature. MP4 audio can be
 extracted to a separate WAV while retaining the original file.
 
-The independent audio service lives in `services/audio` and runs on port 3002,
+The independent audio service lives in `apps/audio` and runs on port 3002,
 with its own database/storage/API key. It implements upload, durable jobs,
 OpenAI Whisper + diarization, playback, exports (JSON/TXT/SRT/Markdown/Excel/PDF)
 and 30/60-day cleanup of media and transcripts. App/LLM integration is separate.
-See the [audio service setup](services/audio/README.md),
+See the [audio service setup](apps/audio/README.md),
 [API contract](docs/audio-service-api.md) and [validation results](docs/audio-validation.md).
 
 ## Workspace
 
 - `apps/web`: Next.js App Router frontend.
 - `apps/api`: NestJS API with a starter `GET /health` endpoint.
-- `services/audio`: Independent NestJS audio API and worker with its own Prisma schema.
+- `apps/audio`: Independent NestJS audio API and worker with its own Prisma schema.
+- `apps/llm-service`: FastAPI extraction contract and runtime; provider integration is pending.
 - `packages/database`: Prisma schema, PostgreSQL adapter, and shared client factory.
 - `docker-compose.yml`: local PostgreSQL service and persistent volume.
 - `docs/`: product description and feature breakdown.
@@ -65,7 +66,7 @@ To reset the local database, run `docker compose down -v` and then apply migrati
 
 ## Run the independent audio service
 
-See [services/audio/README.md](services/audio/README.md) for database/key setup,
+See [apps/audio/README.md](apps/audio/README.md) for database/key setup,
 Docker Compose, test commands and the file-processing client. App is not required.
 
 ```sh

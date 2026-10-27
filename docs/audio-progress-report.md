@@ -2,12 +2,12 @@
 
 ## Cập nhật: service audio độc lập
 
-Audio đã chuyển sang `services/audio`, port 3002, có database/storage/API key riêng.
+Audio đã chuyển sang `apps/audio`, port 3002, có database/storage/API key riêng.
 Đã triển khai upload, job/checkpoint, chuẩn hóa/chunking, OpenAI Whisper + diarization,
 transcript/speaker, playback, xóa/expiry (cả transcript) và export JSON/TXT/SRT/MD/XLSX/PDF.
 App/LLM chưa tích hợp. Chỉ làm việc trên `son_branch`.
 
-- Setup/giới hạn: [README audio](../services/audio/README.md).
+- Setup/giới hạn: [README audio](../apps/audio/README.md).
 - Endpoint và schema: [Audio API](audio-service-api.md).
 - Kiểm thử và chất lượng thật: [Audio validation](audio-validation.md).
 

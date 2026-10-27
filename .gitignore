@@ -10,4 +10,4 @@ coverage/
 packages/database/generated/
 data/
 artifacts/private/
-services/audio/src/generated/
+apps/audio/src/generated/
