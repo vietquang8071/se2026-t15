@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useState } from "react";
 import Icon from "./icon";
 import MeetingUploadForm from "./meeting-upload-form";
 import type { MeetingDraft } from "./meeting-upload-form";
 import SampleMinutes from "./sample-minutes";
 import type { MeetingContext } from "./sample-minutes";
-
-type Theme = "light" | "dark";
-const themeStorageKey = "meeting-minutes-theme";
+import { Brand, ThemeToggle } from "./ui";
 
 export default function MeetingWorkspace() {
   const [view, setView] = useState<"upload" | "minutes">("upload");
@@ -19,42 +18,6 @@ export default function MeetingWorkspace() {
     file: null,
   });
   const [meeting, setMeeting] = useState<MeetingContext | null>(null);
-
-  useEffect(() => {
-    let savedTheme: string | null = null;
-    try {
-      savedTheme = window.localStorage.getItem(themeStorageKey);
-    } catch {
-      savedTheme = null;
-    }
-
-    const initialTheme: Theme =
-      savedTheme === "light" || savedTheme === "dark"
-        ? savedTheme
-        : window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light";
-
-    document.documentElement.dataset.theme = initialTheme;
-  }, []);
-
-  function toggleTheme() {
-    const hasDarkPreference = window.matchMedia(
-      "(prefers-color-scheme: dark)",
-    ).matches;
-    const currentTheme: Theme =
-      document.documentElement.dataset.theme === "dark" ||
-      (document.documentElement.dataset.theme !== "light" && hasDarkPreference)
-        ? "dark"
-        : "light";
-    const nextTheme: Theme = currentTheme === "dark" ? "light" : "dark";
-    document.documentElement.dataset.theme = nextTheme;
-    try {
-      window.localStorage.setItem(themeStorageKey, nextTheme);
-    } catch {
-      // Keep the theme active for this session when storage is unavailable.
-    }
-  }
 
   function createMinutes(nextDraft: MeetingDraft) {
     setDraft(nextDraft);
@@ -81,15 +44,7 @@ export default function MeetingWorkspace() {
     >
       <aside className="sidebar">
         <div className="sidebar-main">
-          <div className="brand">
-            <span className="brand-mark">
-              <Icon name="document" size={19} />
-            </span>
-            <div>
-              <p className="brand-name">Meeting Minutes</p>
-              <p className="brand-caption">WORKSPACE</p>
-            </div>
-          </div>
+          <Brand />
           <button
             className="new-meeting-button"
             type="button"
@@ -133,6 +88,11 @@ export default function MeetingWorkspace() {
             Tối đa 100 MB mỗi file
           </p>
         </div>
+        <div className="sidebar-account">
+          <p className="sidebar-account-label">Khám phá bản demo</p>
+          <Link href="/sign-in">Đăng nhập</Link>
+          <Link href="/sign-up">Tạo tài khoản</Link>
+        </div>
       </aside>
 
       <div className="main-column">
@@ -145,23 +105,11 @@ export default function MeetingWorkspace() {
             </span>
           </div>
           <div className="topbar-actions">
-            <button
-              className="theme-toggle"
-              type="button"
-              aria-label="Chuyển giao diện sáng hoặc tối"
-              title="Chuyển giao diện sáng hoặc tối"
-              onClick={toggleTheme}
-            >
-              <span className="theme-icon-light">
-                <Icon name="moon" size={17} />
-              </span>
-              <span className="theme-icon-dark">
-                <Icon name="sun" size={17} />
-              </span>
-            </button>
-            <span className="account-avatar" aria-label="Tài khoản mẫu">
-              MM
-            </span>
+            <span className="demo-badge">Bản demo</span>
+            <ThemeToggle />
+            <Link className="header-auth-link" href="/sign-in">
+              Đăng nhập
+            </Link>
           </div>
         </header>
 
@@ -172,7 +120,12 @@ export default function MeetingWorkspace() {
             <>
               <div className="page-heading">
                 <div>
+                  <p className="eyebrow">Không gian làm việc</p>
                   <h1 className="page-title">Tạo biên bản mới</h1>
+                  <p className="page-description">
+                    Bắt đầu từ file audio cuộc họp. Xem cách nội dung được sắp
+                    xếp thành một bộ biên bản rõ ràng.
+                  </p>
                 </div>
                 <span className="step-indicator">
                   <span className="step-dot" /> Bước 1 / 2

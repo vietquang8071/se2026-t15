@@ -30,3 +30,7 @@ Provide both light and dark themes with a visible toggle. Use the system prefere
 - The file is selected locally for the demo interaction only. Sample minutes are fixture data.
 - Keep implementation in `apps/web`; use the existing Next.js App Router, TypeScript, and Tailwind setup. Do not change the NestJS, Prisma, or database packages.
 - Avoid adding dependencies unless the existing stack cannot provide a needed interaction.
+
+## Frontend branch extension — 2026-10-27
+
+The original design above records the first frontend slice. The next frontend branch pass adds a cohesive visual system across the workspace, upload form, sample minutes, and demo authentication pages. Shared field, button, brand, and theme controls keep the screens consistent. The `/sign-in` and `/sign-up` forms validate locally and offer a path into the sample workspace; they do not create accounts, store credentials, or gate access to the workspace. The workspace continues to use local fixture minutes and a locally selected audio file.
