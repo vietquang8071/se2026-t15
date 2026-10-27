@@ -45,6 +45,8 @@ pnpm dev
 
 The web app runs at `http://localhost:3000`; the API runs at `http://localhost:3001` and exposes `GET /health`. The apps load configuration from the root `.env` file; use `API_PORT` to change the API port. Docker Compose starts PostgreSQL only so both apps can use local hot reload.
 
+The frontend currently demonstrates audio selection and sample minutes. Its `/sign-in` and `/sign-up` pages are demo forms without account or session creation. See [the frontend README](apps/web/README.md) for the current behavior.
+
 ## Common commands
 
 ```sh

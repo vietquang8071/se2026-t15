@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Icon from "./icon";
 import { SAMPLE_MINUTES } from "@/lib/sample-minutes";
 
@@ -33,6 +34,31 @@ function DownloadPlaceholder({ section }: { section: string }) {
   );
 }
 
+function MinutesCard({
+  number,
+  title,
+  id,
+  children,
+}: {
+  number: string;
+  title: string;
+  id: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="minutes-card document-card" aria-labelledby={id}>
+      <div className="minutes-card-header">
+        <span className="section-number">{number}</span>
+        <h2 className="minutes-card-title" id={id}>
+          {title}
+        </h2>
+        <DownloadPlaceholder section={title.toLowerCase()} />
+      </div>
+      {children}
+    </section>
+  );
+}
+
 export default function SampleMinutes({
   meeting,
 }: {
@@ -44,6 +70,9 @@ export default function SampleMinutes({
         <div>
           <p className="eyebrow">Biên bản cuộc họp</p>
           <h1 className="page-title">{meeting.title}</h1>
+          <p className="sample-label">
+            Nội dung minh họa từ dữ liệu mẫu, không được tạo từ file bạn chọn.
+          </p>
           <div className="meeting-meta-row">
             <span className="meeting-meta-item">
               <Icon name="calendar" size={14} />
@@ -99,31 +128,19 @@ export default function SampleMinutes({
         </section>
 
         <div className="minutes-documents">
-          <section
-            className="minutes-card document-card"
-            aria-labelledby="minutes-summary-title"
+          <MinutesCard
+            number="01"
+            title="Tóm tắt cuộc họp"
+            id="minutes-summary-title"
           >
-            <div className="minutes-card-header">
-              <span className="section-number">01</span>
-              <h2 className="minutes-card-title" id="minutes-summary-title">
-                Tóm tắt cuộc họp
-              </h2>
-              <DownloadPlaceholder section="tóm tắt cuộc họp" />
-            </div>
             <p className="minutes-copy">{SAMPLE_MINUTES.summary}</p>
-          </section>
+          </MinutesCard>
 
-          <section
-            className="minutes-card document-card"
-            aria-labelledby="minutes-actions-title"
+          <MinutesCard
+            number="02"
+            title="Công việc cần làm"
+            id="minutes-actions-title"
           >
-            <div className="minutes-card-header">
-              <span className="section-number">02</span>
-              <h2 className="minutes-card-title" id="minutes-actions-title">
-                Công việc cần làm
-              </h2>
-              <DownloadPlaceholder section="công việc cần làm" />
-            </div>
             <div className="action-list">
               {SAMPLE_MINUTES.actionItems.map((item) => (
                 <div className="action-row" key={item.task}>
@@ -133,19 +150,13 @@ export default function SampleMinutes({
                 </div>
               ))}
             </div>
-          </section>
+          </MinutesCard>
 
-          <section
-            className="minutes-card document-card"
-            aria-labelledby="minutes-decisions-title"
+          <MinutesCard
+            number="03"
+            title="Quyết định"
+            id="minutes-decisions-title"
           >
-            <div className="minutes-card-header">
-              <span className="section-number">03</span>
-              <h2 className="minutes-card-title" id="minutes-decisions-title">
-                Quyết định
-              </h2>
-              <DownloadPlaceholder section="quyết định" />
-            </div>
             <ul className="minutes-list">
               {SAMPLE_MINUTES.decisions.map((item) => (
                 <li className="decision-item" key={item}>
@@ -156,19 +167,13 @@ export default function SampleMinutes({
                 </li>
               ))}
             </ul>
-          </section>
+          </MinutesCard>
 
-          <section
-            className="minutes-card document-card"
-            aria-labelledby="minutes-issues-title"
+          <MinutesCard
+            number="04"
+            title="Vấn đề còn mở"
+            id="minutes-issues-title"
           >
-            <div className="minutes-card-header">
-              <span className="section-number">04</span>
-              <h2 className="minutes-card-title" id="minutes-issues-title">
-                Vấn đề còn mở
-              </h2>
-              <DownloadPlaceholder section="vấn đề còn mở" />
-            </div>
             <ul className="minutes-list">
               {SAMPLE_MINUTES.openIssues.map((item) => (
                 <li className="minutes-list-item" key={item}>
@@ -176,19 +181,13 @@ export default function SampleMinutes({
                 </li>
               ))}
             </ul>
-          </section>
+          </MinutesCard>
 
-          <section
-            className="minutes-card document-card"
-            aria-labelledby="minutes-followups-title"
+          <MinutesCard
+            number="05"
+            title="Việc cần theo dõi"
+            id="minutes-followups-title"
           >
-            <div className="minutes-card-header">
-              <span className="section-number">05</span>
-              <h2 className="minutes-card-title" id="minutes-followups-title">
-                Việc cần theo dõi
-              </h2>
-              <DownloadPlaceholder section="việc cần theo dõi" />
-            </div>
             <ul className="minutes-list">
               {SAMPLE_MINUTES.followUps.map((item) => (
                 <li className="minutes-list-item" key={item}>
@@ -196,19 +195,13 @@ export default function SampleMinutes({
                 </li>
               ))}
             </ul>
-          </section>
+          </MinutesCard>
 
-          <section
-            className="minutes-card document-card"
-            aria-labelledby="minutes-timeline-title"
+          <MinutesCard
+            number="06"
+            title="Dòng thời gian"
+            id="minutes-timeline-title"
           >
-            <div className="minutes-card-header">
-              <span className="section-number">06</span>
-              <h2 className="minutes-card-title" id="minutes-timeline-title">
-                Dòng thời gian
-              </h2>
-              <DownloadPlaceholder section="dòng thời gian" />
-            </div>
             <ol className="timeline-list">
               {SAMPLE_MINUTES.timeline.map((item) => (
                 <li
@@ -220,7 +213,7 @@ export default function SampleMinutes({
                 </li>
               ))}
             </ol>
-          </section>
+          </MinutesCard>
         </div>
       </div>
     </>

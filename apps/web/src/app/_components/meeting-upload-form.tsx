@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { ChangeEvent, DragEvent, FormEvent } from "react";
 import Icon from "./icon";
+import { Button, TextField } from "./ui";
 
 export const MAX_UPLOAD_SIZE_BYTES = 100 * 1024 * 1024;
 
@@ -143,68 +144,45 @@ export default function MeetingUploadForm({
       </div>
 
       <div className="field-grid">
-        <label className="field field-full">
-          <span className="field-label">
-            Tên cuộc họp<span className="field-required">*</span>
-          </span>
-          <input
-            className="text-input"
-            type="text"
-            placeholder="Ví dụ: Họp kế hoạch sản phẩm tháng 10"
-            value={draft.title}
-            required
-            aria-required="true"
-            aria-invalid={Boolean(fieldErrors.title)}
-            aria-describedby={fieldErrors.title ? "title-error" : undefined}
-            onChange={(event) => {
-              onDraftChange({ ...draft, title: event.target.value });
-              setFieldErrors((current) => ({ ...current, title: undefined }));
-            }}
-          />
-          {fieldErrors.title && (
-            <p id="title-error" className="field-error" role="alert">
-              {fieldErrors.title}
-            </p>
-          )}
-        </label>
+        <TextField
+          id="meeting-title"
+          label="Tên cuộc họp"
+          fullWidth
+          type="text"
+          placeholder="Ví dụ: Họp kế hoạch sản phẩm tháng 10"
+          value={draft.title}
+          required
+          error={fieldErrors.title}
+          onChange={(event) => {
+            onDraftChange({ ...draft, title: event.target.value });
+            setFieldErrors((current) => ({ ...current, title: undefined }));
+          }}
+        />
 
-        <label className="field">
-          <span className="field-label">
-            Ngày họp<span className="field-required">*</span>
-          </span>
-          <input
-            className="text-input"
-            type="date"
-            value={draft.date}
-            required
-            aria-required="true"
-            aria-invalid={Boolean(fieldErrors.date)}
-            aria-describedby={fieldErrors.date ? "date-error" : undefined}
-            onChange={(event) => {
-              onDraftChange({ ...draft, date: event.target.value });
-              setFieldErrors((current) => ({ ...current, date: undefined }));
-            }}
-          />
-          {fieldErrors.date && (
-            <p id="date-error" className="field-error" role="alert">
-              {fieldErrors.date}
-            </p>
-          )}
-        </label>
+        <TextField
+          id="meeting-date"
+          label="Ngày họp"
+          type="date"
+          value={draft.date}
+          required
+          error={fieldErrors.date}
+          onChange={(event) => {
+            onDraftChange({ ...draft, date: event.target.value });
+            setFieldErrors((current) => ({ ...current, date: undefined }));
+          }}
+        />
 
-        <label className="field">
-          <span className="field-label">Người tham gia</span>
-          <input
-            className="text-input"
-            type="text"
-            placeholder="Tên người, cách nhau bằng dấu phẩy"
-            value={draft.participants}
-            onChange={(event) =>
-              onDraftChange({ ...draft, participants: event.target.value })
-            }
-          />
-          <p className="field-hint">Có thể bổ sung hoặc chỉnh sửa sau.</p>
-        </label>
+        <TextField
+          id="meeting-participants"
+          label="Người tham gia"
+          type="text"
+          placeholder="Tên người, cách nhau bằng dấu phẩy"
+          value={draft.participants}
+          hint="Có thể bổ sung hoặc chỉnh sửa sau."
+          onChange={(event) =>
+            onDraftChange({ ...draft, participants: event.target.value })
+          }
+        />
 
         <div className="field field-full">
           <span className="field-label" id="audio-file-label">
@@ -286,9 +264,9 @@ export default function MeetingUploadForm({
           Đây là bản xem trước giao diện. File được chọn chỉ nằm trong trình
           duyệt; nội dung biên bản bên dưới là dữ liệu mẫu.
         </p>
-        <button className="primary-button" type="submit">
+        <Button type="submit">
           Xem biên bản mẫu <Icon name="chevron-right" size={15} />
-        </button>
+        </Button>
       </div>
     </form>
   );
