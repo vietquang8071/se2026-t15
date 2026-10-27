@@ -7,6 +7,9 @@ import type {
   WhisperResult,
 } from "./audio-types.js";
 
+// A short gap can be a missed boundary between two turns of the same speaker.
+const MAX_SAME_SPEAKER_GAP_SECONDS = 0.75;
+
 function validTime(start: unknown, end: unknown, duration: number) {
   return (
     typeof start === "number" &&
@@ -80,12 +83,28 @@ export function buildTranscript(
   diarization: DiarizationResult,
 ): AudioTranscript {
   const labels = new Map<string, string>();
-  for (const turn of [...diarization.segments].sort(
-    (a, b) => a.start - b.start,
-  )) {
+  const turns = [...diarization.segments].sort((a, b) => a.start - b.start);
+  for (const turn of turns) {
     if (!labels.has(turn.speaker))
       labels.set(turn.speaker, `speaker_${labels.size + 1}`);
   }
+  const gaps = turns.slice(1).flatMap((next, index) => {
+    const previous = turns[index];
+    const gap = next.start - previous.end;
+    if (
+      previous.speaker !== next.speaker ||
+      gap <= 0 ||
+      gap > MAX_SAME_SPEAKER_GAP_SECONDS ||
+      turns.some(
+        (turn) =>
+          turn.speaker !== previous.speaker &&
+          turn.start < next.start &&
+          turn.end > previous.end,
+      )
+    )
+      return [];
+    return [{ previous, next }];
+  });
   const words: TimedWord[] = [];
   for (const { chunk, result } of chunks) {
     for (const word of result.words) {
@@ -114,17 +133,46 @@ export function buildTranscript(
       const ranked = [...matches].sort((a, b) => b[1] - a[1]);
       const length = end === start ? 1 : end - start;
       const winner = ranked[0];
-      const speaker =
+      let speaker =
         winner &&
         winner[1] / length >= 0.5 &&
         (!ranked[1] || ranked[1][1] / length < 0.2)
           ? labels.get(winner[0])!
           : "unknown";
+      let bridgedGap = false;
+      if (speaker === "unknown") {
+        const candidates = gaps.filter(({ previous, next }) => {
+          const touchesGap =
+            start === end
+              ? previous.end <= start && start < next.start
+              : start < next.start && end > previous.end;
+          const coverage =
+            start === end
+              ? Number(previous.start <= start && start < next.end)
+              : Math.max(
+                  0,
+                  Math.min(end, next.end) - Math.max(start, previous.start),
+                );
+          return (
+            touchesGap &&
+            coverage / length >= 0.5 &&
+            ![...matches.keys()].some((id) => id !== previous.speaker)
+          );
+        });
+        const candidateSpeakers = new Set(
+          candidates.map(({ previous }) => previous.speaker),
+        );
+        if (candidateSpeakers.size === 1) {
+          speaker = labels.get(candidates[0].previous.speaker)!;
+          bridgedGap = true;
+        }
+      }
       words.push({
         word: word.word.trim(),
         start: Math.min(sourceDuration, start + sourceOffset),
         end: Math.min(sourceDuration, end + sourceOffset),
         speaker,
+        ...(bridgedGap ? { speaker_attribution: "bridged_gap" as const } : {}),
       });
     }
   }
@@ -169,6 +217,11 @@ export function buildTranscript(
       ...(used.includes("unknown")
         ? [
             "Một số từ chưa xác định được người nói hoặc nằm trong vùng chồng tiếng.",
+          ]
+        : []),
+      ...(words.some((word) => word.speaker_attribution === "bridged_gap")
+        ? [
+            "Một số từ được gán người nói bằng cách nối khoảng trống ngắn giữa hai lượt của cùng người; cần kiểm tra lại.",
           ]
         : []),
       ...(!words.length

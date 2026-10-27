@@ -125,6 +125,9 @@ Giới hạn chất lượng: cắt theo thời gian có thể sai/mất/trùng 
 cho timestamp khác nhau; overlap chỉ giảm rủi ro, không bảo đảm đúng tuyệt đối.
 Speaker là nhãn suy luận, không xác minh danh tính. Chưa xử lý voiceprint hoặc
 âm thanh chồng tiếng bằng model local. Giữ `unknown` khi không đủ bằng chứng.
+Khe hở tối đa 0,75 giây giữa hai lượt của cùng speaker có thể được nối nếu không
+có speaker khác chồng vào; từ được suy ra có `speaker_attribution: "bridged_gap"`
+trong JSON và cần kiểm tra lại. Kết quả diarization gốc vẫn nằm trong checkpoint.
 
 Mặc định dùng `whisper-1` và `gpt-4o-transcribe-diarize` theo contract hiện tại.
 Tài liệu OpenAI ngày rà soát thông báo shutdown ngày 26/02/2027; cần thay đổi

@@ -3,6 +3,7 @@ export interface TimedWord {
   start: number;
   end: number;
   speaker: string;
+  speaker_attribution?: "bridged_gap";
 }
 
 export interface TranscriptSegment {

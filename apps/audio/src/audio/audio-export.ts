@@ -43,7 +43,7 @@ export function markdown(transcript: AudioTranscript) {
     "## Nội dung",
     "",
     ...transcript.segments.flatMap((segment) => [
-      `### ${timestamp(segment.start)} → ${timestamp(segment.end)} — ${escapeMarkdown(speakerName(transcript, segment.speaker))}`,
+      `### ${timestamp(segment.start)} → ${timestamp(segment.end)} — ${escapeMarkdown(speakerName(transcript, segment.speaker))}${segment.words.some((word) => word.speaker_attribution === "bridged_gap") ? " (có từ suy ra)" : ""}`,
       "",
       escapeMarkdown(segment.text),
       "",

@@ -1,5 +1,31 @@
 # Audio — kết quả kiểm tra 25/10/2026
 
+## Nối khe hở speaker — kiểm tra 27/10/2026
+
+- Quy tắc mới chỉ nối khe hở tối đa 0,75 giây giữa hai lượt cùng nhãn khi
+  không có lượt khác chồng vào. JSON đánh dấu từng từ `bridged_gap`; PDF và
+  Markdown đánh dấu đoạn có từ suy ra. Nhãn này vẫn cần nghe kiểm tra.
+- Chạy một job với 300 giây đầu của mẫu VietMed ghép bên dưới, một attempt,
+  2 provider calls, thời gian từ tạo job đến hoàn thành khoảng 222 giây. So
+  sánh trước/sau dùng **cùng checkpoint**, không gọi lại provider.
+- Đối chiếu tại midpoint từ với metadata clip: 1.161 từ có tham chiếu, số
+  `unknown` giảm 29 → 19. Trong 10 từ được gán mới, 8 khớp và 2 không khớp
+  nhãn clip. Số từ khớp tổng thể tăng 842 → 850; mapping speaker được chọn từ
+  kết quả trước sửa và giữ nguyên khi so sánh. Đây không phải DER: phép đo bỏ
+  qua từ ASR bỏ sót, không dùng nhãn hoạt động giọng nói liên tục, và mapping
+  được tối ưu trên cùng mẫu.
+- Không đổi nội dung hoặc timestamp của 1.193 từ; không có timestamp nằm ngoài
+  300 giây. So với transcript đối chiếu, WER theo token cách bởi dấu cách là
+  18,98% trên 294 giây đầu và 1.238 token tham chiếu. Dừng ở ranh giới clip
+  hoàn chỉnh vì clip kế tiếp bị cắt tại giây 300; thước đo này gần mức âm tiết
+  tiếng Việt, không phải tách từ ngôn ngữ học.
+- PDF 3 trang có dấu tiếng Việt, các đoạn suy ra được đánh dấu; câu “hay không
+  ạ” không còn tách ở ví dụ đầu. Vẫn còn từ chưa rõ người nói, lỗi nhận dạng,
+  và câu bị cắt ở biên trang/giới hạn 20 giây. Mẫu đã ghép, không phải cuộc họp
+  tự nhiên; chưa đủ kết luận chất lượng tổng quát hoặc xác thực danh tính.
+- File chạy và số liệu riêng nằm trong `artifacts/private/audio-gap-check-result`;
+  đây là dữ liệu local không commit. Các file kết quả 10 phút cũ không bị ghi đè.
+
 ## Kiểm tra sau khi chuyển vào apps — 27/10/2026
 
 - Audio service được chuyển từ `services/audio` vào `apps/audio`; API, database

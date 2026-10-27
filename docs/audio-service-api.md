@@ -99,6 +99,12 @@ Whisper cung cấp từ/timing; segment cuối được nhóm lại theo speaker
 và độ dài (~20 giây), không giả danh segmentation gốc của Whisper. Diarization
 gọi trên toàn audio MP3 nén để giữ speaker ID nhất quán giữa chunk ASR.
 Vùng mơ hồ/chồng tiếng dùng `unknown`. Speaker không phải danh tính xác thực.
+Với khe hở tối đa 0,75 giây giữa hai lượt của cùng một speaker, không có
+speaker khác chồng vào, các từ đủ điều kiện có thể được gán theo lượt hai bên.
+Các từ được suy ra có thêm `speaker_attribution: "bridged_gap"` trong JSON;
+Markdown/PDF đánh dấu đoạn có từ suy ra và `warnings` yêu cầu kiểm tra lại.
+Timestamp gốc không thay đổi. Đây là quy tắc
+hậu xử lý, không xác thực danh tính hoặc bảo đảm speaker đúng.
 PATCH chỉ đổi tên hiển thị, không sửa timing hoặc nhãn tự động.
 
 Mọi export dùng transcript hiện tại sau sửa tên. Excel có Transcript/Words/Metadata;
