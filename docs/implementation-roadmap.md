@@ -1,5 +1,7 @@
 # SE2026-T15 — Breakdown & Implementation Phases
 
+> **Cập nhật kiến trúc audio:** Các mô tả Whisper, timestamp theo từ và chia chunk bên dưới là kế hoạch/lịch sử cũ. Pipeline hiện tại dùng một request `gpt-4o-transcribe-diarize`, transcript v2 theo segment; xem [audio service API](audio-service-api.md). Các phần App/LLM vẫn cần tích hợp và kiểm chứng riêng.
+
 - **Dự án:** Meeting Minutes Assistant tiếng Việt (AI-05 — AI / Speech)
 - **Repository:** https://github.com/vietquang8071/se2026-t15
 - **Phiên bản:** 1.3 — 25/10/2026
@@ -10,7 +12,7 @@
 
 ## 1. Cách dùng breakdown
 
-- Đây là **kế hoạch triển khai**; danh sách task không phải bằng chứng tính năng đã được triển khai. Tại lần rà soát 25/10/2026, repo có bộ khung App và service audio độc lập tại `apps/audio`: upload, normalization/chunk, job/checkpoint, OpenAI ASR/diarization, playback/export và cleanup. Kết quả thực tế và giới hạn tại [Audio validation](audio-validation.md); chưa nối App/LLM.
+- Đây là **kế hoạch triển khai**; danh sách task không phải bằng chứng tính năng đã được triển khai. Tại lần rà soát 25/10/2026, repo có bộ khung App và service audio độc lập tại `apps/audio`: upload, normalization, job/checkpoint, OpenAI ASR/diarization, playback/export và cleanup. Kết quả thực tế và giới hạn tại [Audio validation](audio-validation.md); chưa nối App/LLM.
 - Có **12 phase, 72 task gợi ý**. Phase thể hiện thứ tự phụ thuộc, **không mặc định một phase bằng một tuần**. Nhóm chốt deadline và năng lực trước khi gán lịch.
 - Mỗi task hướng đến **một thay đổi có thể review và kiểm tra**, thường tương ứng một commit logic. Có thể gộp task nhỏ hoặc chia task lớn; không tạo commit chỉ để đủ số lượng.
 - Mỗi phase có 2 nhóm việc, đầu vào và đầu ra cụ thể. Kiểm thử liên quan đi cùng chức năng; task test riêng dành cho kịch bản tích hợp hoặc lỗi phức tạp.
@@ -25,7 +27,7 @@ Nguồn đối chiếu: [Product Description](product-description.md) v1.2, [Fea
 | Feature Card hiện có | Đầu ra cần có trong MVP | Phase chính |
 |---|---|---|
 | FC1 — Audio Ingestion | Tạo meeting với title, anchor date, participants; upload WAV/MP3/M4A/WebM; nghe lại audio; chia file lớn | P02, P04, P05 |
-| FC2 — Transcription & Speaker Attribution | OpenAI Whisper API; timestamp theo segment **và word**; nhãn người nói; ghép transcript các chunk về audio gốc | P03, P05, P06 |
+| FC2 — Transcription & Speaker Attribution | Một model OpenAI; timestamp theo segment và nhãn người nói trên timeline nguồn | P03, P05, P06 |
 | FC3 — Business Extraction & Temporal Resolution | Đủ 6 module, JSON có validation, ngày tương đối dựa trên ngày họp, bằng chứng nguồn | P03, P07, P08 |
 | FC4 — Meeting Document UI & Export | Xem đủ 6 module; tìm transcript; click timestamp để nghe; export Markdown và copy summary | P09, P10 |
 
@@ -33,9 +35,9 @@ Nguồn đối chiếu: [Product Description](product-description.md) v1.2, [Fea
 
 **Các ràng buộc và lưu ý triển khai:**
 
-- **ASR:** giữ OpenAI Whisper API (`whisper-1`) theo đề tài. Dùng `response_format="verbose_json"` và `timestamp_granularities=["segment", "word"]`; kiểm tra response thật, lưu cả hai mức timestamp. Whisper transcription và speaker diarization là hai bước riêng. Tham khảo [API transcription](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create).
-- **Vòng đời provider:** hướng dẫn OpenAI hiện ghi `whisper-1` deprecated, hỗ trợ timestamp cho tích hợp hiện có đến 26/02/2027. P00 phải kiểm tra quyền sử dụng thực tế và thời hạn dự án; nếu cần đổi provider, nhóm cập nhật yêu cầu trước, giữ hợp đồng timestamp và speaker. Chưa coi quyền truy cập API là đã xác minh. Nguồn: [Speech-to-text — Timestamps](https://developers.openai.com/api/docs/guides/speech-to-text#timestamps).
-- **Giới hạn audio:** ứng dụng nhận file tối đa 100 MB; giới hạn mỗi request AI là 25 MB. Kiểm tra dung lượng **file chunk sau encode**, không chỉ số phút. Nguồn: [Speech-to-text — Longer inputs](https://developers.openai.com/api/docs/guides/speech-to-text#longer-inputs).
+- **ASR:** `gpt-4o-transcribe-diarize` trả text, speaker và segment timestamp. Transcript v2 không có word timestamps.
+- **Vòng đời provider:** model được thông báo ngừng ngày 26/02/2027; cần chọn và kiểm thử provider thay thế trước thời điểm đó. [OpenAI](https://developers.openai.com/api/docs/guides/speech-to-text#speaker-diarization).
+- **Giới hạn audio:** nguồn tối đa 100 MB/60 phút; MP3 provider phải dưới 24 MB. Không tự chia nhiều request diarization.
 - **Speaker:** phải có bước suy luận nhãn người nói từ audio hoặc phương án attribution được nhóm chấp thuận. `unknown` và sửa nhãn là fallback; chỉ gán tay không chứng minh tính năng tự động đã hoàn thành. Không dùng nội dung LLM suy đoán làm danh tính người nói đã xác thực.
 - **Export:** MVP đã chốt Markdown và copy summary; JSON là dữ liệu cấu trúc nội bộ. Download JSON/HTML/PDF và audit history đầy đủ là phần mở rộng; không chặn phần audio hiện tại.
 - **Ngày tháng:** với `anchor_date=2026-10-05`, “thứ Sáu này” là **2026-10-09**; `2026-10-08` là thứ Năm. “Tuần sau” chỉ xác định tuần nếu chưa có ngày cụ thể: giữ khoảng ngày/`needs_review`, không tự tạo deadline thứ Hai. P00 đồng bộ các ví dụ sai trong tài liệu gốc.
@@ -62,19 +64,19 @@ Chi tiết request/response, validation và mã lỗi nằm trong [Meeting API C
 - **Nguồn vào chỉ là upload** WAV/MP3/M4A/WebM/MP4, tối đa 100 MB và 60 phút; không thu âm trực tiếp, không MediaRecorder/waveform recorder.
 - Sơn phát triển upload/preprocessing/audio API độc lập; Việt Quang làm LLM; App nối audio_id với meeting và làm thông báo gần hạn. Chưa nối các thành phần ngay.
 - Metadata meeting vẫn thuộc App: title và anchor_date bắt buộc (YYYY-MM-DD), participants là danh sách tên có thể bỏ trống. Quyết định upload độc lập không thay đổi contract metadata đã chốt trước đó.
-- ASR tiếp tục dùng Whisper qua dịch vụ ngoài; không thêm model Whisper local hoặc yêu cầu GPU local. Provider diarization bên ngoài cần chốt riêng khi tới P06.
+- ASR và diarization dùng một model OpenAI ngoài, không chạy model local hoặc yêu cầu GPU.
 - Chọn retention_days **30 hoặc 60** khi upload; audio API trả expires_at UTC. Bản gốc và audio dẫn xuất cùng hạn, App quyết định thời điểm/cách thông báo. Service có cleanup media và transcript; notification vẫn thuộc App.
 - Kế hoạch endpoint độc lập và ranh giới trách nhiệm: [Audio service API plan](audio-service-api.md). Tài liệu này giữ các phase App/LLM làm ngữ cảnh tích hợp sau; hiện ưu tiên P02/P04 thuộc audio.
 
 ## 3. Ghi chú triển khai tối thiểu
 
-Luồng chính: **Meeting + audio → kiểm tra/chia audio → Whisper transcript → speaker attribution → LLM trích xuất + xử lý ngày → giao diện + export**.
+Luồng chính: **Meeting + audio → kiểm tra/chuẩn hóa → transcription + diarization → LLM trích xuất + xử lý ngày → giao diện + export**.
 
 - **Stack hiện tại:** pnpm/Turborepo và TypeScript; Next.js App Router trong `apps/web/`, NestJS trong `apps/api/`, Prisma và PostgreSQL client chung trong `packages/database/`. Tiếp tục trên stack này, dùng DTO và validation ở NestJS theo contract; không khởi tạo lại frontend/backend hoặc chuyển sang FastAPI.
 - **Database/dev:** Docker Compose hiện chỉ chạy PostgreSQL; web/API chạy local theo README. Prisma đã có model `Meeting` tối thiểu. Chưa có trường participants hay migration được commit. Lưu audio trên local volume khi làm P02, chưa cần nhiều lớp storage abstraction.
 - P03 xử lý nền có trạng thái để HTTP trả về sớm. P05 bổ sung độ bền khi restart/retry; chỉ chọn queue riêng khi cần, phù hợp với NestJS/TypeScript. Chưa thêm Redis hoặc Python worker vào bộ khung.
 - Phần audio được đóng API độc lập và test trước khi nối App/LLM.
-- Dữ liệu tối thiểu: meeting, participants, audio, job, transcript segments/words, speakers và sáu loại artifacts. Artifact tham chiếu segment trong cùng meeting; các field chi tiết bám schema tài liệu gốc.
+- Dữ liệu tối thiểu: meeting, participants, audio, job, transcript segments, speakers và sáu loại artifacts. Artifact tham chiếu segment trong cùng meeting; các field chi tiết bám schema tài liệu gốc.
 - Thiếu owner/deadline/rationale thì để `null` hoặc đánh dấu cần xác nhận; không tự bịa. JSON hợp lệ chưa đồng nghĩa nội dung đúng.
 - API key và audio riêng tư không đưa vào Git; fixture phải có quyền sử dụng. Bản deploy công khai cần bảo vệ quyền truy cập meeting/audio phù hợp.
 
@@ -88,7 +90,7 @@ Luồng chính: **Meeting + audio → kiểm tra/chia audio → Whisper transcri
 |---|---|---|---|
 | P00-01 | FE | Viết user flow upload → transcript → biên bản → export; phác thảo màn hình | `docs(requirements): define meeting user flows` |
 | P00-02 | BE | Chốt yêu cầu bắt buộc, giới hạn file/thời lượng, định dạng export; xác nhận deadline và ưu tiên phần mở rộng | `docs(requirements): define MVP acceptance criteria` |
-| P00-03 | AI | Kiểm tra khả năng dùng Whisper và diarization, ngân sách, tài nguyên; ghi quyết định provider và rủi ro vòng đời | `docs(ai): record speech provider constraints` |
+| P00-03 | AI | Kiểm tra khả năng dùng model transcription và diarization, ngân sách, tài nguyên; ghi quyết định provider và rủi ro vòng đời | `docs(ai): record speech provider constraints` |
 | P00-04 | BE | Thống nhất stack, schema meeting/transcript/artifacts, API và trạng thái xử lý ban đầu | `docs(api): define meeting data contracts` |
 | P00-05 | AI | Chọn audio có quyền sử dụng và gold transcript/artifacts; mô tả cách đo và dự kiến tiêu chí chất lượng | `docs(test): define AI evaluation cases` |
 | P00-06 | FE | Đồng bộ ví dụ ngày tháng, link tương đối, README và liên kết roadmap với tài liệu gốc | `docs: align project planning documents` |
@@ -103,7 +105,7 @@ Luồng chính: **Meeting + audio → kiểm tra/chia audio → Whisper transcri
 | ------ | ------- | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | P01-01 | BE      | NestJS, `/health`, `.env.example`, `.gitignore` đã có; kiểm tra cấu hình và bổ sung phần còn thiếu                                | `chore(api): verify backend configuration`   |
 | P01-02 | FE      | Next.js đã có trang mẫu; thay nội dung mẫu bằng layout ứng dụng tối thiểu                                                         | `feat(web): add meeting application shell`   |
-| P01-03 | AI      | Định nghĩa type TypeScript và hàm chuyển response ASR về schema chung; fixture segment/word, chưa cần nhiều provider              | `feat(asr): define transcript normalization` |
+| P01-03 | AI      | Định nghĩa type TypeScript và hàm chuyển response ASR về schema chung; fixture segment, chưa cần nhiều provider              | `feat(asr): define transcript normalization` |
 | P01-04 | BE      | Prisma client và PostgreSQL Compose đã có; xác minh kết nối và bổ sung migration khởi tạo. Participants thuộc P02-01              | `chore(db): verify initial database setup`   |
 | P01-05 | FE      | API client và trạng thái loading/error; gọi `/health` thật từ web 3000 sang API 3001 qua CORS/proxy được cấu hình                 | `feat(web): connect backend health endpoint` |
 | P01-06 | BE      | Chạy build/lint/typecheck có sẵn; thêm smoke test và CI tối thiểu. Đã có test:audio; chưa có CI hoặc suite tích hợp toàn ứng dụng | `ci: add application smoke checks`           |
@@ -132,8 +134,8 @@ Luồng chính: **Meeting + audio → kiểm tra/chia audio → Whisper transcri
 | Task   | Vai trò | Phần việc / đầu ra                                                                           | Commit gợi ý                                          |
 | ------ | ------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | P03-01 | BE      | API bắt đầu xử lý nền, lấy job status, lưu trạng thái và lỗi; chặn chạy trùng đang active    | `feat(jobs): add background processing status`        |
-| P03-02 | AI      | Tích hợp Whisper cho audio ngắn; lấy segment/word timestamps, timeout và mã lỗi provider     | `feat(asr): transcribe audio with word timestamps`    |
-| P03-03 | BE      | Lưu và trả transcript segments/words, kiểm tra timestamp trong duration                      | `feat(transcript): persist timestamped transcription` |
+| P03-02 | AI      | Tích hợp diarization cho audio ngắn; lấy segment timestamps, timeout và mã lỗi provider     | `feat(asr): transcribe audio with segment timestamps`    |
+| P03-03 | BE      | Lưu và trả transcript segments, kiểm tra timestamp trong duration                      | `feat(transcript): persist timestamped transcription` |
 | P03-04 | AI      | LLM tạo Summary và Action Items tối giản; validate JSON, giữ source segment và field chưa rõ | `feat(extraction): add initial summary and actions`   |
 | P03-05 | FE      | Hiển thị job status, transcript và summary/actions đơn giản; xử lý empty/error               | `feat(web): display initial meeting results`          |
 | P03-06 | BE      | Nối pipeline thật, lưu artifacts và kiểm tra upload → ASR → LLM → reload kết quả             | `test(pipeline): verify initial live meeting flow`    |
@@ -155,24 +157,24 @@ Luồng chính: **Meeting + audio → kiểm tra/chia audio → Whisper transcri
 
 **Hoàn thành khi:** audio đã upload nghe lại được trong meeting, timestamp transcript seek đúng vị trí và định dạng cần chuẩn hóa vẫn giữ được mốc thời gian.
 
-### P05 — File dài, chunking và job ổn định
+### P05 — File dài và job ổn định
 
 **Phụ thuộc:** P03; kiểm tra playback sau P04. **Nhóm A:** audio dài (01–03). **Nhóm B:** lỗi/retry (04–06).
 
 | Task | Vai trò | Phần việc / đầu ra | Commit gợi ý |
 |---|---|---|---|
-| P05-01 | AI | Chia audio upload theo dung lượng sau encode, overlap cấu hình được; mỗi chunk trong giới hạn API | `feat(asr): split oversized audio uploads` |
-| P05-02 | AI | Ghép segment và word timestamps về audio gốc, loại trùng vùng overlap | `feat(asr): stitch chunk transcripts and timestamps` |
-| P05-03 | BE | Gắn tiến độ từng chunk vào job; lưu kết quả an toàn, quy định partial result | `feat(jobs): track chunk processing progress` |
+| P05-01 | AI | Encode toàn bộ audio thành MP3; kiểm tra giới hạn provider sau encode | `feat(asr): split oversized audio uploads` |
+| P05-02 | AI | Ánh xạ timestamp segment về audio gốc, kiểm tra offset MP4 | `feat(asr): stitch chunk transcripts and timestamps` |
+| P05-03 | BE | Gắn tiến độ theo stage vào job; lưu checkpoint response an toàn | `feat(jobs): track chunk processing progress` |
 | P05-04 | BE | Retry/backoff có giới hạn, idempotency và trạng thái job khi worker restart; chọn queue riêng nếu cần | `feat(jobs): handle retries and interrupted workers` |
 | P05-05 | FE | Hiển thị tiến độ/lỗi, cho retry phù hợp và tránh bấm xử lý liên tục | `feat(web): add processing recovery controls` |
-| P05-06 | AI | Kiểm tra chunk boundary, trùng chữ, offset segment/word và seek sau khi ghép | `test(asr): verify long audio stitching` |
+| P05-06 | AI | Kiểm tra thời lượng, giới hạn bytes, offset segment và seek | `test(asr): verify long audio stitching` |
 
-**Hoàn thành khi:** file lớn hơn 25 MB của ứng dụng được chia và xử lý; mỗi request đáp ứng giới hạn provider; retry không tạo transcript trùng. Phân biệt lỗi quota/provider với lỗi hệ thống, không báo thành công khi thiếu chunk.
+**Hoàn thành khi:** file nguồn lớn được nén thành một request trong giới hạn provider hoặc trả lỗi rõ; retry dùng checkpoint. Phân biệt lỗi quota/provider với lỗi hệ thống, không báo thành công khi thiếu response.
 
 ### P06 — Speaker attribution và sửa nhãn
 
-**Phụ thuộc:** P03; dùng output P05 khi audio nhiều chunk. **Nhóm A:** suy luận nhãn (01–03). **Nhóm B:** hiển thị/sửa nhãn (04–06).
+**Phụ thuộc:** P03; dùng output P05 khi audio dài. **Nhóm A:** suy luận nhãn (01–03). **Nhóm B:** hiển thị/sửa nhãn (04–06).
 
 | Task   | Vai trò | Phần việc / đầu ra                                                                        | Commit gợi ý                                            |
 | ------ | ------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------- |
@@ -181,7 +183,7 @@ Luồng chính: **Meeting + audio → kiểm tra/chia audio → Whisper transcri
 | P06-03 | BE      | Lưu speaker và mapping participant; API validate speaker thuộc meeting                    | `feat(speakers): persist meeting speaker mapping`       |
 | P06-04 | FE      | Hiển thị speaker trên transcript, màu và nhãn unknown nhất quán                           | `feat(transcript): display attributed speakers`         |
 | P06-05 | FE      | Đổi tên/gán Speaker 1 sang participant, lưu qua API và reload                             | `feat(speakers): add speaker mapping editor`            |
-| P06-06 | AI      | Kiểm tra audio 2–3 người, overlap và nhiều chunk; ghi lỗi gán nhãn trước/sau sửa thủ công | `test(diarization): evaluate speaker attribution cases` |
+| P06-06 | AI      | Kiểm tra audio 2–3 người, overlap và audio dài; ghi lỗi gán nhãn trước/sau sửa thủ công | `test(diarization): evaluate speaker attribution cases` |
 
 **Hoàn thành khi:** có output attribution tự động trên audio kiểm thử, có thể sửa nhãn; báo riêng lỗi tự động và kết quả sau sửa. Chưa đủ chất lượng thì ghi giới hạn/blocker, không đổi nhãn “fallback thủ công” thành tính năng tự động hoàn thành.
 
@@ -228,7 +230,7 @@ Luồng chính: **Meeting + audio → kiểm tra/chia audio → Whisper transcri
 | P09-05 | FE      | Click evidence của artifact → seek audio gốc và highlight segment nguồn                | `feat(minutes): link artifacts to source audio`        |
 | P09-06 | BE      | Kiểm tra response nguồn, ID sai/khác meeting và nội dung frontend đọc đúng schema      | `test(minutes): verify document source navigation`     |
 
-**Hoàn thành khi — M3:** xem đủ sáu block trên dữ liệu thật; từ action/decision/issue/follow-up/event nghe lại đúng nguồn. Click-to-play không trỏ vào timestamp cục bộ của chunk.
+**Hoàn thành khi — M3:** xem đủ sáu block trên dữ liệu thật; từ action/decision/issue/follow-up/event nghe lại đúng nguồn. Click-to-play trỏ vào timestamp của file nguồn.
 
 ### P10 — Export và review cơ bản
 
@@ -279,7 +281,7 @@ flowchart LR
     P10 --> P11["P11 Acceptance"]
 ```
 
-- P04 có thể song song P03; P06 có thể thử trên audio ngắn từ P03, rồi kiểm tra nhiều chunk sau P05; P07 có thể dùng transcript chuẩn trước khi diarization xong.
+- P04 có thể song song P03; P06 có thể thử trên audio ngắn từ P03, rồi kiểm tra file dài sau P05; P07 có thể dùng transcript chuẩn trước khi diarization xong.
 - FE dùng fixture theo contract trong lúc BE/AI đang làm. Đến checkpoint tích hợp phải thay fixture bằng API thật và kiểm tra lại.
 - Mỗi PR nên gom task cùng đầu ra. Ví dụ `P02-01 + P02-02` cho tạo meeting; `P02-03 + P02-04 + P02-05 + P02-06` có thể chia thành PR upload backend và PR upload UI theo độ lớn thực tế.
 - Không mở một PR quá lớn cho cả phase nếu nhiều phần độc lập; cũng không tách riêng code và test cần thiết chỉ để tăng commit.
@@ -331,10 +333,10 @@ Squash merge có thể gộp nhiều commit thành một commit trên `develop`;
 | Phần | Cách kiểm tra | Phase |
 |---|---|---|
 | Metadata/upload | Thiếu ngày/title, đủ bốn định dạng, file rỗng/MIME sai, reload | P02 |
-| ASR | Segment và word timestamp có thứ tự, trong duration; lỗi provider rõ ràng | P03 |
+| ASR | Segment timestamp có thứ tự, trong duration; lỗi provider rõ ràng | P03 |
 | Audio playback | Audio đã upload phát được, transcript seek đúng timestamp và có lỗi trạng thái rõ | P04 |
-| Chunk/job | Dung lượng chunk, overlap, offset segment/word, retry/restart, không lưu trùng | P05 |
-| Speaker | 2–3 người, overlap, ID speaker qua chunk, unknown; tách kết quả tự động và sửa tay | P06 |
+| Audio/job | Dung lượng MP3, source offset, retry/restart, không lưu trùng | P05 |
+| Speaker | 2–3 người, overlap, ID speaker trong file, unknown; tách kết quả tự động và sửa tay | P06 |
 | Extraction | Đủ sáu schema; decision khác proposal; follow-up khác open issue; owner/deadline không bị bịa | P07 |
 | Temporal | Ngày đúng từ anchor, qua tháng/năm; câu mơ hồ không bị ép thành ngày | P08 |
 | Nguồn | Item tham chiếu đúng segment cùng meeting và seek đúng audio gốc | P09 |
@@ -357,4 +359,4 @@ Trước mỗi đợt làm việc: chọn phase/task sẵn sàng, gán owner và
 
 **Việc tiếp theo của audio:** review kết quả/giới hạn tại [Audio validation](audio-validation.md), bàn giao HTTP contract từ service độc lập `apps/audio` cho App/LLM. Không đánh dấu milestone M1/M3 toàn hệ thống hoàn thành khi chưa tích hợp App/LLM và kiểm tra seek/UI thật.
 
-**App khi tích hợp:** dùng contract create/detail đã chốt để làm P02-01 sau khi xác minh setup và các phần P01 còn thiếu. Song song hoàn tất deadline/nhân lực, khả năng sử dụng Whisper/diarization và bộ audio kiểm thử của P00. Giữ mục tiêu P03 chạy thật sớm; chưa mở rộng sang list/update/delete meeting, PDF hoặc audit.
+**App khi tích hợp:** dùng contract create/detail đã chốt để làm P02-01 sau khi xác minh setup và các phần P01 còn thiếu. Song song hoàn tất deadline/nhân lực, khả năng sử dụng model transcription/diarization và bộ audio kiểm thử của P00. Giữ mục tiêu P03 chạy thật sớm; chưa mở rộng sang list/update/delete meeting, PDF hoặc audit.

@@ -1,22 +1,12 @@
-export interface TimedWord {
-  word: string;
-  start: number;
-  end: number;
-  speaker: string;
-  speaker_attribution?: "bridged_gap";
-}
-
 export interface TranscriptSegment {
   id: string;
   start: number;
   end: number;
   text: string;
   speaker: string;
-  words: TimedWord[];
 }
 
-export interface AudioTranscript {
-  schema_version: 1;
+interface TranscriptBase {
   audio_id: string;
   language: "vi";
   timeline: "source";
@@ -24,28 +14,35 @@ export interface AudioTranscript {
   duration_sec: number;
   text: string;
   speakers: { id: string; name: string }[];
-  segments: TranscriptSegment[];
   warnings: string[];
+}
+
+// Existing version-1 transcripts remain readable and are never rewritten as v2.
+export interface LegacyAudioTranscript extends TranscriptBase {
+  schema_version: 1;
+  segments: (TranscriptSegment & {
+    words: {
+      word: string;
+      start: number;
+      end: number;
+      speaker: string;
+      speaker_attribution?: "bridged_gap";
+    }[];
+  })[];
   models: { transcription: string; diarization: string };
 }
 
-export interface WhisperResult {
-  text: string;
-  segments: { start: number; end: number; text: string }[];
-  words: { start: number; end: number; word: string }[];
+export interface AudioTranscriptV2 extends TranscriptBase {
+  schema_version: 2;
+  segments: TranscriptSegment[];
+  models: { transcription_and_diarization: string };
 }
+
+export type AudioTranscript = LegacyAudioTranscript | AudioTranscriptV2;
 
 export interface DiarizationResult {
+  text?: string;
   segments: { start: number; end: number; speaker: string; text: string }[];
-}
-
-export interface Chunk {
-  index: number;
-  path: string;
-  offset: number;
-  duration: number;
-  keepStart: number;
-  keepEnd: number;
 }
 
 export class AudioServiceError extends Error {

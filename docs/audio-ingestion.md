@@ -2,7 +2,7 @@
 
 ## 1. Phân công và trạng thái
 
-- **Sơn — Audio:** audio API độc lập, upload/storage media, kiểm tra metadata, tách/chuẩn hóa audio và tests; ASR qua dịch vụ Whisper bên ngoài ở phase sau.
+- **Sơn — Audio:** audio API độc lập, upload/storage media, kiểm tra metadata, tách/chuẩn hóa audio và tests; ASR và diarization qua một dịch vụ OpenAI bên ngoài.
 - **Việt Quang — LLM:** nhận transcript để trích xuất nghiệp vụ ở giai đoạn tích hợp sau.
 - **App:** giao diện/meeting, ánh xạ audio_id vào meeting, thông báo gần hạn lưu trữ; chưa nối App vào audio trong đợt này.
 
@@ -67,7 +67,7 @@ FFprobe đọc metadata với timeout mặc định 10 giây. FFmpeg giải mã 
 
 Đây là kết quả **nội bộ service**: HTTP API chỉ trả audio_id/storage key và metadata được phép, không lộ absolute filePath. Các lần gọi tách audio dùng thư mục khác nhau, không overwrite kết quả trước. Bản đầu ra thành công do caller quản lý; bản đầu ra lỗi được helper dọn.
 
-Timestamp transcript từ WAV phải được cộng `source_audio_start_sec` để về timeline MP4; nếu chia chunk thì cộng thêm chunk offset. Chưa có ASR/chunking trong helper này.
+Timestamp transcript từ WAV phải được cộng `source_audio_start_sec` để về timeline MP4; service hiện không chia audio thành các request độc lập.
 
 | Mã lỗi                     | HTTP gợi ý | Ý nghĩa                                                                                             |
 | -------------------------- | ---------- | --------------------------------------------------------------------------------------------------- |
@@ -87,10 +87,10 @@ Timestamp transcript từ WAV phải được cộng `source_audio_start_sec` đ
 
 - Audio service nhận upload, cấp audio_id, quản lý local storage và job riêng; upload lỗi dọn file tạm. Không bắt buộc có meeting_id ở audio API.
 - App sau này liên kết audio_id với meeting; ràng buộc một media/meeting được kiểm soát ở bước tích hợp App.
-- Khi upload cần chọn retention_days **30 hoặc 60**; service trả created_at/expires_at UTC. Nguồn MP4 và audio dẫn xuất/chunk có cùng hạn; đọc hoặc xử lý lại không tự gia hạn.
+- Khi upload cần chọn retention_days **30 hoặc 60**; service trả created_at/expires_at UTC. Nguồn MP4 và audio dẫn xuất có cùng hạn; đọc hoặc xử lý lại không tự gia hạn.
 - Audio service dọn media và transcript hết hạn. **App gửi thông báo cho người dùng gần hạn**, dựa trên expires_at; thời điểm/kênh thông báo do App quyết định. Cleanup đã có trong service; thông báo chưa thuộc service.
 - Theo quyết định mới, xóa cả transcript/checkpoint cùng media; không tự xóa biên bản hoặc dữ liệu meeting của App/LLM.
-- Giữ video gốc giúp truy nguồn, nhưng không gửi hình ảnh/video cho LLM; Whisper nhận MP3 audio qua OpenAI; không gửi hình ảnh/video cho model.
+- Giữ video gốc giúp truy nguồn, nhưng không gửi hình ảnh/video cho LLM; model diarization nhận MP3 audio qua OpenAI; không gửi hình ảnh/video cho model.
 
 ## 6. Chạy kiểm tra
 
@@ -105,4 +105,4 @@ Tests dùng Node test runner, không thêm thư viện test. Test helper/provide
 
 Các case thực gồm bốn format audio và MP4, tách/giữ bản gốc, offset âm thanh, file lỗi, video không tiếng, nhiều track, đổi đuôi, MIME giả, path/symlink ngoài root, dung lượng/thời lượng đúng biên và quá biên. Case timeout/malformed probe dùng tool giả cục bộ và được phân biệt với kiểm tra FFmpeg/FFprobe thật.
 
-Bộ kiểm tra cũ có 29 helper tests (8 case MP4); bộ mới bổ sung transcript/export/provider/chunk và HTTP lifecycle. Kết quả hiện tại và provider thật nằm tại [Audio validation](audio-validation.md); không đánh đồng test offline với chất lượng ASR.
+Bộ kiểm tra cũ có 29 helper tests (8 case MP4); bộ mới bổ sung transcript/export/provider và HTTP lifecycle. Kết quả hiện tại và provider thật nằm tại [Audio validation](audio-validation.md); không đánh đồng test offline với chất lượng ASR.

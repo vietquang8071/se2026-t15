@@ -3,7 +3,6 @@ import { mkdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { AudioServiceError, positiveNumber } from "./audio-types.js";
-import type { Chunk } from "./audio-types.js";
 import { PROVIDER_MAX_BYTES } from "./audio-provider.js";
 
 const exec = promisify(execFile);
@@ -92,8 +91,7 @@ export async function prepareAudio(
   );
   const duration = await probeDuration(wav, signal);
   const mp3 = join(directory, "diarization.mp3");
-  // One full-recording diarization call avoids pretending chunk-local speaker IDs
-  // refer to the same person. At 32 kbps, 60 minutes is about 14.4 MB.
+  // Keep one provider request so speaker labels remain consistent.
   await ffmpeg(
     [
       "-i",
@@ -113,54 +111,4 @@ export async function prepareAudio(
   if ((await stat(mp3)).size >= PROVIDER_MAX_BYTES)
     throw new AudioServiceError("PROVIDER_FILE_TOO_LARGE", 422);
   return { wav, mp3, duration };
-}
-
-export async function createChunks(
-  wav: string,
-  directory: string,
-  duration: number,
-  signal: AbortSignal,
-): Promise<Chunk[]> {
-  const seconds = positiveNumber("AUDIO_CHUNK_SECONDS", 600, 1200);
-  const overlap = positiveNumber("AUDIO_OVERLAP_SECONDS", 2, 10);
-  if (seconds <= overlap * 2)
-    throw new AudioServiceError("INVALID_CHUNK_CONFIGURATION");
-  const chunks: Chunk[] = [];
-  for (
-    let coreStart = 0, index = 0;
-    coreStart < duration;
-    coreStart += seconds, index++
-  ) {
-    signal.throwIfAborted();
-    const offset = Math.max(0, coreStart - overlap);
-    const end = Math.min(duration, coreStart + seconds + overlap);
-    const path = join(directory, `chunk-${index}.mp3`);
-    await ffmpeg(
-      [
-        "-ss",
-        String(offset),
-        "-i",
-        wav,
-        "-t",
-        String(end - offset),
-        "-c:a",
-        "libmp3lame",
-        "-b:a",
-        "64k",
-        path,
-      ],
-      signal,
-    );
-    if ((await stat(path)).size >= PROVIDER_MAX_BYTES)
-      throw new AudioServiceError("PROVIDER_FILE_TOO_LARGE", 422);
-    chunks.push({
-      index,
-      path,
-      offset,
-      duration: end - offset,
-      keepStart: coreStart,
-      keepEnd: Math.min(duration, coreStart + seconds),
-    });
-  }
-  return chunks;
 }

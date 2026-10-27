@@ -14,14 +14,14 @@ import { PrismaService } from "../prisma.service.js";
 import { inspectAudio } from "./audio-inspection.js";
 import type { AudioMetadata } from "./audio-inspection.js";
 import { AudioServiceError } from "./audio-types.js";
-import type { AudioTranscript, Chunk, WhisperResult } from "./audio-types.js";
-import { createChunks, prepareAudio } from "./audio-media.js";
-import { openAIKey, transcribeFile } from "./audio-provider.js";
+import type { AudioTranscript } from "./audio-types.js";
+import { prepareAudio } from "./audio-media.js";
 import {
-  buildTranscript,
-  validateDiarization,
-  validateWhisper,
-} from "./audio-transcript.js";
+  DIARIZATION_MODEL,
+  openAIKey,
+  transcribeWithDiarization,
+} from "./audio-provider.js";
+import { buildTranscript, validateDiarization } from "./audio-transcript.js";
 
 function json(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value));
@@ -44,7 +44,7 @@ export class AudioService implements OnModuleInit, OnModuleDestroy {
     controller: AbortController;
     done: Promise<void>;
   };
-  provider = transcribeFile;
+  provider = transcribeWithDiarization;
   uploads = 0;
 
   constructor(private readonly prisma: PrismaService) {}
@@ -330,6 +330,7 @@ export class AudioService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async run(jobId: string, audioId: string, signal: AbortSignal) {
+    let preparedByThisRun = false;
     try {
       const asset = await this.get(audioId);
       const metadata = asset.metadata as unknown as AudioMetadata;
@@ -353,17 +354,34 @@ export class AudioService implements OnModuleInit, OnModuleDestroy {
       });
       const checkpoints = job.checkpoints as Record<string, unknown>;
       const configuration = JSON.stringify({
-        transcription: process.env.OPENAI_ASR_MODEL ?? "whisper-1",
-        diarization:
-          process.env.OPENAI_DIARIZATION_MODEL ?? "gpt-4o-transcribe-diarize",
-        chunkSeconds: Number(process.env.AUDIO_CHUNK_SECONDS ?? 600),
-        overlapSeconds: Number(process.env.AUDIO_OVERLAP_SECONDS ?? 2),
+        version: 2,
+        model: DIARIZATION_MODEL,
       });
+      // A legacy checkpoint must never be treated as a v2 response.
+      const checkpointKeys = Object.keys(checkpoints);
+      if (
+        checkpointKeys.some((key) => key.startsWith("whisper_")) ||
+        (checkpointKeys.length > 0 && !checkpoints._configuration)
+      )
+        throw new AudioServiceError("LEGACY_PIPELINE_CHECKPOINT", 409);
       if (
         checkpoints._configuration &&
         checkpoints._configuration !== configuration
-      )
+      ) {
+        let oldConfiguration: unknown;
+        try {
+          oldConfiguration = JSON.parse(String(checkpoints._configuration));
+        } catch {
+          /* Invalid configuration is incompatible. */
+        }
+        if (
+          oldConfiguration &&
+          typeof oldConfiguration === "object" &&
+          "transcription" in oldConfiguration
+        )
+          throw new AudioServiceError("LEGACY_PIPELINE_CHECKPOINT", 409);
         throw new AudioServiceError("JOB_CONFIGURATION_CHANGED", 409);
+      }
       checkpoints._configuration = configuration;
       await this.db.audioJob.update({
         where: { id: jobId },
@@ -371,15 +389,10 @@ export class AudioService implements OnModuleInit, OnModuleDestroy {
       });
       const directory = join(this.root, audioId, "processed");
       signal.throwIfAborted();
+      preparedByThisRun = true;
       const prepared = await prepareAudio(
         join(this.root, asset.sourceKey),
         directory,
-        signal,
-      );
-      const chunks = await createChunks(
-        prepared.wav,
-        directory,
-        prepared.duration,
         signal,
       );
       const beforeCall = async () => {
@@ -399,46 +412,24 @@ export class AudioService implements OnModuleInit, OnModuleDestroy {
           data: { checkpoints: json(checkpoints) },
         });
       };
-      const results: { chunk: Chunk; result: WhisperResult }[] = [];
-      for (const chunk of chunks) {
-        signal.throwIfAborted();
-        await this.get(audioId);
-        await this.db.audioJob.update({
-          where: { id: jobId },
-          data: {
-            stage: "transcribing",
-            progress: 10 + Math.floor((55 * chunk.index) / chunks.length),
-          },
-        });
-        const key = `whisper_${chunk.index}`;
-        const result = validateWhisper(
-          checkpoints[key] ??
-            (await this.provider(chunk.path, "whisper", signal, beforeCall)),
-          chunk.duration,
-        );
-        if (!checkpoints[key]) await save(key, result);
-        results.push({ chunk, result });
-      }
       await this.db.audioJob.update({
         where: { id: jobId },
-        data: { stage: "diarizing", progress: 70 },
+        data: { stage: "transcribing_diarizing", progress: 30 },
       });
       const turns = validateDiarization(
         checkpoints.diarization ??
-          (await this.provider(
-            prepared.mp3,
-            "diarization",
-            signal,
-            beforeCall,
-          )),
+          (await this.provider(prepared.mp3, signal, beforeCall)),
         prepared.duration,
       );
       if (!checkpoints.diarization) await save("diarization", turns);
+      await this.db.audioJob.update({
+        where: { id: jobId },
+        data: { stage: "building_transcript", progress: 90 },
+      });
       const transcript = buildTranscript(
         audioId,
         metadata.duration_sec,
         metadata.audio_start_sec ?? 0,
-        results,
         turns,
       );
       signal.throwIfAborted();
@@ -464,10 +455,11 @@ export class AudioService implements OnModuleInit, OnModuleDestroy {
       });
     } catch (error) {
       if (signal.aborted && this.stopping) return; // startup recovers running jobs
-      await rm(join(this.root, audioId, "processed"), {
-        recursive: true,
-        force: true,
-      }).catch(() => undefined);
+      if (preparedByThisRun)
+        await rm(join(this.root, audioId, "processed"), {
+          recursive: true,
+          force: true,
+        }).catch(() => undefined);
       const code =
         error instanceof AudioServiceError
           ? error.code

@@ -3,7 +3,6 @@ import { test } from "node:test";
 import ExcelJS from "exceljs";
 import {
   buildTranscript,
-  validateWhisper,
   validateDiarization,
 } from "../../dist/audio-test/audio/audio-transcript.js";
 import {
@@ -11,252 +10,186 @@ import {
   markdown,
 } from "../../dist/audio-test/audio/audio-export.js";
 
-const word = (word, start, end) => ({ word, start, end });
-function fixture() {
-  return buildTranscript(
-    "00000000-0000-0000-0000-000000000001",
-    20,
-    2,
-    [
-      {
-        chunk: { offset: 0, keepStart: 0, keepEnd: 10 },
-        result: {
-          words: [
-            word("Xin", 1, 2),
-            word("chào", 9, 9.5),
-            word("trùng", 10.2, 10.5),
-          ],
-        },
-      },
-      {
-        chunk: { offset: 8, keepStart: 10, keepEnd: 18 },
-        result: {
-          words: [
-            word("trùng", 1, 1.5),
-            word("bạn", 2.2, 2.5),
-            word("Sơn", 3, 3.5),
-          ],
-        },
-      },
-    ],
-    {
-      segments: [
-        { start: 0, end: 10, speaker: "A", text: "" },
-        { start: 10, end: 18, speaker: "B", text: "" },
-      ],
-    },
-  );
-}
+const turns = [
+  { start: 3, end: 5, speaker: "speaker_9", text: "Vâng, em báo cáo." },
+  { start: 0.5, end: 2, speaker: "speaker_7", text: "Chào mọi người!" },
+  { start: 1.5, end: 2.5, speaker: "speaker_9", text: "Xin chào." },
+  { start: 6, end: 7, speaker: "speaker_7", text: "Cảm ơn." },
+  { start: 8, end: 9, speaker: "unknown", text: "Không rõ." },
+];
+const fixture = () =>
+  buildTranscript("test", 12, 1, validateDiarization({ segments: turns }, 10));
 
-test("stitches chunk core intervals without duplicate overlap, adds source offset and maps speakers globally", () => {
+test("preserves provider text, segment boundaries, overlap and deterministic speaker order", () => {
   const result = fixture();
-  assert.equal(
-    result.segments.map((s) => s.text).join(" "),
-    "Xin chào bạn Sơn",
-  );
-  assert.equal(result.segments[0].start, 3);
-  assert.equal(result.segments.at(-1).speaker, "speaker_2");
-  assert.equal(result.segments.at(-1).words.at(-1).end, 13.5);
-  assert.equal(result.timeline, "source");
-});
-
-test("marks overlapping or uncovered speech unknown rather than guessing a speaker", () => {
-  const result = buildTranscript(
-    "a",
-    10,
-    0,
-    [
-      {
-        chunk: { offset: 0, keepStart: 0, keepEnd: 10 },
-        result: { words: [word("chồng", 1, 2), word("thiếu", 8, 9)] },
-      },
-    ],
-    {
-      segments: [
-        { start: 0, end: 3, speaker: "A", text: "" },
-        { start: 0, end: 3, speaker: "B", text: "" },
-      ],
-    },
-  );
-  assert.ok(result.segments.every((s) => s.speaker === "unknown"));
-});
-
-test("bridges a short gap between turns of the same speaker and marks inferred words", () => {
-  const result = buildTranscript(
-    "a",
-    10,
-    0,
-    [
-      {
-        chunk: { offset: 0, keepStart: 0, keepEnd: 10 },
-        result: {
-          words: [
-            word("hay", 1.2, 1.32),
-            word("không", 1.32, 1.44),
-            word("ạ", 1.44, 2.18),
-            word("tiếp", 2.5, 2.7),
-          ],
-        },
-      },
-    ],
-    {
-      segments: [
-        { start: 0, end: 1.374, speaker: "A", text: "" },
-        { start: 1.94, end: 4, speaker: "A", text: "" },
-      ],
-    },
-  );
-  assert.equal(result.segments.length, 1);
-  assert.equal(result.segments[0].text, "hay không ạ tiếp");
-  assert.equal(result.segments[0].speaker, "speaker_1");
+  assert.equal(result.schema_version, 2);
   assert.deepEqual(
-    result.segments[0].words.map((item) => item.speaker_attribution),
-    [undefined, "bridged_gap", "bridged_gap", undefined],
+    result.segments.map((s) => [s.start, s.end, s.speaker, s.text]),
+    [
+      [1.5, 3, "speaker_1", "Chào mọi người!"],
+      [2.5, 3.5, "speaker_2", "Xin chào."],
+      [4, 6, "speaker_2", "Vâng, em báo cáo."],
+      [7, 8, "speaker_1", "Cảm ơn."],
+      [9, 10, "unknown", "Không rõ."],
+    ],
   );
-  assert.match(result.warnings.join(" "), /nối khoảng trống/);
-  assert.match(markdown(result), /speaker\\_1 \(có từ suy ra\)/);
-});
-
-test("does not bridge long gaps, different speakers or overlapping speech", () => {
-  const cases = [
-    [
-      { start: 0, end: 1, speaker: "A" },
-      { start: 2, end: 4, speaker: "A" },
-    ],
-    [
-      { start: 0, end: 1, speaker: "A" },
-      { start: 1.6, end: 4, speaker: "B" },
-    ],
-    [
-      { start: 0, end: 1, speaker: "A" },
-      { start: 0.9, end: 1.25, speaker: "B" },
-      { start: 1.6, end: 4, speaker: "A" },
-    ],
-    [
-      { start: 0, end: 1, speaker: "A" },
-      { start: 0.8, end: 1.1, speaker: "B" },
-      { start: 1.6, end: 4, speaker: "A" },
-    ],
-  ];
-  for (const turns of cases) {
-    const result = buildTranscript(
-      "a",
-      10,
-      0,
-      [
-        {
-          chunk: { offset: 0, keepStart: 0, keepEnd: 10 },
-          result: { words: [word("x", 1.2, 1.4)] },
-        },
-      ],
-      { segments: turns.map((turn) => ({ ...turn, text: "" })) },
-    );
-    assert.equal(result.segments[0].speaker, "unknown");
-    assert.equal(result.segments[0].words[0].speaker_attribution, undefined);
-  }
-});
-
-test("bridges a zero-duration word in the gap without changing its timestamp", () => {
-  const result = buildTranscript(
-    "a",
-    10,
-    0,
-    [
-      {
-        chunk: { offset: 0, keepStart: 0, keepEnd: 10 },
-        result: { words: [word("x", 1.3, 1.3)] },
-      },
-    ],
-    {
-      segments: [
-        { start: 0, end: 1, speaker: "A", text: "" },
-        { start: 1.6, end: 4, speaker: "A", text: "" },
-      ],
-    },
+  assert.equal(
+    result.text,
+    "Chào mọi người!\nXin chào.\nVâng, em báo cáo.\nCảm ơn.\nKhông rõ.",
   );
-  assert.deepEqual(result.segments[0].words[0], {
-    word: "x",
-    start: 1.3,
-    end: 1.3,
-    speaker: "speaker_1",
-    speaker_attribution: "bridged_gap",
+  assert.ok(result.segments.every((s) => !("words" in s)));
+  assert.deepEqual(result.models, {
+    transcription_and_diarization: "gpt-4o-transcribe-diarize",
   });
 });
 
-test("rejects missing, unsorted, non-finite or out-of-range timestamps", () => {
-  for (const words of [
-    [word("x", 2, 1)],
-    [word("x", 0, Infinity)],
-    [word("x", 0, 50)],
-    [word("x", 2, 3), word("y", 1, 2)],
-  ])
-    assert.throws(() =>
-      validateWhisper({ text: "x", segments: [], words }, 10),
-    );
-  assert.throws(() =>
-    validateWhisper({ text: "hello", segments: [], words: [] }, 10),
-  );
-  assert.throws(() =>
-    validateDiarization({ segments: [{ start: 0, end: 3, text: "x" }] }, 10),
-  );
-});
-
-test("zero-duration word keeps its provider timestamp and gets a speaker only when a unique turn contains it", () => {
+test("empty transcript stays empty without inventing a speaker", () => {
   const result = buildTranscript(
     "a",
     10,
     0,
-    [
-      {
-        chunk: { offset: 0, keepStart: 0, keepEnd: 10 },
-        result: { words: [word("một", 1, 1), word("hai", 3, 3)] },
-      },
-    ],
-    {
-      segments: [
-        { start: 0, end: 5, speaker: "A", text: "" },
-        { start: 2, end: 5, speaker: "B", text: "" },
-      ],
-    },
+    validateDiarization({ text: "", segments: [] }, 10),
   );
-  assert.equal(result.segments[0].speaker, "speaker_1");
-  assert.equal(
-    result.segments[0].words[0].start,
-    result.segments[0].words[0].end,
-  );
-  assert.equal(result.segments[1].speaker, "unknown");
+  assert.deepEqual(result.segments, []);
+  assert.deepEqual(result.speakers, []);
+  assert.equal(result.text, "");
 });
 
-test("exports the same Vietnamese transcript to JSON/TXT/SRT/Markdown/Excel/PDF", async () => {
+test("an explicit unassigned speaker does not consume a numbered speaker ID", () => {
+  const data = validateDiarization(
+    {
+      segments: [
+        { start: 0, end: 1, speaker: "unassigned", text: "Không rõ." },
+        { start: 1.2, end: 2, speaker: "speaker_42", text: "Tôi đây." },
+      ],
+    },
+    3,
+  );
+  const result = buildTranscript("a", 3, 0, data);
+  assert.deepEqual(
+    result.segments.map((segment) => segment.speaker),
+    ["unknown", "speaker_1"],
+  );
+});
+
+test("rejects malformed and out-of-bounds provider response", () => {
+  const segment = { start: 0, end: 1, speaker: "A", text: "x" };
+  for (const input of [
+    null,
+    {},
+    { text: "speech", segments: [] },
+    { segments: [null] },
+    { segments: [{ ...segment, start: -1 }] },
+    { segments: [{ ...segment, end: Infinity }] },
+    { segments: [{ ...segment, start: 2 }] },
+    { segments: [{ ...segment, end: 10.1 }] },
+    { segments: [{ ...segment, speaker: "" }] },
+    { segments: [{ ...segment, speaker: null }] },
+    { segments: [{ ...segment, text: null }] },
+  ]) {
+    assert.throws(() => validateDiarization(input, 10), {
+      code: "PROVIDER_INVALID_DIARIZATION",
+    });
+  }
+  assert.throws(
+    () =>
+      buildTranscript(
+        "a",
+        10,
+        2,
+        validateDiarization({ segments: [{ ...segment, end: 9 }] }, 10),
+      ),
+    { code: "PROVIDER_INVALID_DIARIZATION" },
+  );
+  const rounded = buildTranscript(
+    "a",
+    10,
+    0,
+    validateDiarization({ segments: [{ ...segment, end: 10.01 }] }, 10),
+  );
+  assert.equal(rounded.segments[0].end, 10);
+});
+
+test("all v2 exports preserve Unicode, speaker rename and contain no word sheet", async () => {
   const transcript = fixture();
   transcript.speakers[0].name = "Nguyễn Huy Sơn";
-  assert.equal(
-    JSON.parse((await exportTranscript(transcript, "json")).toString())
-      .timeline,
-    "source",
+  const json = JSON.parse(
+    (await exportTranscript(transcript, "json")).toString(),
   );
+  assert.equal(json.schema_version, 2);
+  assert.equal(json.speakers[0].name, "Nguyễn Huy Sơn");
+  assert.ok(!("words" in json.segments[0]));
   assert.match(
     (await exportTranscript(transcript, "txt")).toString(),
-    /Nguyễn Huy Sơn/,
+    /Nguyễn Huy Sơn: Chào mọi người!/,
   );
   assert.match(
     (await exportTranscript(transcript, "srt")).toString(),
-    /00:00:03,000 -->/,
+    /00:00:01,500 --> 00:00:03,000\nNguyễn Huy Sơn/,
   );
   assert.match(markdown(transcript), /Nguyễn Huy Sơn/);
-  const excel = await exportTranscript(transcript, "xlsx");
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(excel);
+  await workbook.xlsx.load(await exportTranscript(transcript, "xlsx"));
+  assert.deepEqual(
+    workbook.worksheets.map((sheet) => sheet.name),
+    ["Transcript", "Metadata"],
+  );
   assert.equal(
     workbook.getWorksheet("Transcript").getRow(2).getCell(4).value,
     "Nguyễn Huy Sơn",
   );
-  assert.equal(workbook.getWorksheet("Words").rowCount, 5);
-  const pdf = await exportTranscript(transcript, "pdf");
-  assert.equal(pdf.subarray(0, 5).toString(), "%PDF-");
+  assert.equal(
+    (await exportTranscript(transcript, "pdf")).subarray(0, 5).toString(),
+    "%PDF-",
+  );
   await assert.rejects(exportTranscript(transcript, "html"), {
     code: "INVALID_EXPORT_FORMAT",
   });
+});
+
+test("historical v1 transcript remains unchanged and exports its original words", async () => {
+  const transcript = {
+    ...fixture(),
+    schema_version: 1,
+    models: { transcription: "historical", diarization: "historical" },
+    segments: [
+      {
+        id: "SEG-0001",
+        start: 0,
+        end: 1,
+        speaker: "speaker_1",
+        text: "Xin chào",
+        words: [
+          {
+            word: "Xin",
+            start: 0,
+            end: 0.3,
+            speaker: "speaker_1",
+            speaker_attribution: "bridged_gap",
+          },
+        ],
+      },
+    ],
+  };
+  transcript.speakers[0].name = "Sơn";
+  assert.match(markdown(transcript), /có từ suy ra/);
+  for (const format of ["json", "txt", "srt", "md", "xlsx", "pdf"])
+    assert.ok((await exportTranscript(transcript, format)).length > 0);
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(await exportTranscript(transcript, "xlsx"));
+  assert.deepEqual(
+    workbook.worksheets.map((sheet) => sheet.name),
+    ["Transcript", "Words", "Metadata"],
+  );
+  assert.equal(
+    workbook.getWorksheet("Words").getRow(2).getCell(5).value,
+    "Sơn",
+  );
+  assert.equal(
+    JSON.parse((await exportTranscript(transcript, "json")).toString())
+      .schema_version,
+    1,
+  );
 });
 
 test("Excel stores untrusted transcript text as a string, not a formula", async () => {

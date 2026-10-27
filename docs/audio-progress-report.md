@@ -1,5 +1,7 @@
 # Báo cáo tiến độ audio — 25/10/2026
 
+> **Cập nhật kiến trúc audio:** Các mô tả Whisper, timestamp theo từ và chia chunk bên dưới là kế hoạch/lịch sử cũ. Pipeline hiện tại dùng một request `gpt-4o-transcribe-diarize`, transcript v2 theo segment; xem [audio service API](audio-service-api.md). Các phần App/LLM vẫn cần tích hợp và kiểm chứng riêng.
+
 ## Cập nhật: service audio độc lập
 
 Audio đã chuyển sang `apps/audio`, port 3002, có database/storage/API key riêng.

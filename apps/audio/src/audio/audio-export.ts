@@ -43,7 +43,7 @@ export function markdown(transcript: AudioTranscript) {
     "## Nội dung",
     "",
     ...transcript.segments.flatMap((segment) => [
-      `### ${timestamp(segment.start)} → ${timestamp(segment.end)} — ${escapeMarkdown(speakerName(transcript, segment.speaker))}${segment.words.some((word) => word.speaker_attribution === "bridged_gap") ? " (có từ suy ra)" : ""}`,
+      `### ${timestamp(segment.start)} → ${timestamp(segment.end)} — ${escapeMarkdown(speakerName(transcript, segment.speaker))}${transcript.schema_version === 1 && "words" in segment && segment.words.some((word) => word.speaker_attribution === "bridged_gap") ? " (có từ suy ra)" : ""}`,
       "",
       escapeMarkdown(segment.text),
       "",
@@ -100,17 +100,19 @@ export async function exportTranscript(
     sheet.getRow(1).font = { bold: true };
     sheet.views = [{ state: "frozen", ySplit: 1 }];
     sheet.getColumn("text").alignment = { wrapText: true, vertical: "top" };
-    const words = workbook.addWorksheet("Words");
-    words.addRow(["Segment", "Từ", "Bắt đầu", "Kết thúc", "Người nói"]);
-    for (const segment of transcript.segments)
-      for (const word of segment.words)
-        words.addRow([
-          segment.id,
-          word.word,
-          word.start,
-          word.end,
-          speakerName(transcript, word.speaker),
-        ]);
+    if (transcript.schema_version === 1) {
+      const words = workbook.addWorksheet("Words");
+      words.addRow(["Segment", "Từ", "Bắt đầu", "Kết thúc", "Người nói"]);
+      for (const segment of transcript.segments)
+        for (const word of segment.words)
+          words.addRow([
+            segment.id,
+            word.word,
+            word.start,
+            word.end,
+            speakerName(transcript, word.speaker),
+          ]);
+    }
     const metadata = workbook.addWorksheet("Metadata");
     metadata.addRows([
       ["audio_id", transcript.audio_id],

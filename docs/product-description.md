@@ -1,5 +1,7 @@
 # Product Description: Meeting Minutes Assistant (MVP)
 
+> **Cập nhật kiến trúc audio:** Các mô tả Whisper, timestamp theo từ và chia chunk bên dưới là kế hoạch/lịch sử cũ. Pipeline hiện tại dùng một request `gpt-4o-transcribe-diarize`, transcript v2 theo segment; xem [audio service API](audio-service-api.md). Các phần App/LLM vẫn cần tích hợp và kiểm chứng riêng.
+
 - **Document Version:** 1.2
 - **Status:** Approved / In Progress
 - **Target Milestone:** Minimum Viable Product (MVP)
@@ -12,7 +14,7 @@
 ### 1.1 Executive Summary
 The **Meeting Minutes Assistant** is an intelligent meeting productivity tool designed to convert uploaded meeting audio into structured, accurate, and actionable documentation.
 
-By leveraging speech-to-text (OpenAI Whisper API), speaker diarization/labeling, and LLM-driven business extraction, the product eliminates manual note-taking friction, preserves critical organizational memory, and ensures transparent team alignment.
+By leveraging a single OpenAI transcription and diarization model and LLM-driven business extraction, the product eliminates manual note-taking friction, preserves critical organizational memory, and ensures transparent team alignment.
 
 ### 1.2 Core Problem Statement
 * **Information Loss:** Crucial decisions, upcoming milestone commitments, and assigned deliverables discussed verbally are frequently forgotten.
@@ -41,9 +43,9 @@ By leveraging speech-to-text (OpenAI Whisper API), speaker diarization/labeling,
    * Direct audio upload up to 100 MB per file (MP3, M4A, WAV, WebM).
    * Meeting metadata capture (Meeting Title, Anchor Date / Date of the Meeting).
 2. **Audio Transcription & Attribution:**
-   * Transcription powered by **OpenAI Whisper API**.
+   * Transcription and speaker labeling by **gpt-4o-transcribe-diarize**.
    * Speaker labeling (Speaker 1, Speaker 2, or participant tags).
-   * Segment-level and word-level timestamps.
+   * Segment-level timestamps on the source timeline.
 3. **Structured Business Output Generation:**
    * Extraction and formatting of all 6 defined business modules.
    * Temporal date resolution (converting relative statements like *"thứ 6 demo"* to exact dates based on the meeting anchor date).
@@ -62,7 +64,7 @@ By leveraging speech-to-text (OpenAI Whisper API), speaker diarization/labeling,
 
 ```mermaid
 flowchart LR
-    A["Uploaded Audio<br/>+ Meeting Anchor Date"] --> B["OpenAI Whisper API<br/>+ Diarization Pipeline"]
+    A["Uploaded Audio<br/>+ Meeting Anchor Date"] --> B["OpenAI Transcription<br/>+ Diarization"]
     B --> C["Timestamped & Speaker-Labeled<br/>Transcript"]
     C --> D["LLM Business Extraction<br/>& Temporal Engine"]
     D --> E1["1. Meeting Summary"]
@@ -75,7 +77,7 @@ flowchart LR
 ```
 
 1. **Ingest & Context:** User uploads an existing audio file and supplies meeting context (specifically the **Meeting Anchor Date**, e.g., `05/10/2026`).
-2. **Transcribe & Tag:** Audio is processed using the OpenAI Whisper API to yield transcripts with timestamps and speaker attribution.
+2. **Transcribe & Tag:** Audio is processed using `gpt-4o-transcribe-diarize` to yield transcripts with segment timestamps and speaker attribution.
 3. **Extract & Resolve:** The timestamped transcript and meeting anchor date are passed to the business intelligence extraction prompt to produce structured JSON for all 6 modules.
 4. **Deliver:** The user receives a comprehensive Meeting Minutes Document with all business modules cleanly formatted.
 
@@ -256,13 +258,13 @@ To avoid ambiguity, ensure consistent extraction, and provide high utility, the 
 
 ## 5. Technical Considerations & Alignment
 
-1. **OpenAI Whisper API:**
-   * Uses Whisper (`/v1/audio/transcriptions` with `verbose_json`) for high-fidelity speech-to-text and segment-level timestamps.
-   * *Diarization:* Pair Whisper timestamps with a speaker attribution pipeline (e.g., PyAnnote diarization or LLM turn-based speaker attribution with participant metadata).
+1. **OpenAI transcription and diarization:**
+   * `gpt-4o-transcribe-diarize` returns speaker-labeled segments and segment timestamps in one request.
+   * Model speaker labels are inferred, not verified identities; the model is scheduled to shut down on 26/02/2027.
 2. **Temporal Resolution Engine:**
    * Prompts provide the current meeting date (`anchor_date`) to the LLM.
    * The LLM applies temporal parsing rules (ISO 8601 date resolution) for Vietnamese and English expressions (e.g., *"thứ 6 này"*, *"tuần sau"*, *"cuối tháng"*, *"next Tuesday"*).
-3. **File Size & Chunking:**
-   * OpenAI Whisper API has a 25 MB limit per request. Audio files exceeding this limit require pre-processing (chunking with slight overlap using `ffmpeg` or `pydub`).
+3. **File size:**
+   * Encode the full audio to MP3 and reject provider payloads at or above 24 MB; do not split it into independent diarization requests.
 4. **Structured Document Output:**
    * Stores meeting artifacts in structured JSON and renders to clean, shareable Markdown and HTML/PDF exports.

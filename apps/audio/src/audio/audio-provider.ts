@@ -3,6 +3,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { AudioServiceError, positiveNumber } from "./audio-types.js";
 
 export const PROVIDER_MAX_BYTES = 24_000_000;
+export const DIARIZATION_MODEL = "gpt-4o-transcribe-diarize";
 
 export function openAIKey() {
   return (
@@ -11,9 +12,8 @@ export function openAIKey() {
 }
 
 /** Native fetch keeps provider calls explicit: no hidden SDK retries. */
-export async function transcribeFile(
+export async function transcribeWithDiarization(
   filePath: string,
-  kind: "whisper" | "diarization",
   signal: AbortSignal,
   beforeCall: () => Promise<void>,
 ): Promise<unknown> {
@@ -21,34 +21,20 @@ export async function transcribeFile(
   if (!key) throw new AudioServiceError("OPENAI_KEY_MISSING", 503);
   if ((await stat(filePath)).size >= PROVIDER_MAX_BYTES)
     throw new AudioServiceError("PROVIDER_FILE_TOO_LARGE", 422);
-  const model =
-    kind === "whisper"
-      ? (process.env.OPENAI_ASR_MODEL ?? "whisper-1")
-      : (process.env.OPENAI_DIARIZATION_MODEL ?? "gpt-4o-transcribe-diarize");
   const bytes = await readFile(filePath);
   for (let attempt = 0; attempt < 3; attempt++) {
     signal.throwIfAborted();
     const form = new FormData();
     form.set("file", new Blob([bytes], { type: "audio/mpeg" }), "audio.mp3");
-    form.set("model", model);
+    form.set("model", DIARIZATION_MODEL);
     form.set("language", "vi");
-    if (kind === "whisper") {
-      form.set("response_format", "verbose_json");
-      form.append("timestamp_granularities[]", "segment");
-      form.append("timestamp_granularities[]", "word");
-    } else {
-      form.set("response_format", "diarized_json");
-      form.set("chunking_strategy", "auto");
-    }
+    form.set("response_format", "diarized_json");
+    form.set("chunking_strategy", "auto");
     await beforeCall();
     let retryAfter = 0;
     try {
       const timeout = AbortSignal.timeout(
-        positiveNumber(
-          "OPENAI_TIMEOUT_MS",
-          kind === "diarization" ? 600_000 : 180_000,
-          600_000,
-        ),
+        positiveNumber("OPENAI_TIMEOUT_MS", 600_000, 600_000),
       );
       const response = await fetch(
         "https://api.openai.com/v1/audio/transcriptions",

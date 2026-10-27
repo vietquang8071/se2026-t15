@@ -1,5 +1,7 @@
 # Feature Cards & Task Breakdown: Meeting Minutes Assistant (MVP)
 
+> **Cập nhật kiến trúc audio:** Các mô tả Whisper, timestamp theo từ và chia chunk bên dưới là kế hoạch/lịch sử cũ. Pipeline hiện tại dùng một request `gpt-4o-transcribe-diarize`, transcript v2 theo segment; xem [audio service API](audio-service-api.md). Các phần App/LLM vẫn cần tích hợp và kiểm chứng riêng.
+
 - **Document Version:** 1.1
 - **Target Milestone:** Minimum Viable Product (MVP)
 - **Parent Document:** [docs/product-description.md](product-description.md)
@@ -35,9 +37,9 @@ flowchart TD
     - Tiêu đề cuộc họp (`title`)
     - Ngày họp (`anchor_date` - bắt buộc để tính toán Timeline)
     - Danh sách người tham gia (`participants` - hỗ trợ gán nhãn người nói).
-- [ ] **Task 1.3: Audio Pre-processing & Chunking Service (>25MB)**
-  - Xử lý giới hạn 25MB của OpenAI Whisper API.
-  - Tích hợp công cụ cắt file audio (dùng `ffmpeg` / `pydub`) thành các chunk nhỏ (ví dụ 10–15 phút/chunk) có 5-10s overlap để không mất chữ ở điểm cắt.
+- [ ] **Task 1.3: Audio Pre-processing**
+  - Chuẩn hóa WAV và nén toàn bộ nguồn thành MP3; từ chối file provider từ 24 MB.
+  - Không chia thành nhiều request diarization độc lập.
 
 ---
 
@@ -48,15 +50,12 @@ flowchart TD
 
 ### Danh sách Tasks kỹ thuật:
 
-- [ ] **Task 2.1: OpenAI Whisper API Integration**
-  - Dùng dịch vụ OpenAI Whisper API bên ngoài (`whisper-1` theo yêu cầu hiện có); không chạy Whisper local. Khả năng dùng provider phải được xác minh khi tích hợp.
-  - Cấu hình request parameter `response_format="verbose_json"` để lấy timestamp theo từng câu/từng từ.
-  - Cơ chế retry khi gặp rate-limit hoặc timeout.
-- [ ] **Task 2.2: Speaker Diarization / Turn-Taking Attribution**
-  - Phân tách giọng nói của từng speaker (Speaker 1, Speaker 2,... hoặc tên thành viên).
-  - Ghép speaker turns từ dịch vụ diarization ngoài vào transcript theo timestamp; dùng OpenAI `gpt-4o-transcribe-diarize`, không coi nhãn suy luận là danh tính đã xác thực.
-- [ ] **Task 2.3: Multi-chunk Transcript Stitcher**
-  - Ghép nối kết quả transcript từ các chunk audio (nếu file > 25MB) thành một chuỗi transcript hoàn chỉnh duy nhất, hiệu chỉnh lại offset thời gian (timestamp offset).
+- [ ] **Task 2.1: OpenAI Transcription & Diarization**
+  - Gọi `gpt-4o-transcribe-diarize` với `diarized_json` và retry có giới hạn.
+- [ ] **Task 2.2: Speaker Labels**
+  - Chuẩn hóa nhãn theo thứ tự xuất hiện; không coi nhãn model là danh tính xác thực.
+- [ ] **Task 2.3: Source Timeline**
+  - Giữ ranh giới segment provider và cộng audio start offset cho file MP4.
 - [ ] **Task 2.4: Transcript Structured Storage**
   - Lưu trữ transcript dạng cấu trúc:
     ```json

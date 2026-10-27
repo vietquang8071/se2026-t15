@@ -1,6 +1,6 @@
 # Independent Audio API
 
-Service NestJS riêng cho upload → chuẩn hóa → chunking → OpenAI Whisper →
+Service NestJS riêng cho upload → chuẩn hóa → OpenAI transcription +
 diarization → transcript → export. Không khởi động App, không dùng model Meeting
 hoặc database của App, không chạy model/GPU local.
 
@@ -76,7 +76,7 @@ pnpm audio:file audio:<audio_id> artifacts/private/audio-result
 
 Client upload, gọi process, poll job và tải:
 `transcript.json`, `.txt`, `.srt`, `.md`, `.xlsx`, `.pdf`, cùng `metadata.json`.
-Excel có ba sheet Transcript/Words/Metadata. PDF được render từ cùng Markdown
+Excel v2 có hai sheet Transcript/Metadata; transcript v1 cũ vẫn có sheet Words. PDF được render từ cùng Markdown
 do service sinh ra và nhúng font tiếng Việt. Đây là **bản chép lời**, chưa phải
 biên bản sáu module của LLM.
 
@@ -90,49 +90,42 @@ Xem [contract đầy đủ](../../docs/audio-service-api.md), bao gồm lỗi v�
 
 Upload giới hạn 100.000.000 bytes / 3.600 giây, WAV/MP3/M4A/WebM/MP4. Chỉ upload,
 không thu âm trình duyệt. `retention_days` bắt buộc là 30 hoặc 60. Hạn gốc áp dụng
-nguồn, WAV, chunk, checkpoint và **transcript**; không gia hạn khi đọc/xử lý lại.
+nguồn, WAV, MP3, checkpoint và **transcript**; không gia hạn khi đọc/xử lý lại.
 App chịu trách nhiệm thông báo gần hạn.
 
 ## Pipeline và giới hạn
 
 1. Upload kiểm tra container/MIME/codec, một audio track và full decode trước persist.
 2. POST process trả 202 + job_id. Mỗi audio có một job, gọi lặp trả cùng ID.
-3. Worker tạo WAV PCM16 mono/16 kHz, giữ nguồn. Nguồn MP4 giữ audio start offset.
-4. Whisper nhận MP3 64 kbps theo chunk (mặc định 600 giây, context overlap 2 giây).
-   Kiểm tra **bytes sau encode** dưới 24 MB, không dựa riêng thời lượng.
-5. Diarization nhận MP3 32 kbps của toàn cuộc họp, dưới 24 MB với giới hạn nguồn
-   60 phút. Một lần gọi toàn nguồn giữ speaker ID nhất quán giữa các chunk ASR.
-6. Ghép từ theo core interval không chồng, cộng chunk offset và audio start offset
-   về source. Speaker gán theo overlap thời gian; vùng không rõ dùng `unknown`.
-   Segment cuối được nhóm lại theo speaker, khoảng nghỉ và độ dài; không giả
-   danh đó là nguyên xi segmentation của Whisper.
-7. Lưu kết quả trong PostgreSQL; các bản export sinh từ transcript hiện tại,
-   nên sửa tên speaker phản ánh vào mọi định dạng.
+3. Worker tạo WAV PCM16 mono/16 kHz và MP3 32 kbps toàn audio; giữ file gốc.
+4. Một request `gpt-4o-transcribe-diarize` nhận MP3 với `diarized_json`,
+   `chunking_strategy=auto` và `language=vi`. Không chia audio thành nhiều
+   request trong ứng dụng. File MP3 phải nhỏ hơn 24.000.000 bytes, nếu không
+   service trả `PROVIDER_FILE_TOO_LARGE`.
+5. Validate segment, giữ text và ranh giới của provider, gán ID người nói theo
+   thứ tự xuất hiện, cộng source offset cho MP4. Transcript mới là schema v2,
+   có timestamp theo segment, không có timestamp theo từ.
+6. Lưu checkpoint và transcript trong PostgreSQL; các export dùng transcript
+   hiện tại nên đổi tên speaker phản ánh vào mọi định dạng.
 
-Provider có timeout mặc định Whisper 180 giây, diarization 600 giây/request;
-`OPENAI_TIMEOUT_MS` có thể override cả hai (tối đa 600 giây). Tối đa ba lần gọi cho lỗi
-network/429/5xx. Auth/quota/request lỗi không retry âm thầm. Job thất bại được
-gọi process lại, tối đa ba lần chạy tổng cộng. Checkpoint từng chunk/diarization
-được lưu DB; retry/restart tái dùng kết quả đã persist. Provider calls là tổng
-số attempt thực tế. Crash sau provider trả nhưng trước khi commit checkpoint
-có thể cần gọi lại; không cam kết exactly-once ở phía provider.
+Provider timeout mặc định 600 giây/request, có thể đổi qua `OPENAI_TIMEOUT_MS`
+(tối đa 600 giây). Retry tối đa ba attempt cho lỗi network/429/5xx; auth,
+quota và request lỗi không retry âm thầm. Job thất bại có thể gọi process lại,
+tối đa ba lần chạy. Checkpoint được tái sử dụng khi retry/restart và
+`provider_calls` đếm từng attempt thật. Crash sau provider trả nhưng trước khi
+commit checkpoint có thể phải gọi lại; không cam kết exactly-once.
 
-Không đổi model/chunk/overlap giữa các lượt retry của cùng job; service từ chối
-checkpoint khác cấu hình bằng `JOB_CONFIGURATION_CHANGED`. Nếu muốn thử cấu hình
-mới, upload thành asset mới để giữ nguồn gốc kết quả rõ ràng.
+Transcript v1 đã hoàn thành vẫn đọc, đổi tên và export theo cấu trúc cũ. Job
+cũ chưa hoàn thành có checkpoint không tương thích thất bại với
+`LEGACY_PIPELINE_CHECKPOINT`; file nguồn và checkpoint được giữ lại. Để chạy
+pipeline mới, upload lại file thành asset mới; không đổi cấu trúc dữ liệu cũ.
+Job v2 từ chối checkpoint cấu hình khác bằng `JOB_CONFIGURATION_CHANGED`.
 
-Giới hạn chất lượng: cắt theo thời gian có thể sai/mất/trùng từ ở biên khi model
-cho timestamp khác nhau; overlap chỉ giảm rủi ro, không bảo đảm đúng tuyệt đối.
-Speaker là nhãn suy luận, không xác minh danh tính. Chưa xử lý voiceprint hoặc
-âm thanh chồng tiếng bằng model local. Giữ `unknown` khi không đủ bằng chứng.
-Khe hở tối đa 0,75 giây giữa hai lượt của cùng speaker có thể được nối nếu không
-có speaker khác chồng vào; từ được suy ra có `speaker_attribution: "bridged_gap"`
-trong JSON và cần kiểm tra lại. Kết quả diarization gốc vẫn nằm trong checkpoint.
-
-Mặc định dùng `whisper-1` và `gpt-4o-transcribe-diarize` theo contract hiện tại.
-Tài liệu OpenAI ngày rà soát thông báo shutdown ngày 26/02/2027; cần thay đổi
-provider contract có kiểm thử trước mốc đó, không chỉ đổi tên model tùy ý vì
-response/timestamp có thể khác. [Nguồn chính thức](https://developers.openai.com/api/docs/guides/speech-to-text).
+Speaker là nhãn suy luận, không xác minh danh tính và có thể gán sai. Dữ liệu
+không chắc chắn cần được review; không có timestamp từng từ trong transcript v2.
+Model `gpt-4o-transcribe-diarize` đã được OpenAI thông báo ngừng hoạt động ngày
+26/02/2027. Đây là lựa chọn ngắn hạn; cần thay provider và kiểm thử contract
+trước thời điểm đó. [Tài liệu OpenAI](https://developers.openai.com/api/docs/guides/speech-to-text#speaker-diarization).
 
 ## Kiểm thử
 

@@ -15,19 +15,12 @@ import { generateAudioFixtures, createSilentWav } from "../audio/fixtures.mjs";
 let app, service, base, root, fixtures, admin;
 const database = `audio_test_${process.pid}_${randomBytes(4).toString("hex")}`;
 const headers = { "X-API-Key": "audio-http-test-key-at-least-24-characters" };
-const fakeProvider = async (_path, kind, signal, beforeCall) => {
+const fakeProvider = async (_path, signal, beforeCall) => {
   signal.throwIfAborted();
   await beforeCall();
-  return kind === "whisper"
-    ? {
-        text: "Xin chào",
-        words: [
-          { word: "Xin", start: 0.05, end: 0.2 },
-          { word: "chào", start: 0.2, end: 0.4 },
-        ],
-        segments: [{ text: "Xin chào", start: 0.05, end: 0.4 }],
-      }
-    : { segments: [{ speaker: "A", text: "Xin chào", start: 0.05, end: 0.4 }] };
+  return {
+    segments: [{ speaker: "A", text: "Xin chào", start: 0.05, end: 0.4 }],
+  };
 };
 
 async function start() {
@@ -147,6 +140,36 @@ test("invalid retention, malformed media, missing file and invalid IDs have stab
   assert.deepEqual(await readdir(service.incoming), []);
 });
 
+test("MP4 audio start offset is applied exactly once to v2 segments", async () => {
+  const uploaded = await (
+    await upload(fixtures.offsetMp4, "offset.mp4")
+  ).json();
+  assert.ok(uploaded.source.audio_start_sec > 0);
+  const path = `/api/audio/${uploaded.audio_id}`;
+  const started = await (
+    await request(path + "/process", { method: "POST" })
+  ).json();
+  const job = await poll(started.job_id);
+  assert.equal(job.status, "completed", job.error);
+  const transcript = await (await request(path + "/transcript")).json();
+  assert.equal(transcript.schema_version, 2);
+  assert.equal(
+    transcript.source_audio_start_sec,
+    uploaded.source.audio_start_sec,
+  );
+  assert.ok(
+    Math.abs(
+      transcript.segments[0].start - (0.05 + uploaded.source.audio_start_sec),
+    ) < 1e-9,
+  );
+  assert.ok(
+    Math.abs(
+      transcript.segments[0].end - (0.4 + uploaded.source.audio_start_sec),
+    ) < 1e-9,
+  );
+  await request(path, { method: "DELETE" });
+});
+
 test("HTTP honors the inclusive 100 MB limit and removes oversized temporary uploads", async () => {
   const source = join(root, "limit.wav");
   await createSilentWav(source, 100_000_000 - 44, 25000);
@@ -173,9 +196,11 @@ test("process is idempotent, job completes, speaker edits persist and every expo
   assert.ok(results.every((r) => r.job_id === results[0].job_id));
   const job = await poll(results[0].job_id);
   assert.equal(job.status, "completed", job.error);
-  assert.equal(job.provider_calls, 2);
+  assert.equal(job.provider_calls, 1);
   const transcript = await (await request(path + "/transcript")).json();
   assert.equal(transcript.text, "Xin chào");
+  assert.equal(transcript.schema_version, 2);
+  assert.equal("words" in transcript.segments[0], false);
   assert.equal(transcript.segments[0].speaker, "speaker_1");
   assert.equal(
     (
@@ -235,30 +260,39 @@ test("process is idempotent, job completes, speaker edits persist and every expo
   await assert.rejects(access(join(service.root, uploaded.audio_id)));
 });
 
-test("retry resumes persisted Whisper checkpoint without another transcription call", async () => {
+test("retry reuses a persisted diarization checkpoint without another provider call", async () => {
   const uploaded = await (await upload()).json();
   const path = `/api/audio/${uploaded.audio_id}`;
-  service.provider = async (...args) => {
-    if (args[1] === "diarization") {
-      await args[3]();
-      throw new Error("simulated provider outage");
-    }
-    return fakeProvider(...args);
-  };
+  const asset = await service.db.audioAsset.findUniqueOrThrow({
+    where: { id: uploaded.audio_id },
+  });
+  await service.db.audioAsset.update({
+    where: { id: uploaded.audio_id },
+    data: { metadata: { ...asset.metadata, audio_start_sec: 999 } },
+  });
   const started = await (
     await request(path + "/process", { method: "POST" })
   ).json();
-  assert.equal((await poll(started.job_id)).status, "failed");
+  const failed = await poll(started.job_id);
+  assert.equal(failed.status, "failed");
   const checkpoint = await service.db.audioJob.findUnique({
     where: { id: started.job_id },
   });
-  assert.ok(checkpoint.checkpoints.whisper_0);
-  service.provider = fakeProvider;
+  assert.ok(checkpoint.checkpoints.diarization);
+  assert.equal(checkpoint.providerCalls, 1);
+  await service.db.audioAsset.update({
+    where: { id: uploaded.audio_id },
+    data: { metadata: asset.metadata },
+  });
+  service.provider = async () => {
+    throw new Error("provider must not be called");
+  };
   await request(path + "/process", { method: "POST" });
   const job = await poll(started.job_id);
-  assert.equal(job.status, "completed");
-  assert.equal(job.provider_calls, 3);
+  assert.equal(job.status, "completed", job.error);
+  assert.equal(job.provider_calls, 1);
   assert.equal(job.attempts, 2);
+  service.provider = fakeProvider;
   await request(path, { method: "DELETE" });
 });
 
@@ -289,7 +323,7 @@ test("DELETE aborts active provider work and no output is resurrected", async ()
   const running = new Promise((resolve) => {
     entered = resolve;
   });
-  service.provider = async (_path, _kind, signal, beforeCall) => {
+  service.provider = async (_path, signal, beforeCall) => {
     await beforeCall();
     entered();
     await delay(60000, undefined, { signal });
@@ -308,23 +342,23 @@ test("DELETE aborts active provider work and no output is resurrected", async ()
   await assert.rejects(access(join(service.root, uploaded.audio_id)));
 });
 
-test("startup recovers an interrupted running job and persisted checkpoint", async () => {
+test("startup recovers an interrupted v2 job using its checkpoint", async () => {
   const uploaded = await (await upload()).json();
   const assetId = uploaded.audio_id;
   const job = await service.db.audioJob.create({
     data: {
       audioId: assetId,
       status: "running",
-      stage: "transcribing",
+      stage: "building_transcript",
       attempts: 1,
+      providerCalls: 1,
       checkpoints: {
-        whisper_0: {
-          text: "Xin chào",
-          words: [
-            { word: "Xin", start: 0.05, end: 0.2 },
-            { word: "chào", start: 0.2, end: 0.4 },
-          ],
-          segments: [],
+        _configuration: JSON.stringify({
+          version: 2,
+          model: "gpt-4o-transcribe-diarize",
+        }),
+        diarization: {
+          segments: [{ speaker: "A", text: "Xin chào", start: 0.05, end: 0.4 }],
         },
       },
     },
@@ -332,10 +366,145 @@ test("startup recovers an interrupted running job and persisted checkpoint", asy
   await app.close();
   app = undefined;
   await start();
+  service.provider = async () => {
+    throw new Error("checkpoint should be reused");
+  };
   const result = await poll(job.id);
-  assert.equal(result.status, "completed");
+  assert.equal(result.status, "completed", result.error);
   assert.equal(result.provider_calls, 1);
+  service.provider = fakeProvider;
   await request(`/api/audio/${assetId}`, { method: "DELETE" });
+});
+
+test("legacy unfinished checkpoints fail explicitly and preserve existing media and checkpoint", async () => {
+  const uploaded = await (await upload()).json();
+  const job = await service.db.audioJob.create({
+    data: {
+      audioId: uploaded.audio_id,
+      status: "queued",
+      checkpoints: { whisper_0: { text: "legacy" } },
+    },
+  });
+  const result = await poll(job.id);
+  assert.equal(result.status, "failed");
+  assert.equal(result.error, "LEGACY_PIPELINE_CHECKPOINT");
+  assert.equal(result.provider_calls, 0);
+  const saved = await service.db.audioJob.findUnique({ where: { id: job.id } });
+  assert.deepEqual(saved.checkpoints, { whisper_0: { text: "legacy" } });
+  assert.equal(
+    (await request(`/api/audio/${uploaded.audio_id}/media`)).status,
+    200,
+  );
+  await request(`/api/audio/${uploaded.audio_id}`, { method: "DELETE" });
+});
+
+test("legacy failed and interrupted jobs keep their checkpoints when retried or recovered", async () => {
+  for (const status of ["failed", "running"]) {
+    const uploaded = await (await upload()).json();
+    const path = `/api/audio/${uploaded.audio_id}`;
+    const checkpoints = {
+      _configuration: JSON.stringify({
+        transcription: "whisper-1",
+        diarization: "gpt-4o-transcribe-diarize",
+        chunkSeconds: 600,
+        overlapSeconds: 2,
+      }),
+      diarization: { segments: [] },
+    };
+    const job = await service.db.audioJob.create({
+      data: {
+        audioId: uploaded.audio_id,
+        status,
+        stage: "diarizing",
+        attempts: 1,
+        providerCalls: 2,
+        checkpoints,
+      },
+    });
+    if (status === "failed") {
+      await request(path + "/process", { method: "POST" });
+    } else {
+      await app.close();
+      app = undefined;
+      await start();
+    }
+    const result = await poll(job.id);
+    assert.equal(result.status, "failed");
+    assert.equal(result.error, "LEGACY_PIPELINE_CHECKPOINT");
+    assert.equal(result.provider_calls, 2);
+    assert.deepEqual(
+      (await service.db.audioJob.findUnique({ where: { id: job.id } }))
+        .checkpoints,
+      checkpoints,
+    );
+    assert.equal((await request(path + "/media")).status, 200);
+    await request(path, { method: "DELETE" });
+  }
+});
+
+test("historical completed version-1 transcript remains retrievable, renameable and exportable", async () => {
+  const uploaded = await (await upload()).json();
+  const path = `/api/audio/${uploaded.audio_id}`;
+  const legacy = {
+    schema_version: 1,
+    audio_id: uploaded.audio_id,
+    language: "vi",
+    timeline: "source",
+    source_audio_start_sec: 0,
+    duration_sec: 1,
+    text: "Xin chào",
+    speakers: [{ id: "speaker_1", name: "speaker_1" }],
+    segments: [
+      {
+        id: "SEG-0001",
+        start: 0,
+        end: 0.5,
+        speaker: "speaker_1",
+        text: "Xin chào",
+        words: [{ word: "Xin", start: 0, end: 0.2, speaker: "speaker_1" }],
+      },
+    ],
+    warnings: [],
+    models: { transcription: "legacy", diarization: "legacy" },
+  };
+  await service.db.audioAsset.update({
+    where: { id: uploaded.audio_id },
+    data: { status: "completed", transcript: legacy },
+  });
+  await service.db.audioJob.create({
+    data: {
+      audioId: uploaded.audio_id,
+      status: "completed",
+      stage: "completed",
+      checkpoints: { whisper_0: { text: "legacy" } },
+    },
+  });
+  assert.deepEqual(await (await request(path + "/transcript")).json(), legacy);
+  assert.equal(
+    (
+      await request(path + "/speakers/speaker_1", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Sơn" }),
+      })
+    ).status,
+    200,
+  );
+  for (const format of ["json", "txt", "srt", "md", "xlsx", "pdf"])
+    assert.equal(
+      (await request(path + `/export?format=${format}`)).status,
+      200,
+    );
+  assert.equal(
+    (await (await request(path + "/transcript")).json()).schema_version,
+    1,
+  );
+  assert.equal(
+    (await (await request(path + "/process", { method: "POST" })).json())
+      .status,
+    "completed",
+  );
+  await request(path, { method: "DELETE" });
 });
 
 test("configuration changes never reuse checkpoints from a different chunk/model layout", async () => {

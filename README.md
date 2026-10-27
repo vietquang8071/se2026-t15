@@ -10,7 +10,7 @@ extracted to a separate WAV while retaining the original file.
 
 The independent audio service lives in `apps/audio` and runs on port 3002,
 with its own database/storage/API key. It implements upload, durable jobs,
-OpenAI Whisper + diarization, playback, exports (JSON/TXT/SRT/Markdown/Excel/PDF)
+single-model OpenAI transcription + diarization, playback, exports (JSON/TXT/SRT/Markdown/Excel/PDF)
 and 30/60-day cleanup of media and transcripts. App/LLM integration is separate.
 See the [audio service setup](apps/audio/README.md),
 [API contract](docs/audio-service-api.md) and [validation results](docs/audio-validation.md).

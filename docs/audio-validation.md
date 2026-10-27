@@ -1,5 +1,28 @@
 # Audio — kết quả kiểm tra 25/10/2026
 
+## Pipeline một model — kiểm tra 27/10/2026
+
+- Kiểm tra thật riêng với 60 giây đầu của mẫu VietMed ghép bên dưới: một job,
+  một attempt, **1 provider call**, hoàn thành trong khoảng 35 giây. JSON v2
+  có 14 segment; text và timestamp từng segment khớp response provider. Đã
+  tải JSON/TXT/SRT/Markdown/Excel/PDF; Excel có Transcript/Metadata, PDF một
+  trang. Trên 55,25 giây overlap với nhãn clip, 40,026 giây khớp (72,45%) sau
+  mapping tối ưu; không phải DER. Không tính WER/CER vì file 60 giây cắt giữa
+  một clip tham chiếu. File riêng tại `artifacts/private/audio-single-model-result`.
+- Đánh giá offline lại checkpoint diarization thật của lần 604,2 giây cũ bằng
+  normalizer v2, không gọi provider thêm: 81 segment; WER token cách dấu cách
+  16,76%, CER bỏ dấu cách 12,86%; 0 timestamp segment ngoài giới hạn. So khớp
+  duration với metadata clip: 484,52/562,44 giây, 86,15%, mapping speaker chọn
+  tối ưu trên chính mẫu. Đây là **replay dữ liệu cũ**, không phải một lần chạy
+  provider mới và không phải DER.
+- Scoring duration có thể đếm trùng nếu segment provider overlap, không chấm
+  đầy đủ khoảng im lặng, thiếu speech hoặc speech chồng; nhãn tham chiếu là
+  nhãn clip thay vì VAD liên tục. Mẫu là các clip ghép, không phải họp tự nhiên.
+- Test tự động và HTTP dùng provider giả, tách biệt khỏi lần chạy thật; không
+  chứng minh chất lượng tổng quát hoặc khả năng xử lý file dài 60 phút.
+
+> Các số đo và mô tả bên dưới thuộc pipeline hai model cũ; không đại diện cho chất lượng pipeline v2.
+
 ## Nối khe hở speaker — kiểm tra 27/10/2026
 
 - Quy tắc mới chỉ nối khe hở tối đa 0,75 giây giữa hai lượt cùng nhãn khi
