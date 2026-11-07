@@ -11,3 +11,5 @@ packages/database/generated/
 data/
 artifacts/private/
 apps/audio/src/generated/
+__pycache__/
+*.py[cod]
