@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     llm_service_max_request_bytes: int = Field(default=10 * 1024 * 1024, ge=1)
     llm_service_request_timeout_seconds: float = Field(default=180.0, gt=0, allow_inf_nan=False)
     llm_service_provider_timeout_seconds: float = Field(default=60.0, gt=0, allow_inf_nan=False)
+    openrouter_api_key: SecretStr | None = None
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_model: str = "nvidia/nemotron-3.5-super-vl:free"
+    openrouter_structured_output_mode: Literal["text", "json_object"] = "json_object"
+    openrouter_max_output_tokens: int = Field(default=2048, gt=0)
+    openrouter_temperature: float = Field(default=0, ge=0, le=2, allow_inf_nan=False)
+    openrouter_require_parameters: bool = True
 
     @field_validator("llm_service_token")
     @classmethod
