@@ -623,6 +623,11 @@ test("job retry cap stops repeated paid processing", async () => {
   });
   assert.equal(response.status, 409);
   assert.equal((await response.json()).error.code, "JOB_RETRY_LIMIT");
+  const job = await service.db.audioJob.findUniqueOrThrow({
+    where: { audioId: uploaded.audio_id },
+  });
+  assert.equal(job.status, "failed");
+  assert.equal(job.providerCalls, 0);
   await request(`/api/audio/${uploaded.audio_id}`, { method: "DELETE" });
 });
 

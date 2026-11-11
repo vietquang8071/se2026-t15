@@ -129,6 +129,36 @@ test("transient errors retry at most three times and count each attempt", async 
   assert.equal(calls, 3);
 });
 
+test("provider retries a temporary 503 and returns the successful response", async (t) => {
+  const path = join(root, "transient-then-success.mp3");
+  await writeFile(path, "synthetic mock payload");
+  const previousKey = process.env.OPENAI_API_KEY;
+  process.env.OPENAI_API_KEY = "unit-test-key";
+  let requests = 0;
+  let calls = 0;
+  t.mock.method(globalThis, "fetch", async () => {
+    requests++;
+    return requests === 1
+      ? Response.json({}, { status: 503 })
+      : Response.json({ segments: [] });
+  });
+  try {
+    const result = await transcribeWithDiarization(
+      path,
+      new AbortController().signal,
+      async () => {
+        calls++;
+      },
+    );
+    assert.deepEqual(result, { segments: [] });
+    assert.equal(requests, 2);
+    assert.equal(calls, 2);
+  } finally {
+    if (previousKey === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = previousKey;
+  }
+});
+
 test("cancellation interrupts retries", async (t) => {
   let calls = 0;
   const controller = new AbortController();
