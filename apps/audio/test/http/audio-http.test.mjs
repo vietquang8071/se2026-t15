@@ -260,6 +260,49 @@ test("process is idempotent, job completes, speaker edits persist and every expo
   await assert.rejects(access(join(service.root, uploaded.audio_id)));
 });
 
+test("failure status updates roll back together if the asset update fails", async () => {
+  const uploaded = await (await upload()).json();
+  const path = `/api/audio/${uploaded.audio_id}`;
+  let providerCalled;
+  const called = new Promise((resolve) => (providerCalled = resolve));
+  await service.db.$executeRawUnsafe(`
+    CREATE FUNCTION bt3_reject_failed_asset() RETURNS trigger AS $$
+    BEGIN
+      IF NEW.status = 'failed' THEN
+        RAISE EXCEPTION 'injected asset failure';
+      END IF;
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql
+  `);
+  await service.db.$executeRawUnsafe(`
+    CREATE TRIGGER bt3_reject_failed_asset BEFORE UPDATE ON "AudioAsset"
+    FOR EACH ROW EXECUTE FUNCTION bt3_reject_failed_asset()
+  `);
+  service.provider = async (_file, _signal, beforeCall) => {
+    await beforeCall();
+    providerCalled();
+    throw new Error("injected provider failure");
+  };
+  try {
+    const started = await (await request(path + "/process", { method: "POST" })).json();
+    await called;
+    for (let i = 0; i < 200 && service.active; i++) await delay(25);
+    assert.equal(service.active, undefined, "worker did not finish failure handling");
+    const job = await service.db.audioJob.findUniqueOrThrow({ where: { id: started.job_id } });
+    const asset = await service.db.audioAsset.findUniqueOrThrow({ where: { id: uploaded.audio_id } });
+    assert.equal(job.status, "running", "job update must roll back with the asset update");
+    assert.equal(asset.status, "processing");
+    assert.equal(job.providerCalls, 1);
+    assert.equal(asset.transcript, null);
+  } finally {
+    service.provider = fakeProvider;
+    await service.db.$executeRawUnsafe('DROP TRIGGER IF EXISTS bt3_reject_failed_asset ON "AudioAsset"');
+    await service.db.$executeRawUnsafe('DROP FUNCTION IF EXISTS bt3_reject_failed_asset()');
+    await request(path, { method: "DELETE" });
+  }
+});
+
 test("retry reuses a persisted diarization checkpoint without another provider call", async () => {
   const uploaded = await (await upload()).json();
   const path = `/api/audio/${uploaded.audio_id}`;
