@@ -260,12 +260,15 @@ test("process is idempotent, job completes, speaker edits persist and every expo
   await assert.rejects(access(join(service.root, uploaded.audio_id)));
 });
 
-test("failure status updates roll back together if the asset update fails", async () => {
-  const uploaded = await (await upload()).json();
-  const path = `/api/audio/${uploaded.audio_id}`;
-  let providerCalled;
-  const called = new Promise((resolve) => (providerCalled = resolve));
-  await service.db.$executeRawUnsafe(`
+test(
+  "failure status updates roll back together if the asset update fails",
+  { timeout: 15000 },
+  async () => {
+    const uploaded = await (await upload()).json();
+    const path = `/api/audio/${uploaded.audio_id}`;
+    let providerCalled;
+    const called = new Promise((resolve) => (providerCalled = resolve));
+    await service.db.$executeRawUnsafe(`
     CREATE FUNCTION bt3_reject_failed_asset() RETURNS trigger AS $$
     BEGIN
       IF NEW.status = 'failed' THEN
@@ -275,33 +278,52 @@ test("failure status updates roll back together if the asset update fails", asyn
     END;
     $$ LANGUAGE plpgsql
   `);
-  await service.db.$executeRawUnsafe(`
+    await service.db.$executeRawUnsafe(`
     CREATE TRIGGER bt3_reject_failed_asset BEFORE UPDATE ON "AudioAsset"
     FOR EACH ROW EXECUTE FUNCTION bt3_reject_failed_asset()
   `);
-  service.provider = async (_file, _signal, beforeCall) => {
-    await beforeCall();
-    providerCalled();
-    throw new Error("injected provider failure");
-  };
-  try {
-    const started = await (await request(path + "/process", { method: "POST" })).json();
-    await called;
-    for (let i = 0; i < 200 && service.active; i++) await delay(25);
-    assert.equal(service.active, undefined, "worker did not finish failure handling");
-    const job = await service.db.audioJob.findUniqueOrThrow({ where: { id: started.job_id } });
-    const asset = await service.db.audioAsset.findUniqueOrThrow({ where: { id: uploaded.audio_id } });
-    assert.equal(job.status, "running", "job update must roll back with the asset update");
-    assert.equal(asset.status, "processing");
-    assert.equal(job.providerCalls, 1);
-    assert.equal(asset.transcript, null);
-  } finally {
-    service.provider = fakeProvider;
-    await service.db.$executeRawUnsafe('DROP TRIGGER IF EXISTS bt3_reject_failed_asset ON "AudioAsset"');
-    await service.db.$executeRawUnsafe('DROP FUNCTION IF EXISTS bt3_reject_failed_asset()');
-    await request(path, { method: "DELETE" });
-  }
-});
+    service.provider = async (_file, _signal, beforeCall) => {
+      await beforeCall();
+      providerCalled();
+      throw new Error("injected provider failure");
+    };
+    try {
+      const started = await (
+        await request(path + "/process", { method: "POST" })
+      ).json();
+      await called;
+      for (let i = 0; i < 200 && service.active; i++) await delay(25);
+      assert.equal(
+        service.active,
+        undefined,
+        "worker did not finish failure handling",
+      );
+      const job = await service.db.audioJob.findUniqueOrThrow({
+        where: { id: started.job_id },
+      });
+      const asset = await service.db.audioAsset.findUniqueOrThrow({
+        where: { id: uploaded.audio_id },
+      });
+      assert.equal(
+        job.status,
+        "running",
+        "job update must roll back with the asset update",
+      );
+      assert.equal(asset.status, "processing");
+      assert.equal(job.providerCalls, 1);
+      assert.equal(asset.transcript, null);
+    } finally {
+      service.provider = fakeProvider;
+      await service.db.$executeRawUnsafe(
+        'DROP TRIGGER IF EXISTS bt3_reject_failed_asset ON "AudioAsset"',
+      );
+      await service.db.$executeRawUnsafe(
+        "DROP FUNCTION IF EXISTS bt3_reject_failed_asset()",
+      );
+      await request(path, { method: "DELETE" });
+    }
+  },
+);
 
 test("retry reuses a persisted diarization checkpoint without another provider call", async () => {
   const uploaded = await (await upload()).json();
@@ -337,6 +359,31 @@ test("retry reuses a persisted diarization checkpoint without another provider c
   assert.equal(job.attempts, 2);
   service.provider = fakeProvider;
   await request(path, { method: "DELETE" });
+});
+
+test("provider failure records failed job and asset together", async () => {
+  const uploaded = await (await upload()).json();
+  const path = `/api/audio/${uploaded.audio_id}`;
+  service.provider = async (_file, _signal, beforeCall) => {
+    await beforeCall();
+    throw new Error("injected provider failure");
+  };
+  try {
+    const started = await (
+      await request(path + "/process", { method: "POST" })
+    ).json();
+    const job = await poll(started.job_id);
+    const asset = await service.db.audioAsset.findUniqueOrThrow({
+      where: { id: uploaded.audio_id },
+    });
+    assert.equal(job.status, "failed");
+    assert.equal(asset.status, "failed");
+    assert.equal(job.provider_calls, 1);
+    assert.equal(asset.transcript, null);
+  } finally {
+    service.provider = fakeProvider;
+    await request(path, { method: "DELETE" });
+  }
 });
 
 test("expiry refuses transcript/media immediately and cleanup deletes transcript, jobs and files", async () => {
@@ -578,6 +625,80 @@ test("job retry cap stops repeated paid processing", async () => {
   assert.equal((await response.json()).error.code, "JOB_RETRY_LIMIT");
   await request(`/api/audio/${uploaded.audio_id}`, { method: "DELETE" });
 });
+
+test("failed job with two attempts can be queued for its final attempt", async () => {
+  const uploaded = await (await upload()).json();
+  const existing = await service.db.audioJob.create({
+    data: { audioId: uploaded.audio_id, status: "failed", attempts: 2 },
+  });
+  try {
+    const response = await request(`/api/audio/${uploaded.audio_id}/process`, {
+      method: "POST",
+    });
+    assert.equal(response.status, 202);
+    const body = await response.json();
+    assert.equal(body.job_id, existing.id);
+    assert.equal(body.status, "queued");
+    assert.equal(
+      await service.db.audioJob.count({
+        where: { audioId: uploaded.audio_id },
+      }),
+      1,
+    );
+  } finally {
+    await request(`/api/audio/${uploaded.audio_id}`, { method: "DELETE" });
+  }
+});
+
+test(
+  "40 concurrent process requests share one job and report response latency",
+  { timeout: 30000 },
+  async () => {
+    const uploaded = await (await upload()).json();
+    const path = `/api/audio/${uploaded.audio_id}`;
+    try {
+      const results = await Promise.all(
+        Array.from({ length: 40 }, async () => {
+          const start = performance.now();
+          const response = await request(path + "/process", { method: "POST" });
+          const body = await response.json();
+          return {
+            status: response.status,
+            jobId: body.job_id,
+            ms: performance.now() - start,
+          };
+        }),
+      );
+      const latencies = results
+        .map((result) => result.ms)
+        .sort((a, b) => a - b);
+      const p95 = latencies[Math.ceil(latencies.length * 0.95) - 1];
+      console.log(
+        "BT3_LOAD_RESULT " +
+          JSON.stringify({
+            scenario:
+              "40 concurrent POST process requests for one uploaded audio",
+            samples: results.length,
+            success: results.filter((result) => result.status === 202).length,
+            uniqueJobIds: new Set(results.map((result) => result.jobId)).size,
+            p95_ms: p95,
+            max_ms: latencies.at(-1),
+            latencies_ms: latencies,
+          }),
+      );
+      assert.ok(results.every((result) => result.status === 202));
+      assert.equal(new Set(results.map((result) => result.jobId)).size, 1);
+      assert.equal(
+        await service.db.audioJob.count({
+          where: { audioId: uploaded.audio_id },
+        }),
+        1,
+      );
+    } finally {
+      await request(path, { method: "DELETE" });
+    }
+  },
+);
 
 test("database session lock prevents two audio workers owning the same storage", async () => {
   const other = new pg.Client({

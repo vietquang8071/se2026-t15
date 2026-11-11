@@ -467,13 +467,15 @@ export class AudioService implements OnModuleInit, OnModuleDestroy {
             ? "JOB_CANCELLED"
             : "AUDIO_JOB_FAILED";
       try {
-        await this.db.audioJob.updateMany({
-          where: { id: jobId },
-          data: { status: "failed", stage: "failed", errorCode: code },
-        });
-        await this.db.audioAsset.updateMany({
-          where: { id: audioId, status: { not: "deleted" } },
-          data: { status: "failed" },
+        await this.db.$transaction(async (tx) => {
+          await tx.audioJob.updateMany({
+            where: { id: jobId },
+            data: { status: "failed", stage: "failed", errorCode: code },
+          });
+          await tx.audioAsset.updateMany({
+            where: { id: audioId, status: { not: "deleted" } },
+            data: { status: "failed" },
+          });
         });
       } catch {
         this.logger.error(

@@ -141,5 +141,18 @@ Test HTTP cần PostgreSQL và user có quyền tạo database test. Provider đ
 bằng fixture trong test code, không có chế độ mock bật qua HTTP/biến môi trường
 production. Không dùng số test pass để kết luận chất lượng ASR thật.
 
+Test HTTP còn kiểm tra rollback khi ghi trạng thái thất bại và gửi đồng thời
+40 yêu cầu process cho một audio. Dòng `BT3_LOAD_RESULT` ghi thời gian phản hồi
+API; phép đo này không bao gồm thời gian phiên âm hoàn tất. Để chạy riêng:
+
+```sh
+cd apps/audio
+pnpm exec tsc -p tsconfig.json
+node --env-file=../../.env --test --test-name-pattern='40 concurrent process' test/http/audio-http.test.mjs
+```
+
+Test tạo rồi xóa database test riêng; cấu hình URL trong `.env` phải trỏ đến
+PostgreSQL dành cho kiểm thử, không dùng dữ liệu production.
+
 Benchmark thật và các giới hạn dữ liệu được ghi riêng tại
 [Audio validation](../../docs/audio-validation.md).
