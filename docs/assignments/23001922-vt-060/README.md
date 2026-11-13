@@ -48,7 +48,7 @@ Script tạo worktree detached tạm, chạy original, đảo rule trong worktre
 
 ## Giới hạn
 
-Không có exactly-once ở provider: crash sau response trước checkpoint có thể gọi lại. Lượt tải không chứng minh thời gian hoàn tất phiên âm hoặc 40 worker; service dùng worker tuần tự. Chưa chạy real-provider E2E. AI đã hỗ trợ plan, code, test và báo cáo; reflection do sinh viên cung cấp; sinh viên cần kiểm tra báo cáo và xác nhận cam kết trước khi nộp.
+Không có exactly-once ở provider: crash sau response trước checkpoint có thể gọi lại. Lượt tải không chứng minh thời gian hoàn tất phiên âm hoặc 40 worker; service dùng worker tuần tự. Chưa chạy real-provider E2E. AI đã hỗ trợ plan, code, test và báo cáo; reflection do sinh viên cung cấp; sinh viên đã xác nhận đã review và xác nhận cam kết.
 
 ## Xuất lại báo cáo
 

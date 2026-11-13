@@ -1,1 +1,1 @@
-PDF: 13 trang A4; nội dung chính trang 1–8, phụ lục A–E trang 9–13; 0 hyperlink URI; reflection 344 từ do sinh viên cung cấp được kiểm tra với Markdown và văn bản trích xuất PDF; không còn phụ lục F, G.
+PDF: 7 trang A4; nội dung chính trang 1–4, phụ lục A–E trang 5–7; 21 hyperlink GitHub; kiểm tra đích file liên kết trong repository, nội dung tiếng Việt, reflection nguyên văn, xác nhận sinh viên và phân trang; đã xem render các trang 1, 4, 5, 6, 7.
