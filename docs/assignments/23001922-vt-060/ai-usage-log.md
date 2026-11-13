@@ -1,6 +1,6 @@
 # Nhật ký sử dụng AI
 
-Nhật ký mô tả hoạt động có evidence; các phase không có timestamp độc lập không được gán thời điểm giả. Thời gian commit theo Git, múi giờ +07. Codex hỗ trợ viết và review; sau đó sinh viên đã xác nhận đã review; chưa ghi nhận xác nhận riêng về cam kết trách nhiệm.
+Nhật ký mô tả hoạt động có evidence; các phase không có timestamp độc lập không được gán thời điểm giả. Thời gian commit theo Git, múi giờ +07. Codex hỗ trợ viết và review; sau đó sinh viên đã xác nhận đã review và xác nhận cam kết trách nhiệm.
 
 | Thời gian/phase | Công cụ và task | Output và quyết định | Evidence |
 |---|---|---|---|
@@ -11,6 +11,7 @@ Nhật ký mô tả hoạt động có evidence; các phase không có timestamp
 | 14/11, lượt hoàn thiện | Codex: audit, lặp test và viết báo cáo | Báo cáo AI-assisted; sinh viên sau đó xác nhận đã review | Các tài liệu cùng thư mục |
 | Lượt cập nhật reflection | Sinh viên cung cấp trực tiếp nội dung reflection; Codex cập nhật báo cáo | Giữ nguyên văn; sinh viên sau đó xác nhận đã review | reflection.md và báo cáo |
 | Lượt cập nhật liên kết | Sinh viên xác nhận đã review; chưa ghi nhận xác nhận riêng về cam kết | Cập nhật trạng thái review, khôi phục hyperlink và dàn trang | Báo cáo và xác nhận trong hội thoại |
+| Lượt xác nhận cam kết | Sinh viên xác nhận cam kết trong hội thoại | Cập nhật trạng thái cam kết trong báo cáo và tài liệu | Xác nhận trong hội thoại |
 
 Prompt chính và yêu cầu tiếp tục có trong cuộc hội thoại; không có transcript độc lập đầy đủ của mọi thao tác trước trong repo. Không tự suy diễn nội dung hoặc cách review vượt ngoài lời xác nhận của sinh viên.
 
