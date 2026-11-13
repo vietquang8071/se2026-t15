@@ -6,7 +6,7 @@ LLM-03.4 xây dựng pipeline trích xuất Summary và Action Items từ một 
 
 LLM-03.4 phụ thuộc vào LLM-03.2 (provider protocol, adapter và `ProviderUsage`) và LLM-03.3 (candidate schema, prompt registry, renderer và parser). Đã chọn **Phương án A — Tách biệt Orchestration và Verification**: LLM-03.4 phụ trách orchestration và chuẩn bị dữ liệu; LLM-03.5 xác minh source references, semantic evidence và các điều kiện để tạo response đã xác minh.
 
-Trạng thái hiện tại: **Groups A, B và C hoàn thành, đã được kiểm chứng**. Toàn bộ milestone LLM-03.4 chưa hoàn thành; Group D vẫn chưa triển khai.
+Trạng thái hiện tại: **Groups A, B, C và D hoàn thành trong phạm vi pipeline nội bộ đã được duyệt và kiểm chứng**. Các tiêu chí verified public extraction trong acceptance ban đầu được hoãn có chủ đích sang LLM-03.5; vì vậy không tuyên bố mọi tiêu chí public của milestone gốc đã đạt.
 
 ## 2. Kiến trúc và luồng dữ liệu
 
@@ -21,6 +21,7 @@ ExtractionRequest
     → PreparedExtraction                    [Group B — đã triển khai]
     → ExtractionProjector.project()          [Group C — đã triển khai]
     → ProjectedExtraction                    [Group C — đã triển khai]
+    → kiểm tra ranh giới, lỗi và cách ly request [Group D — đã kiểm thử]
     → validation/evidence safeguards         [LLM-03.5]
     → verified ExtractionResponse            [sau các validation bắt buộc]
 ```
@@ -137,7 +138,7 @@ Kết quả regression sau Group C: **409 passed, 0 failed, 0 skipped** (`2.37s`
 - Request-specific state không nằm trên instance preflight; kiểm thử xác nhận hai request độc lập không lẫn dữ liệu.
 - Dataclass representation ẩn request, rendered prompt và candidate. Các model Pydantic lồng bên trong không được tuyên bố là bất biến sâu.
 - Byte limit HTTP hiện có không thay thế token/context limit theo model. Group A không ước lượng, chunk hoặc truncate transcript.
-- Candidate chưa được xác minh không thể tạo public success trong phạm vi Group A; endpoint runtime vẫn dùng placeholder fail-closed.
+- Default runtime vẫn fail-closed sau Group D: endpoint mặc định dùng `UnconfiguredExtractionService`, không gọi provider hoặc candidate pipeline. `create_app()` vẫn cho phép inject một `ExtractionService` tùy biến; schema validation của response không chứng minh service đó đã xác minh evidence.
 - Group B không ghi log transcript, prompt hoặc raw provider output; `ProviderResult.content` chỉ được giữ cục bộ đến khi parse xong.
 - Factory production tạo `OpenRouterAdapter` mà không gọi mạng hoặc đọc API key; đọc cấu hình bí mật chỉ xảy ra bên trong adapter khi `generate()` được gọi.
 - Mỗi lần chạy giữ request, candidate, timestamps và provider result ở biến cục bộ. Kiểm thử hai request chồng lấp xác nhận candidate, model ID và token usage không bị trộn.
@@ -154,7 +155,7 @@ Kết quả regression sau Group C: **409 passed, 0 failed, 0 skipped** (`2.37s`
 
 Đã chọn **Phương án A — Tách biệt Orchestration và Verification**. LLM-03.4 chịu trách nhiệm orchestration, preflight, provider invocation và chuẩn bị dữ liệu đầu ra. LLM-03.5 chịu trách nhiệm xác minh source references, semantic evidence, temporal safeguards, review flags và hoàn thiện verified `ExtractionResponse`.
 
-Production endpoint phải **fail closed** khi các bước validation bắt buộc chưa sẵn sàng. Candidate chưa xác minh không được tạo HTTP `200 completed`; không điền giả `evidence_prompt_version` hoặc metadata verification.
+Default production endpoint phải **fail closed** khi các bước validation bắt buộc chưa sẵn sàng; candidate của pipeline nội bộ chưa xác minh không được nối thành HTTP `200 completed`. Không điền giả `evidence_prompt_version` hoặc metadata verification.
 
 #### Group A — LLM-03.4.1 + LLM-03.4.3: Kiến trúc pipeline và chuẩn bị request
 
@@ -183,7 +184,7 @@ Production endpoint phải **fail closed** khi các bước validation bắt bu�
 #### Group D — LLM-03.4.7 + LLM-03.4.8: Validation Gate, kiểm thử tích hợp và hoàn thiện báo cáo
 
 - Hoàn thiện ranh giới fail-closed.
-- Bảo đảm candidate chưa được xác minh không thể tạo HTTP `200 completed`.
+- Xác nhận default FastAPI runtime không tạo HTTP `200 completed` từ candidate nội bộ chưa xác minh; response sai cấu trúc từ service được inject bị từ chối.
 - Bổ sung service-level và HTTP integration tests.
 - Kiểm thử failure propagation và concurrent-request isolation.
 - Chạy full offline regression suite.
@@ -194,9 +195,9 @@ Production endpoint phải **fail closed** khi các bước validation bắt bu�
 | A | LLM-03.4.1 + LLM-03.4.3 | Hoàn thành |
 | B | LLM-03.4.2 + LLM-03.4.4 | Hoàn thành |
 | C | LLM-03.4.5 + LLM-03.4.6 | Hoàn thành |
-| D | LLM-03.4.7 + LLM-03.4.8 | Chưa triển khai |
+| D | LLM-03.4.7 + LLM-03.4.8 | Hoàn thành |
 
-Việc hoàn thành Groups A, B và C không đồng nghĩa toàn bộ LLM-03.4 hoặc LLM-03.5 đã hoàn thành. Tiêu chí public HTTP success trong tài liệu milestone gốc được điều chỉnh có chủ đích theo Phương án A: không thể bật an toàn trước khi LLM-03.5 cung cấp validation bắt buộc và đường dựng verified response.
+Phạm vi pipeline nội bộ của LLM-03.4 đã hoàn thành theo Phương án A. Đây là điều chỉnh ranh giới acceptance có chủ đích: tiêu chí HTTP success từ tài liệu milestone gốc vẫn được ghi nhận nhưng hoãn sang LLM-03.5, vì không thể bật an toàn trước khi có validation bắt buộc và đường dựng verified response.
 
 ## 8. Handoff sang Group B
 
@@ -248,7 +249,7 @@ Group C cần giữ nguyên source IDs, `raw_due_expression`, owner và priority
 
 ## 12. Ranh giới với LLM-03.5
 
-Groups A, B và C **chưa** triển khai:
+Groups A, B và C không triển khai; Group D xác nhận các trách nhiệm sau vẫn nằm ngoài phạm vi LLM-03.4:
 
 - Kiểm tra source ID tồn tại trong transcript revision.
 - Semantic evidence checking hoặc xác minh claim.
@@ -303,4 +304,121 @@ Integration tests dùng `FakeProvider`, PromptRegistry, PromptRenderer, `Candida
 
 Projector không gọi LLM/provider, không log hoặc sinh nội dung mới, không mutate request/transcript/candidate và không gán trạng thái xác minh. Request-derived meeting metadata và candidate-derived claims vẫn phân biệt được; source references chưa được kiểm tra tiếp tục mang provenance tới LLM-03.5.
 
-Group D có thể nhận `ProjectedExtraction`, dùng `meeting_summary` và `action_items` để hoàn thiện validation gate, đồng thời lấy toàn bộ provenance và processing metadata qua `prepared_extraction`. Các nội dung, owners, deadlines và source IDs vẫn chưa được xác minh. LLM-03.5 phải xử lý source ID existence, semantic evidence, temporal safeguards, review states, artifact IDs, source timestamps, error mapping và verified response construction. Vì vậy public `ExtractionResponse` chưa thể được tạo an toàn và HTTP `200 completed` tiếp tục không khả dụng cho candidate chưa xác minh.
+Group D đã kiểm thử luồng `PreparedExtraction` → `ProjectedExtraction` và xác nhận có thể tiếp tục lấy request, transcript, candidate cùng provider metadata qua `prepared_extraction`. Các nội dung, owners, deadlines và source IDs vẫn chưa được xác minh. LLM-03.5 phải xử lý source ID existence, semantic evidence, temporal safeguards, review states, artifact IDs, source timestamps, error mapping và verified response construction. Vì vậy public `ExtractionResponse` chưa thể được tạo an toàn từ candidate chưa xác minh; endpoint mặc định tiếp tục fail-closed.
+
+## 14. LLM-03.4.7 — Validation Gate & Fail-Closed Boundary
+
+Group D đã rà soát đường đi nội bộ và public API mà không thêm production component. `CandidateExtractionOrchestrator` chỉ trả `PreparedExtraction`; `ExtractionProjector` chỉ trả `ProjectedExtraction`. Không có đường đăng ký hai thành phần này làm public `ExtractionService`, và `app/main.py` mặc định tiếp tục khởi tạo `UnconfiguredExtractionService`.
+
+`GET /health` không phụ thuộc provider. Request trích xuất đã xác thực trong default runtime trả HTTP 503 với `ErrorEnvelope` `PROVIDER_CONFIGURATION_ERROR`; public service contract vẫn là `extract(request) -> ExtractionResponse`. Test Group D xác nhận response sai cấu trúc từ service được inject trả HTTP 502 `INVALID_STRUCTURED_OUTPUT`, không trả HTTP 200.
+
+Ranh giới này có giới hạn rõ ràng: caller có thể inject một `ExtractionService` tùy biến. Nếu service đó chủ động trả một `ExtractionResponse` hợp lệ về schema, route có thể trả HTTP 200. Runtime không xác minh ngữ nghĩa/evidence của mọi implementation được inject, và Pydantic response validation không thay thế semantic verification. Group D không thay đổi DI public hoặc tự nhận có bảo đảm này; production composition mặc định vẫn fail-closed.
+
+Ở pipeline nội bộ, lỗi prompt preparation được kiểm tra qua orchestrator và không gọi provider. Các test A/B hiện có tiếp tục xác nhận typed provider errors, candidate format/schema/module mismatch được truyền nguyên trạng, không retry hoặc sửa JSON. Test cancellation hiện có được bổ sung timeout hữu hạn khi chờ provider bắt đầu và khi chờ task bị hủy; cleanup hủy và thu hồi task nếu đồng bộ hóa lỗi. Group D không bổ sung HTTP mapping cho provider/parser errors; phần này thuộc LLM-03.5.
+
+Không có transcript, prompt, raw provider output, API key hoặc chi tiết exception nhạy cảm mới được ghi log hay đưa vào public error. Không tạo verification metadata, không xác minh source IDs, semantic evidence, owner hoặc deadline.
+
+## 15. LLM-03.4.8 — Integration Tests & Milestone Documentation
+
+### Coverage audit và test bổ sung
+
+| Hành vi | Coverage trước Group D | Kết quả Group D |
+|---|---|---|
+| Module không hỗ trợ bị chặn trước provider | `test_preflight.py::test_unsupported_modules_are_rejected_before_prompt_components`; `test_orchestration.py::test_unsupported_modules_fail_before_provider_call`; `test_prompt_candidate_flow.py::test_it08_unsupported_module_is_rejected_before_fake_provider_call` | Đã đủ; không tạo test trùng. |
+| Lỗi prompt không gọi provider qua orchestrator | Preflight unit tests kiểm tra lỗi template/render; chưa kiểm tra qua orchestrator | Bổ sung `test_prompt_preparation_failure_propagates_without_provider_invocation`. |
+| Provider/parser errors, module mismatch và không retry | Orchestration unit tests, `test_prompt_candidate_flow.py::test_it05`–`test_it09`, parser và provider tests | Đã đủ; không nhân đôi. |
+| Cancellation và cleanup | `test_orchestration.py::test_cancellation_propagates_without_retry_or_completed_result` | Đã thêm timeout hữu hạn và cleanup cho task blocking. |
+| Pipeline thành công A → B → C | `test_candidate_projection.py::test_full_offline_pipeline_projects_requested_module_variants` và các test Group B | Đã đủ cho các biến thể module; không thêm luồng tuần tự trùng lặp. |
+| Cách ly request đồng thời qua projection | Group B kiểm tra concurrency đến `PreparedExtraction`; Group C kiểm tra projection tuần tự | Bổ sung `test_concurrent_requests_remain_isolated_through_projection` để bao phủ A → B → C trong hai request chồng lấp. |
+| Default HTTP fail-closed, health, auth và request validation | `test_runtime.py`, `test_candidate_orchestration.py::test_it04_fastapi_health_and_extraction_remain_fail_closed`, `test_candidate_projection.py::test_fastapi_remains_fail_closed_without_projection_wiring` | Đã đủ; giữ nguyên test hiện có. |
+| Response sai cấu trúc từ service được inject | Có test response hợp lệ và schema contract, nhưng chưa kiểm tra handler response-validation qua HTTP | Bổ sung `test_invalid_injected_extraction_response_maps_to_error_envelope`. |
+| Unknown source IDs và thiếu verification fields | Projection unit/integration tests | Đã đủ; source IDs được giữ nguyên và chưa được xem là evidence đã xác minh. |
+
+Test mới nằm trong `apps/llm-service/tests/integration/test_extraction_pipeline_boundary.py`. Fake provider đồng bộ hai request bằng `asyncio.Event`; test xác nhận candidate, source references, request/transcript, model, usage, provider identity và prompt/schema metadata vẫn gắn với đúng request sau projection. Các test dùng fixture tổng hợp và không cần credentials hoặc network.
+
+### Kiểm thử và regression
+
+Các lệnh chạy từ `apps/llm-service/`:
+
+```bash
+uv run --locked --extra test pytest -q tests/integration/test_extraction_pipeline_boundary.py
+```
+
+Kết quả: **3 passed, 0 failed, 0 skipped**.
+
+```bash
+uv run --locked --extra test pytest -q tests/unit/services/test_orchestration.py::test_cancellation_propagates_without_retry_or_completed_result
+```
+
+Kết quả: **1 passed, 0 failed, 0 skipped**.
+
+```bash
+uv run --locked --extra test pytest -q tests/unit/services
+```
+
+Kết quả: **47 passed, 0 failed, 0 skipped**.
+
+```bash
+uv run --locked --extra test pytest -q tests/integration
+```
+
+Kết quả: **60 passed, 0 failed, 0 skipped**.
+
+```bash
+uv run --locked --extra test pytest -q
+```
+
+Regression sau Group D: **412 passed, 0 failed, 0 skipped**. Mốc lịch sử trước Group D là **409 passed** sau Group C; ba test integration mới làm tăng tổng số test. Không gọi OpenRouter, không dùng API key và không dùng transcript thật.
+
+Runner ban đầu chặn `uv` tạo file tạm trong cache chỉ đọc nên pytest chưa được khởi chạy; các lần chạy sau được cấp quyền truy cập cache cần thiết và hoàn tất offline. Trong lần chạy ban đầu của test concurrency, test cũng bị timeout do chưa mở sự kiện giải phóng provider sau khi xác nhận hai request đã vào. Test harness đã được sửa để giải phóng event và cleanup task trong `finally`; các lần chạy focused và full regression cuối cùng đều hoàn tất như kết quả trên.
+
+## 16. Kiểm toán acceptance và trạng thái milestone
+
+Đây là đối chiếu giữa acceptance ban đầu và phạm vi được điều chỉnh theo Phương án A. `Đạt` nghĩa là đã triển khai và có bằng chứng kiểm thử; `Hoãn có chủ đích sang LLM-03.5` không được tính là đã đạt public extraction; `Chưa đạt` dành cho yêu cầu còn thiếu trong phạm vi đã duyệt. Audit hiện không phát hiện tiêu chí Group D nào thuộc phạm vi được duyệt ở trạng thái `Chưa đạt`.
+
+| Tiêu chí | Trạng thái | Bằng chứng hoặc giới hạn | Theo dõi |
+|---|---|---|---|
+| Preflight, prompt version cố định và các module Summary/Actions được hỗ trợ | Đạt | `test_preflight.py`, integration Group A/B/C và regression Group D | — |
+| Provider invocation, parse Candidate Schema v1 và metadata thực tế | Đạt | `test_orchestration.py`, `test_candidate_orchestration.py`, `test_prompt_candidate_flow.py` | — |
+| Projection giữ metadata request, candidate content, nullable states và source IDs | Đạt | `test_projection.py`, `test_candidate_projection.py` | — |
+| Lỗi preflight/provider/parser không tạo kết quả pipeline giả; cancellation truyền lên caller | Đạt | Unit orchestration, flow tests, test prompt failure Group D và test cancellation có timeout | — |
+| Isolation giữa request đồng thời đến hết projection | Đạt | `test_concurrent_requests_remain_isolated_through_projection` và test concurrency Group B | — |
+| Default API health, auth, validation, 503 fail-closed và response sai cấu trúc không thành 200 | Đạt | `test_runtime.py`, test fail-closed Group B/C và `test_invalid_injected_extraction_response_maps_to_error_envelope` | — |
+| Source ID existence, semantic evidence, owner attribution và temporal safeguards | Hoãn có chủ đích sang LLM-03.5 | Candidate/projected data vẫn chưa xác minh; Group D không xây verifier | LLM-03.5 |
+| `source_timestamp`, artifact IDs, review flags/reasons và verified `ExtractionResponse` | Hoãn có chủ đích sang LLM-03.5 | Không được dựng giả từ candidate; không có public response builder | LLM-03.5 |
+| HTTP mapping đầy đủ cho provider/candidate errors và kích hoạt public extraction an toàn | Hoãn có chủ đích sang LLM-03.5 | Default service vẫn trả 503; response schema validation không xác minh evidence | LLM-03.5 |
+| Public HTTP `200 completed` cho kết quả đã xác minh theo tiêu chí milestone gốc | Hoãn có chủ đích sang LLM-03.5 | Đây là điều chỉnh acceptance có chủ đích theo Option A, không phải tiêu chí đã hoàn thành trong LLM-03.4 nội bộ | LLM-03.5 |
+| Tương thích duration dương rất ngắn với schema public | Hoãn có chủ đích sang LLM-03.5/contract decision | `round(duration_seconds / 60, 2)` có thể cho `0.0`, trong khi `duration_minutes` công khai yêu cầu dương; Group C không tự đặt giá trị tối thiểu | Giải quyết trước khi dựng public response |
+| Các tiêu chí Group D thuộc phạm vi được duyệt đã qua kiểm thử | Đạt | Không phát hiện tiêu chí Group D nào còn thiếu sau kiểm tra; public extraction được phân loại riêng là hoãn có chủ đích | — |
+
+Trạng thái nhóm sau khi kiểm chứng:
+
+| Nhóm | Tasks | Trạng thái |
+|---|---|---|
+| A | LLM-03.4.1 + LLM-03.4.3 | Hoàn thành |
+| B | LLM-03.4.2 + LLM-03.4.4 | Hoàn thành |
+| C | LLM-03.4.5 + LLM-03.4.6 | Hoàn thành |
+| D | LLM-03.4.7 + LLM-03.4.8 | Hoàn thành |
+
+**Hoàn thành phạm vi pipeline nội bộ của LLM-03.4 theo Phương án A; các tiêu chí verified public extraction được chuyển sang LLM-03.5.** Không tuyên bố toàn bộ acceptance ban đầu của public extraction đã đạt.
+
+## 17. Handoff sang LLM-03.5
+
+LLM-03.5 có thể nhận `ProjectedExtraction`; dùng `meeting_summary` và `action_items` làm nội dung candidate chưa xác minh, đồng thời truy cập nguồn gốc, transcript, request và provider metadata qua `projected.prepared_extraction`. Meeting title/date/duration/participants là dữ liệu từ request; overview, topics, actions và source references là nội dung candidate từ model.
+
+Checklist tiếp theo:
+
+1. Xác minh mọi source segment ID tồn tại trong đúng transcript revision.
+2. Kiểm tra semantic evidence cho từng claim; không coi ID hợp lệ là bằng chứng nội dung được hỗ trợ.
+3. Kiểm tra owner attribution và thể hiện uncertainty an toàn khi không đủ căn cứ.
+4. Xử lý temporal safeguards, deadline mơ hồ và các biểu thức raw chưa resolve; không suy diễn ngày còn thiếu.
+5. Dẫn xuất `source_timestamp` từ các segment đã xác minh.
+6. Gán artifact IDs sau validation theo thứ tự xác định.
+7. Gán `needs_review` và `review_reasons` theo kết quả validation thực tế.
+8. Ánh xạ lỗi provider/candidate sang HTTP `ErrorEnvelope` theo contract mà không làm lộ dữ liệu nhạy cảm.
+9. Chỉ dựng `ExtractionResponse` từ dữ liệu đã qua các kiểm tra bắt buộc; không điền giả `evidence_prompt_version`.
+10. Kích hoạt public extraction service bằng composition đã nối đầy đủ verification path, giữ default fail-closed khi path chưa sẵn sàng.
+11. Chứng minh response HTTP thành công tuân thủ contract và chứa đúng state của module được yêu cầu.
+12. Kiểm thử rằng candidate hoặc projection chưa xác minh không thể được publish thành HTTP `200 completed`.
+
+Trước khi dựng public Summary, cần quyết định cách xử lý duration dương rất ngắn: quy tắc hiện tại `round(duration_seconds / 60, 2)` có thể tạo `0.0`, nhưng `MeetingSummary.duration_minutes` yêu cầu giá trị dương. Không được âm thầm áp dụng mức tối thiểu hoặc thay đổi contract khi chưa có quyết định riêng.
