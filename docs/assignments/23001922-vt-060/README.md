@@ -49,3 +49,13 @@ Script tạo worktree detached tạm, chạy original, đảo rule trong worktre
 ## Giới hạn
 
 Không có exactly-once ở provider: crash sau response trước checkpoint có thể gọi lại. Lượt tải không chứng minh thời gian hoàn tất phiên âm hoặc 40 worker; service dùng worker tuần tự. Chưa chạy real-provider E2E. AI đã hỗ trợ plan, code, test và báo cáo; sinh viên cần kiểm tra reflection và cam kết trước khi nộp.
+
+## Xuất lại báo cáo
+
+Cần Pandoc, Google Chrome, Python và PyMuPDF. Chạy từ repository:
+
+~~~sh
+bash docs/assignments/23001922-vt-060/scripts/render-report.sh
+~~~
+
+PDF được phân trang bằng CSS và thêm số trang; sau khi xuất lại cần kiểm tra bố cục, số trang chính và nội dung. [Kết quả kiểm tra PDF](evidence/pdf-validation.txt).

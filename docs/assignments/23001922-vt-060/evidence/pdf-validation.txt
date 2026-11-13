@@ -1,0 +1,1 @@
+PDF: 9 trang A4; 8 trang chính, phụ lục trang 9; 51 hyperlinks GitHub; không có text block ngoài trang; extract Unicode và thông tin bắt buộc pass; reflection 349 từ; render xem trang 1, 4, 8, 9.
