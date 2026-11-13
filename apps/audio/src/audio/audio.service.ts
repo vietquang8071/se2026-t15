@@ -339,18 +339,20 @@ export class AudioService implements OnModuleInit, OnModuleDestroy {
       });
       if (previous.attempts >= 3)
         throw new AudioServiceError("JOB_RETRY_LIMIT", 409);
-      await this.db.audioAsset.updateMany({
-        where: { id: audioId, status: { not: "deleted" } },
-        data: { status: "processing" },
-      });
-      const job = await this.db.audioJob.update({
-        where: { id: jobId },
-        data: {
-          status: "running",
-          stage: "preparing",
-          attempts: { increment: 1 },
-          progress: 5,
-        },
+      const job = await this.db.$transaction(async (tx) => {
+        await tx.audioAsset.updateMany({
+          where: { id: audioId, status: { not: "deleted" } },
+          data: { status: "processing" },
+        });
+        return tx.audioJob.update({
+          where: { id: jobId },
+          data: {
+            status: "running",
+            stage: "preparing",
+            attempts: { increment: 1 },
+            progress: 5,
+          },
+        });
       });
       const checkpoints = job.checkpoints as Record<string, unknown>;
       const configuration = JSON.stringify({
