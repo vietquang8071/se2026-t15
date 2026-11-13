@@ -1,0 +1,59 @@
+✔ audio service runs independently and rejects unauthenticated upload/metadata (1060.785768ms)
+✔ HTTP upload supports all five formats and persists UTC 30/60-day metadata without leaking storage paths (671.714653ms)
+✔ invalid retention, malformed media, missing file and invalid IDs have stable errors and no incoming leftovers (135.414481ms)
+✔ MP4 audio start offset is applied exactly once to v2 segments (491.563586ms)
+✔ HTTP honors the inclusive 100 MB limit and removes oversized temporary uploads (1890.774444ms)
+✔ process is idempotent, job completes, speaker edits persist and every export downloads (1281.797493ms)
+✔ failure status updates roll back together if the asset update fails (1252.895752ms)
+✔ starting a job rolls back asset status when both job writes fail (196.917858ms)
+✔ retry reuses a persisted diarization checkpoint without another provider call (2294.549478ms)
+✔ provider failure records failed job and asset together (1050.386568ms)
+✔ expiry refuses transcript/media immediately and cleanup deletes transcript, jobs and files (139.684074ms)
+✔ DELETE aborts active provider work and no output is resurrected (810.458513ms)
+✔ startup recovers an interrupted v2 job using its checkpoint (1374.967936ms)
+✔ legacy unfinished checkpoints fail explicitly and preserve existing media and checkpoint (919.267976ms)
+✔ legacy failed and interrupted jobs keep their checkpoints when retried or recovered (2168.449517ms)
+✔ historical completed version-1 transcript remains retrievable, renameable and exportable (307.658381ms)
+✔ configuration changes never reuse checkpoints from a different chunk/model layout (651.853325ms)
+✔ job retry cap stops repeated paid processing (162.593247ms)
+✔ failed job with two attempts can be queued for its final attempt (186.860159ms)
+BT3_LOAD_RESULT {"scenario":"40 concurrent POST process requests for one uploaded audio","samples":40,"success":40,"uniqueJobIds":1,"p95_ms":352.41729000000123,"max_ms":361.4434560000009,"latencies_ms":[57.695035000000644,81.6564240000007,109.6058039999989,120.22144200000184,129.57626300000265,132.38593599999876,143.47910099999717,144.45019599999796,151.3809459999975,160.2732529999994,166.8770110000005,170.4346719999994,182.16906799999924,186.85572599999796,194.89370000000054,196.00261600000158,204.12235400000282,207.1128979999994,215.85948400000052,216.86471399999937,221.34715700000015,227.13696899999923,233.88556099999914,239.34764799999903,246.23507600000084,253.06741500000135,260.2072980000012,265.7233930000002,271.1467339999981,276.58164000000033,281.4754130000001,287.14141500000187,292.3723370000007,297.3927049999984,321.80179399999906,329.6573860000026,336.66908200000034,352.41729000000123,357.11673099999825,361.4434560000009]}
+✔ 40 concurrent process requests share one job and report response latency (530.398795ms)
+BT3_INDEPENDENT_LOAD {"scenario":"40 independent audio process requests","samples":40,"success":40,"uniqueJobIds":40,"databaseJobs":40,"total_ms":207.06435899999997,"p50_ms":129.72769499999777,"p95_ms":200.01070700000128,"p99_ms":201.92073399999936,"min_ms":37.77150000000256,"max_ms":201.92073399999936,"latencies_ms":[37.77150000000256,45.46347500000047,50.686194000001706,55.41561300000103,60.280102000000625,64.77970899999855,70.06727400000091,75.38188000000082,80.03003999999783,84.73200899999938,89.36208199999965,94.05533099999957,98.33157399999982,102.95072199999777,107.91157999999996,112.81919199999902,116.81765399999858,121.80992100000003,126.06149200000073,129.72769499999777,134.74078700000246,139.3106140000018,143.64606300000014,148.24519200000213,152.79742299999998,157.5968130000001,162.76986899999974,168.23130800000217,173.16177100000277,177.12515800000256,181.1891820000019,185.64796600000045,189.29271599999993,191.9407910000009,194.8841790000006,197.1255600000004,198.99944799999867,200.01070700000128,200.69830000000002,201.92073399999936]}
+✔ 40 independent audio tasks report process acceptance latency (5907.353944ms)
+✔ database session lock prevents two audio workers owning the same storage (10.226367ms)
+ℹ tests 22
+ℹ suites 0
+ℹ pass 22
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 24555.434159
+ℹ start of coverage report
+ℹ ------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ℹ file                    | line % | branch % | funcs % | uncovered lines
+ℹ ------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ℹ dist                    |        |          |         | 
+ℹ  app.module.js          |  94.00 |    62.50 |  100.00 | 4 26-27
+ℹ  audio                  |        |          |         | 
+ℹ   audio-export.js       |  98.55 |    91.30 |  100.00 | 110-111
+ℹ   audio-inspection.js   |  63.86 |    64.52 |   90.00 | 56-64 76-77 84-85 101-103 108-109 137-138 144-145 147-148 151-152 159-160 194-195 197-198 223-224 239-320
+ℹ   audio-media.js        |  90.11 |    57.14 |  100.00 | 28-36
+ℹ   audio-provider.js     |  15.15 |    66.67 |   50.00 | 10-65
+ℹ   audio-transcript.js   | 100.00 |    52.38 |   85.71 | 
+ℹ   audio-types.js        | 100.00 |    80.00 |  100.00 | 
+ℹ   audio.controller.js   |  96.38 |    79.52 |   95.83 | 4 147-148 161-163 184-187
+ℹ   audio.service.js      |  96.67 |    76.69 |   94.44 | 4 58-60 62-64 144-146 275-277 302-303
+ℹ  generated              |        |          |         | 
+ℹ   prisma                |        |          |         | 
+ℹ    client.js            | 100.00 |   100.00 |  100.00 | 
+ℹ    enums.js             | 100.00 |   100.00 |  100.00 | 
+ℹ    internal             |        |          |         | 
+ℹ     class.js            | 100.00 |   100.00 |  100.00 | 
+ℹ     prismaNamespace.js  | 100.00 |   100.00 |  100.00 | 
+ℹ  prisma.service.js      |  97.14 |    50.00 |  100.00 | 4
+ℹ ------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ℹ all files               |  87.28 |    74.37 |   94.83 | 
+ℹ ------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ℹ end of coverage report

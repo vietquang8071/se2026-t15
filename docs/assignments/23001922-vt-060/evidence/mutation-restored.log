@@ -1,0 +1,10 @@
+✔ job retry cap stops repeated paid processing (1205.787231ms)
+✔ failed job with two attempts can be queued for its final attempt (178.620754ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2106.390505

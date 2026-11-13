@@ -1,0 +1,9 @@
+$ pnpm db:generate && tsc --noEmit -p tsconfig.json
+$ prisma generate --config prisma.config.ts
+◇ injected env (2) from ../../.env
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+
+✔ Generated Prisma Client (7.10.1) to ./src/generated/prisma in 49ms
+

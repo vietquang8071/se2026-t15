@@ -745,6 +745,44 @@ test(
   },
 );
 
+test("40 independent audio tasks report process acceptance latency", { timeout: 120000 }, async () => {
+  const ids = [];
+  try {
+    for (let i = 0; i < 40; i++) {
+      const response = await upload();
+      assert.equal(response.status, 201);
+      ids.push((await response.json()).audio_id);
+    }
+    const started = performance.now();
+    const results = await Promise.all(ids.map(async (id) => {
+      const begin = performance.now();
+      const response = await request(`/api/audio/${id}/process`, { method: "POST" });
+      const body = await response.json();
+      return { id, status: response.status, jobId: body.job_id, ms: performance.now() - begin };
+    }));
+    const duration = performance.now() - started;
+    const latencies = results.map((result) => result.ms).sort((a, b) => a - b);
+    const jobs = await service.db.audioJob.findMany({ where: { audioId: { in: ids } } });
+    console.log("BT3_INDEPENDENT_LOAD " + JSON.stringify({
+      scenario: "40 independent audio process requests", samples: results.length,
+      success: results.filter((result) => result.status === 202).length,
+      uniqueJobIds: new Set(results.map((result) => result.jobId)).size,
+      databaseJobs: jobs.length, total_ms: duration,
+      p50_ms: latencies[Math.ceil(0.5 * latencies.length) - 1],
+      p95_ms: latencies[Math.ceil(0.95 * latencies.length) - 1],
+      p99_ms: latencies[Math.ceil(0.99 * latencies.length) - 1],
+      min_ms: latencies[0], max_ms: latencies.at(-1), latencies_ms: latencies,
+    }));
+    assert.ok(results.every((result) => result.status === 202));
+    assert.equal(new Set(results.map((result) => result.jobId)).size, 40);
+    assert.equal(jobs.length, 40);
+    for (const result of results)
+      assert.ok(jobs.some((job) => job.audioId === result.id && job.id === result.jobId));
+  } finally {
+    for (const id of ids) await request(`/api/audio/${id}`, { method: "DELETE" });
+  }
+});
+
 test("database session lock prevents two audio workers owning the same storage", async () => {
   const other = new pg.Client({
     connectionString: process.env.AUDIO_DATABASE_URL,

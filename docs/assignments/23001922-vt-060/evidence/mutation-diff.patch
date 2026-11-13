@@ -1,0 +1,13 @@
+diff --git a/apps/audio/src/audio/audio.service.ts b/apps/audio/src/audio/audio.service.ts
+index 7e6cc78..1c48e64 100644
+--- a/apps/audio/src/audio/audio.service.ts
++++ b/apps/audio/src/audio/audio.service.ts
+@@ -201,7 +201,7 @@ export class AudioService implements OnModuleInit, OnModuleDestroy {
+         throw new AudioServiceError("AUDIO_NOT_FOUND", 404);
+       let job = await tx.audioJob.findUnique({ where: { audioId: id } });
+       if (job?.status === "failed") {
+-        if (job.attempts >= 3)
++        if (!(job.attempts >= 3))
+           throw new AudioServiceError("JOB_RETRY_LIMIT", 409);
+         job = await tx.audioJob.update({
+           where: { id: job.id },

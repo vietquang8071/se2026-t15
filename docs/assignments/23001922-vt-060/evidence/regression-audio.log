@@ -1,0 +1,61 @@
+$ pnpm db:generate && tsc -p tsconfig.audio-test.json && node --test test/audio/*.test.mjs
+$ prisma generate --config prisma.config.ts
+◇ injected env (2) from ../../.env
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+
+✔ Generated Prisma Client (7.10.1) to ./src/generated/prisma in 37ms
+
+✔ rejects a missing file without leaking the path (9.244425ms)
+✔ rejects a directory (2.379363ms)
+✔ rejects a file outside upload root and a symlink pointing outside (4.412173ms)
+✔ rejects empty and oversized files before running audio tools (2.230785ms)
+✔ rejects unsupported extensions and specific MIME mismatches (2.500776ms)
+✔ reports missing FFprobe as an infrastructure error (8.095876ms)
+✔ probes and fully decodes a real wav fixture (852.163226ms)
+✔ probes and fully decodes a real mp3 fixture (101.720453ms)
+✔ probes and fully decodes a real m4a fixture (149.765519ms)
+✔ probes and fully decodes a real webm fixture (94.896182ms)
+✔ accepts missing/generic MIME, a WAV alias and uppercase extensions after checking content (266.63446ms)
+✔ rejects a renamed WAV and a renamed Matroska/Opus container (82.112839ms)
+✔ rejects malformed bytes (38.456753ms)
+✔ rejects a damaged AAC payload in an otherwise intact M4A container (133.043133ms)
+✔ rejects video with audio, video without audio and multiple audio tracks (158.625359ms)
+✔ accepts exactly 60 minutes and rejects a file over 60 minutes (573.541267ms)
+✔ accepts a valid file exactly at 100 MB (604.991324ms)
+✔ does not interpret shell syntax in a server file path (97.947866ms)
+✔ reports missing decoder separately from invalid audio (49.007458ms)
+✔ bounds probing and decoding time instead of hanging a worker (157.510741ms)
+✔ rejects missing duration and malformed probe output (167.86619ms)
+✔ FFmpeg prepares one normalized WAV and one full-recording MP3 (283.232191ms)
+✔ provider makes one diarization request with the required multipart fields (50.861435ms)
+✔ provider auth/quota errors do not retry or expose response text (3.558051ms)
+✔ oversized provider audio fails before a request is made (1.934247ms)
+✔ transient errors retry at most three times and count each attempt (3006.131605ms)
+✔ provider retries a temporary 503 and returns the successful response (1003.813075ms)
+✔ cancellation interrupts retries (1.782244ms)
+✔ provider applies timeout to each request and counts retries (3020.727305ms)
+✔ accepts MP4 video with one valid audio track (768.548225ms)
+✔ extracts a separate PCM WAV and leaves original MP4 bytes unchanged (275.815855ms)
+✔ preserves the audio start offset needed to map transcript times to the original video (253.839593ms)
+✔ does not overwrite the output of a previous extraction (419.764151ms)
+✔ rejects MP4 without audio, multiple audio tracks, fake extensions and mismatched MIME (185.399192ms)
+✔ supports audio-only MP4 containers without claiming that video is required (228.483501ms)
+✔ rejects non-MP4 extraction and missing output storage (269.259214ms)
+✔ removes intermediate output on extraction failure or timeout (571.326755ms)
+✔ preserves provider text, segment boundaries, overlap and deterministic speaker order (5.343512ms)
+✔ empty transcript stays empty without inventing a speaker (0.359446ms)
+✔ an explicit unassigned speaker does not consume a numbered speaker ID (0.382891ms)
+✔ rejects malformed and out-of-bounds provider response (1.375712ms)
+✔ all v2 exports preserve Unicode, speaker rename and contain no word sheet (219.657365ms)
+✔ historical v1 transcript remains unchanged and exports its original words (99.742903ms)
+✔ Excel stores untrusted transcript text as a string, not a formula (20.584015ms)
+ℹ tests 44
+ℹ suites 0
+ℹ pass 44
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7527.939722

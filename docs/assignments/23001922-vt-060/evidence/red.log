@@ -1,0 +1,31 @@
+✖ starting a job rolls back asset status when both job writes fail (1284.323019ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2035.195389
+
+✖ failing tests:
+
+test at test/http/audio-http.test.mjs:328:1
+✖ starting a job rolls back asset status when both job writes fail (1284.323019ms)
+  AssertionError [ERR_ASSERTION]: failed start must not commit the asset update
+  + actual - expected
+  
+  + 'processing'
+  - 'uploaded'
+  
+      at TestContext.<anonymous> (file:///home/sonnh/Documents/btvn/SE_final/se2026-t15-bt3-vt060/apps/audio/test/http/audio-http.test.mjs:356:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'processing',
+    expected: 'uploaded',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

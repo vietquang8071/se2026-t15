@@ -1,0 +1,31 @@
+$ tsc -p tsconfig.json && node --env-file=../../.env --test test/http/*.test.mjs
+✔ audio service runs independently and rejects unauthenticated upload/metadata (991.818641ms)
+✔ HTTP upload supports all five formats and persists UTC 30/60-day metadata without leaking storage paths (767.818918ms)
+✔ invalid retention, malformed media, missing file and invalid IDs have stable errors and no incoming leftovers (154.769937ms)
+✔ MP4 audio start offset is applied exactly once to v2 segments (1486.81041ms)
+✔ HTTP honors the inclusive 100 MB limit and removes oversized temporary uploads (1770.213302ms)
+✔ process is idempotent, job completes, speaker edits persist and every export downloads (1424.758217ms)
+✔ failure status updates roll back together if the asset update fails (1255.727105ms)
+✔ starting a job rolls back asset status when both job writes fail (247.851109ms)
+✔ retry reuses a persisted diarization checkpoint without another provider call (2281.181526ms)
+✔ provider failure records failed job and asset together (1026.935544ms)
+✔ expiry refuses transcript/media immediately and cleanup deletes transcript, jobs and files (130.11249ms)
+✔ DELETE aborts active provider work and no output is resurrected (894.910558ms)
+✔ startup recovers an interrupted v2 job using its checkpoint (1465.066718ms)
+✔ legacy unfinished checkpoints fail explicitly and preserve existing media and checkpoint (783.660426ms)
+✔ legacy failed and interrupted jobs keep their checkpoints when retried or recovered (2269.206046ms)
+✔ historical completed version-1 transcript remains retrievable, renameable and exportable (313.004634ms)
+✔ configuration changes never reuse checkpoints from a different chunk/model layout (703.498758ms)
+✔ job retry cap stops repeated paid processing (153.746394ms)
+✔ failed job with two attempts can be queued for its final attempt (137.345168ms)
+BT3_LOAD_RESULT {"scenario":"40 concurrent POST process requests for one uploaded audio","samples":40,"success":40,"uniqueJobIds":1,"p95_ms":289.43922699999894,"max_ms":297.6886270000032,"latencies_ms":[27.609040999999706,41.46880500000043,54.015135999998165,63.39965899999879,66.18826999999874,71.75825899999836,79.0683710000012,84.16133599999739,88.60717800000202,98.13163899999927,107.46475400000054,114.22401999999784,119.93836899999951,127.08992900000158,138.35737700000027,148.4295029999994,156.08812899999975,160.6039950000013,167.35171999999875,185.50493599999754,192.62384699999893,200.62893800000165,208.30437800000072,216.551829,227.25747000000047,234.46458300000086,238.8120889999991,245.54771400000027,251.11006100000304,256.30161299999963,260.8352709999999,264.5201769999985,268.48756499999945,272.65624899999966,276.7281729999995,281.13812999999936,285.27972600000066,289.43922699999894,294.0929499999984,297.6886270000032]}
+✔ 40 concurrent process requests share one job and report response latency (445.640367ms)
+✔ database session lock prevents two audio workers owning the same storage (12.848982ms)
+ℹ tests 21
+ℹ suites 0
+ℹ pass 21
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 19552.679983
