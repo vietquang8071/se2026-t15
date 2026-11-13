@@ -11,3 +11,7 @@ packages/database/generated/
 data/
 artifacts/private/
 apps/audio/src/generated/
+
+# Assignment reports and generated artifacts — local only
+*.pdf
+.local-reports/
