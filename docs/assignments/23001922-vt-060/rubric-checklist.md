@@ -12,6 +12,6 @@
 | 40 request, raw p95, threshold và giới hạn | PASS | [Performance](performance-report.md) |
 | Traceability và AI usage, hai output cần kiểm tra | PASS | [Traceability](traceability.md), [AI log](ai-usage-log.md) |
 | Reflection 250–350 từ | PASS | [Nội dung do sinh viên cung cấp](reflection.md) |
-| Report MD/PDF, ≤8 trang chính | PASS | [Report](report/BT3_23001922_VT-060.pdf); kiểm tra PDF kèm evidence |
-| Xác nhận của sinh viên/cam kết | PASS | Sinh viên xác nhận đã review và xác nhận cam kết trong hội thoại. |
+| Report MD/PDF, ≤8 trang chính | PASS | [Report](report/BT3_23001922_VT-060.pdf); bản hiện tại 4 trang chính; evidence kiểm tra PDF cũ được giữ nguyên |
+| Xác nhận của sinh viên/cam kết | PARTIAL | Sinh viên xác nhận đã review; chưa ghi nhận xác nhận riêng về cam kết. |
 | Real provider E2E/external exactly-once | NOT RUN | Không thuộc phạm vi bằng chứng fake provider; còn rủi ro crash window |

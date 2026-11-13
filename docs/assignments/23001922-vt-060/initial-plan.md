@@ -15,7 +15,7 @@ Provider có thể lỗi tạm thời; retry phải có giới hạn, tái sử 
 | 40 request cùng audio đại diện 40 job | schema unique audioId; process tái sử dụng job | Không phù hợp: đo riêng request trùng và 40 asset độc lập. |
 | Hai trạng thái bắt đầu được ghi nguyên tử | `run` cập nhật asset rồi job bằng hai lệnh riêng | Cần thử failure injection; nếu được chứng minh sẽ dùng transaction nhỏ. |
 
-Bản review ban đầu do AI thực hiện; sau đó, sinh viên xác nhận đã review và xác nhận cam kết trách nhiệm. Không sửa AGENTS.md: quy ước `son_branch` ở đó được chỉ định nhánh VT-060 cụ thể trong yêu cầu hiện tại thay thế cho bài này.
+Bản review ban đầu do AI thực hiện; sau đó, sinh viên xác nhận đã review; chưa ghi nhận xác nhận riêng về cam kết trách nhiệm. Không sửa AGENTS.md: quy ước `son_branch` ở đó được chỉ định nhánh VT-060 cụ thể trong yêu cầu hiện tại thay thế cho bài này.
 
 ## Trình tự và rủi ro
 

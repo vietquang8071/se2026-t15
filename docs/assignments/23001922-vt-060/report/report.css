@@ -14,3 +14,12 @@ blockquote { margin: 10pt 0; padding: 5pt 10pt; background: #eef6f8; border-left
 
 h1, h2, h3 { break-after: avoid; }
 thead { display: table-header-group; }
+
+p, table { break-inside: avoid; }
+
+table:has(th:nth-child(6)) col:nth-child(1) { width: 9% !important; }
+table:has(th:nth-child(6)) col:nth-child(2) { width: 19% !important; }
+table:has(th:nth-child(6)) col:nth-child(3) { width: 12% !important; }
+table:has(th:nth-child(6)) col:nth-child(4) { width: 24% !important; }
+table:has(th:nth-child(6)) col:nth-child(5) { width: 26% !important; }
+table:has(th:nth-child(6)) col:nth-child(6) { width: 10% !important; }
