@@ -325,6 +325,46 @@ test(
   },
 );
 
+test("starting a job rolls back asset status when both job writes fail", async () => {
+  const uploaded = await (await upload()).json();
+  const path = `/api/audio/${uploaded.audio_id}`;
+  clearInterval(service.timer);
+  const job = await service.db.audioJob.create({
+    data: { audioId: uploaded.audio_id },
+  });
+  await service.db.$executeRawUnsafe(`
+    CREATE FUNCTION bt3_reject_start_and_failure() RETURNS trigger AS $$
+    BEGIN
+      IF NEW.status IN ('running', 'failed') THEN
+        RAISE EXCEPTION 'injected job write failure';
+      END IF;
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql
+  `);
+  await service.db.$executeRawUnsafe(`
+    CREATE TRIGGER bt3_reject_start_and_failure BEFORE UPDATE ON "AudioJob"
+    FOR EACH ROW EXECUTE FUNCTION bt3_reject_start_and_failure()
+  `);
+  try {
+    await service.run(job.id, uploaded.audio_id, new AbortController().signal);
+    const savedJob = await service.db.audioJob.findUniqueOrThrow({ where: { id: job.id } });
+    const asset = await service.db.audioAsset.findUniqueOrThrow({ where: { id: uploaded.audio_id } });
+    assert.equal(savedJob.status, "queued");
+    assert.equal(savedJob.attempts, 0);
+    assert.equal(savedJob.providerCalls, 0);
+    assert.equal(asset.status, "uploaded", "failed start must not commit the asset update");
+    assert.equal(asset.transcript, null);
+  } finally {
+    await service.db.$executeRawUnsafe('DROP TRIGGER IF EXISTS bt3_reject_start_and_failure ON "AudioJob"');
+    await service.db.$executeRawUnsafe("DROP FUNCTION IF EXISTS bt3_reject_start_and_failure()");
+    await request(path, { method: "DELETE" });
+    await app.close();
+    app = undefined;
+    await start();
+  }
+});
+
 test("retry reuses a persisted diarization checkpoint without another provider call", async () => {
   const uploaded = await (await upload()).json();
   const path = `/api/audio/${uploaded.audio_id}`;
