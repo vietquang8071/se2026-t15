@@ -6,7 +6,7 @@ LLM-03.4 xây dựng pipeline trích xuất Summary và Action Items từ một 
 
 LLM-03.4 phụ thuộc vào LLM-03.2 (provider protocol, adapter và `ProviderUsage`) và LLM-03.3 (candidate schema, prompt registry, renderer và parser). Đã chọn **Phương án A — Tách biệt Orchestration và Verification**: LLM-03.4 phụ trách orchestration và chuẩn bị dữ liệu; LLM-03.5 xác minh source references, semantic evidence và các điều kiện để tạo response đã xác minh.
 
-Trạng thái hiện tại: **Groups A và B hoàn thành, đã được kiểm chứng**. Toàn bộ milestone LLM-03.4 chưa hoàn thành; Groups C và D vẫn chưa triển khai.
+Trạng thái hiện tại: **Groups A, B và C hoàn thành, đã được kiểm chứng**. Toàn bộ milestone LLM-03.4 chưa hoàn thành; Group D vẫn chưa triển khai.
 
 ## 2. Kiến trúc và luồng dữ liệu
 
@@ -19,11 +19,13 @@ ExtractionRequest
     → LLMProvider.generate()                 [Group B — đã triển khai]
     → parse_candidate()                      [Group B — đã triển khai]
     → PreparedExtraction                    [Group B — đã triển khai]
+    → ExtractionProjector.project()          [Group C — đã triển khai]
+    → ProjectedExtraction                    [Group C — đã triển khai]
     → validation/evidence safeguards         [LLM-03.5]
     → verified ExtractionResponse            [sau các validation bắt buộc]
 ```
 
-Trong Group A, `ExtractionPreflight.prepare()` kiểm tra capability, tải prompt đã duyệt bằng `PromptRegistry`, gọi `PromptRenderer` và trả `PreparedRequest`. Group B dùng kết quả này để gọi provider đúng một lần, parse candidate và tạo `PreparedExtraction` chưa xác minh. Không nhóm nào ở trạng thái hiện tại tạo `ExtractionResponse`.
+Trong Group A, `ExtractionPreflight.prepare()` kiểm tra capability, tải prompt đã duyệt bằng `PromptRegistry`, gọi `PromptRenderer` và trả `PreparedRequest`. Group B dùng kết quả này để gọi provider đúng một lần, parse candidate và tạo `PreparedExtraction` chưa xác minh. Group C chỉ ánh xạ metadata request và candidate sang `ProjectedExtraction`; projection cũng chưa xác minh nội dung. Không nhóm nào ở trạng thái hiện tại tạo `ExtractionResponse`.
 
 `PreparedRequest` giữ `ExtractionRequest` gốc và `RenderedPrompt`; không sao chép provider request hoặc các phiên bản prompt/schema đã có trong `RenderedPrompt`. `PreparedExtraction` là hợp đồng nội bộ cho candidate đã parse nhưng chưa xác minh. Public `ExtractionService.extract(request) -> ExtractionResponse` và `UnconfiguredExtractionService` được giữ nguyên; runtime tiếp tục fail-closed.
 
@@ -107,6 +109,26 @@ uv run --locked --extra test pytest -q
 
 Kết quả regression sau Group B: **387 passed, 0 failed, 0 skipped** (`2.70s`). Không gọi OpenRouter hoặc dùng API credentials. Các lượt chạy cần quyền truy cập cache của `uv` để tạo file tạm; sau khi được cấp quyền chạy, các lệnh đều hoàn tất thành công.
 
+Các lệnh kiểm thử Group C, chạy từ `apps/llm-service/`:
+
+```bash
+uv run --locked --extra test pytest -q tests/unit/services/test_projection.py
+```
+
+Kết quả: **15 passed, 0 failed, 0 skipped**.
+
+```bash
+uv run --locked --extra test pytest -q tests/integration/test_candidate_projection.py
+```
+
+Kết quả: **7 passed, 0 failed, 0 skipped**.
+
+```bash
+uv run --locked --extra test pytest -q
+```
+
+Kết quả regression sau Group C: **409 passed, 0 failed, 0 skipped** (`2.37s`), tăng từ mốc lịch sử **387 passed** sau Group B. Không gọi OpenRouter hoặc dùng API credentials.
+
 ## 6. Bảo mật và độ tin cậy
 
 - Preflight không khởi tạo provider, gọi mạng, đọc API key hoặc chạy inference.
@@ -121,6 +143,10 @@ Kết quả regression sau Group B: **387 passed, 0 failed, 0 skipped** (`2.70s`
 - Mỗi lần chạy giữ request, candidate, timestamps và provider result ở biến cục bộ. Kiểm thử hai request chồng lấp xác nhận candidate, model ID và token usage không bị trộn.
 - Provider hoặc parser lỗi được truyền nguyên trạng; cancellation không bị nuốt. Không có retry, JSON repair hoặc fallback.
 - `PreparedExtraction` vẫn là candidate chưa xác minh; parse thành công không xác nhận source IDs, evidence, owner, deadline hay temporal consistency.
+- `ExtractionProjector` không gọi provider, mạng hoặc đọc credentials; kiểm thử tích hợp đi qua `FakeProvider` và các component prompt/parser thật.
+- Projector không sửa request, transcript hay candidate. Danh sách Action Items được copy nông; các Pydantic candidate bên trong vẫn được tham chiếu và có thể mutable, vì vậy downstream phải xem chúng là dữ liệu chỉ đọc.
+- Source IDs không tồn tại vẫn được giữ nguyên để LLM-03.5 xác minh; projection không tuyên bố chúng là evidence hợp lệ.
+- Thời lượng dương rất ngắn có thể được làm tròn thành `0.0` phút. Public `MeetingSummary.duration_minutes` hiện yêu cầu giá trị dương; projection không bịa mức tối thiểu và chưa thay đổi schema.
 
 ## 7. Trạng thái các nhóm LLM-03.4
 
@@ -167,10 +193,10 @@ Production endpoint phải **fail closed** khi các bước validation bắt bu�
 |---|---|---|
 | A | LLM-03.4.1 + LLM-03.4.3 | Hoàn thành |
 | B | LLM-03.4.2 + LLM-03.4.4 | Hoàn thành |
-| C | LLM-03.4.5 + LLM-03.4.6 | Chưa triển khai |
+| C | LLM-03.4.5 + LLM-03.4.6 | Hoàn thành |
 | D | LLM-03.4.7 + LLM-03.4.8 | Chưa triển khai |
 
-Việc hoàn thành Groups A và B không đồng nghĩa toàn bộ LLM-03.4 hoặc LLM-03.5 đã hoàn thành. Tiêu chí public HTTP success trong tài liệu milestone gốc được điều chỉnh có chủ đích theo Phương án A: không thể bật an toàn trước khi LLM-03.5 cung cấp validation bắt buộc và đường dựng verified response.
+Việc hoàn thành Groups A, B và C không đồng nghĩa toàn bộ LLM-03.4 hoặc LLM-03.5 đã hoàn thành. Tiêu chí public HTTP success trong tài liệu milestone gốc được điều chỉnh có chủ đích theo Phương án A: không thể bật an toàn trước khi LLM-03.5 cung cấp validation bắt buộc và đường dựng verified response.
 
 ## 8. Handoff sang Group B
 
@@ -222,7 +248,7 @@ Group C cần giữ nguyên source IDs, `raw_due_expression`, owner và priority
 
 ## 12. Ranh giới với LLM-03.5
 
-Groups A và B **chưa** triển khai:
+Groups A, B và C **chưa** triển khai:
 
 - Kiểm tra source ID tồn tại trong transcript revision.
 - Semantic evidence checking hoặc xác minh claim.
@@ -233,4 +259,48 @@ Groups A và B **chưa** triển khai:
 - Full public error mapping.
 - Dựng verified `ExtractionResponse`.
 
-Các phần này thuộc LLM-03.5 hoặc milestone sau theo phân công. Không khẳng định đã có production extraction được xác minh từ kết quả Groups A/B, và không điền `evidence_prompt_version` nếu verifier chưa chạy.
+Các phần này thuộc LLM-03.5 hoặc milestone sau theo phân công. Không khẳng định đã có production extraction được xác minh từ kết quả Groups A/B/C, và không điền `evidence_prompt_version` nếu verifier chưa chạy.
+
+## 13. LLM-03.4 Group C — Summary & Action Items Projection
+
+Group C triển khai projection nội bộ giữa `PreparedExtraction` và bước xác minh. Projection chỉ chuẩn bị dữ liệu; nó không biến candidate chưa xác minh thành artifacts đáng tin cậy hoặc public response.
+
+### LLM-03.4.5 — Meeting Summary Projection
+
+| Tệp | Trách nhiệm |
+|---|---|
+| `apps/llm-service/app/services/projection.py` | Định nghĩa `ProjectedMeetingSummary`, `ProjectedExtraction` và `ExtractionProjector`. |
+| `apps/llm-service/tests/unit/services/test_projection.py` | Kiểm tra mapping metadata/content, giữ null state, không mutate và tính xác định. |
+| `apps/llm-service/tests/integration/test_candidate_projection.py` | Kiểm tra luồng offline từ request qua provider giả, parser và projector; xác nhận FastAPI vẫn fail-closed. |
+
+`ProjectedMeetingSummary` chứa metadata lấy từ `PreparedExtraction.request.meeting`: `title`, `anchor_date` thành `date`, `duration_seconds` thành `duration_minutes`, và danh sách `participants[].display_name` theo thứ tự request. Nội dung được giữ trong tham chiếu `MeetingSummaryCandidate`, nhờ đó `overview`, thứ tự `key_topics` và tất cả source IDs không bị sao chép, viết lại hoặc sắp xếp lại.
+
+Duration dùng đúng quy tắc `round(duration_seconds / 60, 2)`. Với thời lượng dương quá ngắn, kết quả có thể là `0.0`; public `MeetingSummary.duration_minutes` lại yêu cầu số dương. Đây là giới hạn tương thích được ghi nhận cho downstream. Group C không thay giá trị, không đặt mức tối thiểu và không sửa public schema; nếu cần thay contract, phải có quyết định/phê duyệt riêng.
+
+### LLM-03.4.6 — Action Items Projection
+
+`ProjectedExtraction.action_items` giữ `None` khi module không được yêu cầu và giữ list rỗng `[]` khi Actions đã được yêu cầu nhưng không có item. Với list có nội dung, projector tạo shallow copy để giữ thứ tự mà không làm thay đổi list gốc; các `ActionItemCandidate` vẫn được tham chiếu và không bị sửa.
+
+Các trường `task`, `owner`, `raw_due_expression`, `priority`, `context` và `source_segment_ids` được giữ nguyên. Owner/priority nullable vẫn là `None`; biểu thức thời gian tương đối vẫn ở dạng raw; source IDs không tồn tại vẫn được chuyển tiếp mà không bị loại hoặc thay thế. Candidate/topic Pydantic models mutable không được xem là immutable sâu, nên caller downstream cần coi dữ liệu là chỉ đọc.
+
+Không tạo `id`, `source_timestamp`, `due_date`, `due_date_resolution`, `needs_review`, `review_reasons` hay `evidence_prompt_version`. Không có `ExtractionResponse` hoặc public `MeetingSummary`/`ActionItem` nào được tạo.
+
+### Hợp đồng và luồng dữ liệu
+
+`ExtractionProjector.project(extraction: PreparedExtraction) -> ProjectedExtraction` là phép ánh xạ đồng bộ, xác định và không có state theo request. `ProjectedExtraction.prepared_extraction` giữ tham chiếu tới nguồn gốc để LLM-03.5 tiếp tục truy cập request, transcript, candidate và provider metadata mà không nhân bản các metadata đó. `ProjectedMeetingSummary.candidate` tái sử dụng `MeetingSummaryCandidate`; `action_items` giữ collection module theo semantics `None`/list.
+
+Projector dựa trên invariant module đã được `parse_candidate()` kiểm tra. Nó không lặp lại Candidate Schema validation và không sửa dữ liệu nếu đầu vào không nhất quán; hợp đồng đầu vào là `PreparedExtraction` đã được tạo từ luồng Group B thành công.
+
+### Kiểm thử và xác minh Group C
+
+- `uv run --locked --extra test pytest -q tests/unit/services/test_projection.py`: **15 passed, 0 failed, 0 skipped**.
+- `uv run --locked --extra test pytest -q tests/integration/test_candidate_projection.py`: **7 passed, 0 failed, 0 skipped**.
+- `uv run --locked --extra test pytest -q`: **409 passed, 0 failed, 0 skipped**. Mốc trước Group C là **387 passed** sau Group B.
+
+Integration tests dùng `FakeProvider`, PromptRegistry, PromptRenderer, `CandidateExtractionOrchestrator` và parser thật. Chúng xác nhận Summary-only, Actions-only, combined, empty Actions, metadata và source preservation; kiểm tra `/health` cùng extraction endpoint mặc định fail-closed. Không dùng API key hoặc gọi mạng provider.
+
+### Bảo mật, độ tin cậy và handoff sang Group D/LLM-03.5
+
+Projector không gọi LLM/provider, không log hoặc sinh nội dung mới, không mutate request/transcript/candidate và không gán trạng thái xác minh. Request-derived meeting metadata và candidate-derived claims vẫn phân biệt được; source references chưa được kiểm tra tiếp tục mang provenance tới LLM-03.5.
+
+Group D có thể nhận `ProjectedExtraction`, dùng `meeting_summary` và `action_items` để hoàn thiện validation gate, đồng thời lấy toàn bộ provenance và processing metadata qua `prepared_extraction`. Các nội dung, owners, deadlines và source IDs vẫn chưa được xác minh. LLM-03.5 phải xử lý source ID existence, semantic evidence, temporal safeguards, review states, artifact IDs, source timestamps, error mapping và verified response construction. Vì vậy public `ExtractionResponse` chưa thể được tạo an toàn và HTTP `200 completed` tiếp tục không khả dụng cho candidate chưa xác minh.
