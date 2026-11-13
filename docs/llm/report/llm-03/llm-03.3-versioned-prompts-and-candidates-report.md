@@ -3,9 +3,9 @@
 ## 1. Overview
 
 - **Mục tiêu milestone:** chuẩn hóa prompt có phiên bản và biểu diễn trung gian cho nội dung trích xuất Summary/Actions trước khi xác minh và tạo response Contract v1.
-- **Phạm vi báo cáo hiện tại:** LLM-03.3.1 — Candidate Schema Specification v1, LLM-03.3.2 — Pydantic Candidate Models, và LLM-03.3.3 — Versioned Prompt Templates.
+- **Phạm vi báo cáo:** toàn bộ LLM-03.3.1–LLM-03.3.7, gồm Candidate Schema, Pydantic models, prompt templates, registry, renderer, parser và offline integration tests.
 - **Milestone liên quan:** LLM-03.2 cung cấp provider interface và OpenRouter adapter; LLM-03.4 sẽ điều phối extraction và dựng response cuối.
-- **Trạng thái:** LLM-03.3.1, LLM-03.3.2 và LLM-03.3.3 hoàn thành. LLM-03.3.4–03.3.7 vẫn Pending; toàn milestone LLM-03.3 chưa hoàn thành.
+- **Trạng thái:** LLM-03.3.1–LLM-03.3.7 hoàn thành; toàn milestone LLM-03.3 hoàn thành trong phạm vi versioned prompts, candidate schema và offline integration. LLM-03.4 production orchestration vẫn nằm ngoài phạm vi.
 - **Tài liệu tham chiếu:** [API Contract](../../llm-service-contract.md), [kiến trúc LLM Service](../../llm-service-architecture.md), [tổng quan LLM-03](llm-03-overview.md), báo cáo [LLM-03.1](llm-03.1-provider-selection-and-smoke-test-report.md) và [LLM-03.2](llm-03.2-provider-adapter-report.md).
 
 Candidate là nội dung do model đề xuất và chỉ được kiểm tra cấu trúc. Nó không phải response công khai đã xác minh, cũng không chứng minh claim được nguồn trích dẫn hỗ trợ.
@@ -79,7 +79,7 @@ Mọi summary, topic và action candidate phải có ít nhất một <code>sour
 
 ### Versioning policy
 
-Schema nội bộ có định danh <code>candidate-v1</code>, thể hiện bằng hằng <code>CANDIDATE_SCHEMA_VERSION</code>; hằng này không được yêu cầu trong JSON do LLM sinh. Nó độc lập với public <code>contract_version = "1.0"</code> và phiên bản prompt tương lai, ví dụ <code>extract-v1.0</code>. Prompt registry trong tương lai có thể ghi nhận cặp phiên bản prompt/schema để parser chọn đúng model candidate. Registry chưa được triển khai ở hai task này.
+Schema nội bộ có định danh <code>candidate-v1</code>, thể hiện bằng hằng <code>CANDIDATE_SCHEMA_VERSION</code>; hằng này không được yêu cầu trong JSON do LLM sinh. Nó độc lập với public <code>contract_version = "1.0"</code> và phiên bản prompt, ví dụ <code>extract-v1.0</code>. PromptRegistry hiện trả cặp prompt/schema version trong bundle; PromptRenderer giữ metadata này cho caller. Candidate Parser hiện dùng trực tiếp model Candidate Schema v1; chưa có logic orchestration chọn parser theo version động.
 
 ### JSON hợp lệ
 
@@ -194,7 +194,7 @@ Public <code>ExtractionRequest</code> tiếp tục là đầu vào helper và hi
 
 ### Mục tiêu và trạng thái
 
-Thiết kế prompt có phiên bản để trích xuất candidate Meeting Summary và Action Items từ transcript tiếng Việt hoặc tiếng Anh. Hai template hiện có đã được đọc và đối chiếu thủ công với Candidate Schema v1 cùng các tiêu chí prompt trong LLM-03 overview. Không thấy mâu thuẫn cấu trúc làm cản trở việc dùng chúng làm candidate prompt. Vì cả hai template đều có mặt và khớp candidate contract, LLM-03.3.3 được đánh dấu **Completed** ở phạm vi thiết kế template. Việc chọn phiên bản trong runtime, render context, parse output và xác minh bằng chứng vẫn là phần việc sau.
+Thiết kế prompt có phiên bản để trích xuất candidate Meeting Summary và Action Items từ transcript tiếng Việt hoặc tiếng Anh. Hai template hiện có đã được đọc và đối chiếu thủ công với Candidate Schema v1 cùng các tiêu chí prompt trong LLM-03 overview. Không thấy mâu thuẫn cấu trúc làm cản trở việc dùng chúng làm candidate prompt. Vì cả hai template đều có mặt và khớp candidate contract, LLM-03.3.3 được đánh dấu **Completed** ở phạm vi thiết kế template. Runtime version selection, context rendering và candidate parsing được triển khai trong LLM-03.3.4–03.3.6; semantic/evidence verification và response construction vẫn thuộc các bước sau.
 
 ### Template và trách nhiệm
 
@@ -234,11 +234,11 @@ Thiết kế prompt có phiên bản để trích xuất candidate Meeting Summa
 
 | Thành phần | Identifier | Trạng thái thực tế |
 |---|---|---|
-| Prompt bundle | <code>extract-v1.0</code> | Được ghi tĩnh trong <code>summary_actions.md</code>; chưa được Prompt Registry chọn hoặc gắn tự động vào lần chạy. |
-| Candidate Schema | <code>candidate-v1</code> | Có constant <code>CANDIDATE_SCHEMA_VERSION</code> trong <code>candidates.py</code> và được nhắc trong prompt; không phải JSON field và hiện chưa được runtime registry dùng để chọn parser. |
+| Prompt bundle | <code>extract-v1.0</code> | Được ghi trong <code>summary_actions.md</code> và được executable PromptRegistry allowlist ánh xạ tới hai template v1. |
+| Candidate Schema | <code>candidate-v1</code> | Constant <code>CANDIDATE_SCHEMA_VERSION</code> trong <code>candidates.py</code>, được PromptBundle giữ cùng prompt version; không phải JSON field do model sinh. |
 | Public API Contract | <code>1.0</code> | Được giới hạn bởi request/response Pydantic schemas; đây là version của public API contract, không phải prompt hay candidate schema version. |
 
-Ba version có trách nhiệm khác nhau: prompt version định danh instructions; candidate schema version định danh cấu trúc trung gian; contract version định danh giao thức public. Repository chưa có executable Prompt Registry/renderer hoặc liên kết runtime giữa các version này. <code>ProcessingMetadata.prompt_version</code> trong response model hiện chỉ là nonblank string; các giá trị trong response fixtures không chứng minh việc chọn version được thực thi. Extraction Service vẫn là <code>UnconfiguredExtractionService</code>.
+Ba version có trách nhiệm khác nhau: prompt version định danh instructions; candidate schema version định danh cấu trúc trung gian; contract version định danh giao thức public. PromptRegistry và PromptRenderer đã dùng prompt bundle cùng schema version để tạo request provider-neutral; Candidate Parser kiểm tra output bằng Candidate Schema v1. Tuy nhiên, <code>ProcessingMetadata.prompt_version</code> chưa được populate vì ExtractionService vẫn là <code>UnconfiguredExtractionService</code> và response construction chưa được triển khai.
 
 ### Placeholder và nguồn dữ liệu
 
@@ -249,13 +249,13 @@ Ba version có trách nhiệm khác nhau: prompt version định danh instructio
 | <code>${meeting_context_json}</code> | <code>request.meeting</code> | Context cho meeting và mapping participants/speakers; chỉ nên chứa trường cần thiết cho extraction. |
 | <code>${transcript_segments_json}</code> | <code>request.transcript.segments</code> | Segments theo thứ tự, gồm ID, thời gian, speaker ID và text. |
 
-Đây là placeholder trong template, chưa có Prompt Renderer thay thế chúng. Thành phần renderer tương lai phải serialize dữ liệu an toàn, chiếu meeting context xuống tập trường tối thiểu cần dùng (đặc biệt participant <code>display_name</code> và <code>speaker_ids</code> đã xác nhận), giữ nguyên transcript IDs/text và loại bỏ metadata nhạy cảm không cần thiết. Không khẳng định việc rendering hoặc lọc context đã hoạt động.
+PromptRenderer hiện thay đúng bốn placeholder bằng dữ liệu từ các field trên. Renderer xác thực cú pháp và tập placeholder của template trước khi serialize/chèn dữ liệu, dùng một lượt substitution; transcript có chuỗi dạng <code>${...}</code> vẫn được giữ nguyên như dữ liệu. Meeting context giới hạn ở participant <code>display_name</code> và <code>speaker_ids</code>; transcript segment giữ ID, start/end, speaker ID và text theo thứ tự. Request/meeting IDs, participant IDs và meeting title không được đưa vào JSON context.
 
 ### Đối chiếu Business Rules với Candidate Schema v1
 
 | Quy tắc | Đối chiếu |
 |---|---|
-| Module hỗ trợ | Prompt chỉ hỗ trợ <code>meeting_summary</code> và <code>action_items</code>; Candidate root cũng chỉ có hai module này. Request v1 còn cho phép bốn module khác, nhưng helper candidate từ chối chúng; chưa có orchestration gọi helper trước render. |
+| Module hỗ trợ | Prompt, PromptRenderer và Candidate root hỗ trợ <code>meeting_summary</code> và <code>action_items</code>. Renderer từ chối các module còn lại trước khi tạo ProviderRequest; Candidate Parser/helper cũng từ chối unsupported module và kiểm tra nullability sau parse. |
 | Root fields/nullability | Cả hai root keys bắt buộc. Module không yêu cầu phải null; summary được yêu cầu phải là object; actions được yêu cầu phải là array. Khớp model. |
 | Kết quả rỗng | Prompt yêu cầu <code>action_items: []</code> khi không có commitment phù hợp và cho phép <code>key_topics: []</code>; cả hai trường hợp được schema hỗ trợ. |
 | Field thông tin thiếu | Owner, raw deadline, priority và context đều bắt buộc hiện diện nhưng nullable. Prompt yêu cầu null khi không có thông tin được hỗ trợ. |
@@ -281,11 +281,86 @@ Những repository này là nguồn tham khảo cho hướng thiết kế, khôn
 
 - Template coi transcript là untrusted data và không cho phép text trong transcript ghi đè system instructions. Prompt policy hữu ích nhưng **không thể bảo đảm chống prompt injection**.
 - Prompt yêu cầu source IDs lấy chính xác từ transcript, không tạo IDs, và yêu cầu output JSON only. Pydantic vẫn chịu trách nhiệm structural validation; bước sau phải xác minh source existence và semantic evidence.
-- Hai template không chứa credentials hoặc transcript/meeting data cụ thể. Placeholder context tổng quát chưa thực thi data minimization; renderer phải loại bỏ metadata không cần thiết trước khi gọi provider.
+- Hai template không chứa credentials hoặc transcript/meeting data cụ thể. PromptRenderer thực hiện data minimization cho meeting context; transcript được tuần tự hóa thành user-message data và không được đưa vào system message.
 - Prompt instructions không thể tự bảo đảm chống hallucination hoặc tính đúng ngữ nghĩa. **Prompt instructions alone cannot guarantee hallucination prevention, semantic correctness, or prompt-injection resistance.**
-- Không chạy automated prompt tests, provider calls, hay model inference trong task cập nhật tài liệu này. Việc đối chiếu ở đây là review nội dung template với schema và tài liệu; chưa phải prompt quality evaluation.
+- Ở thời điểm hoàn thành LLM-03.3.3, chưa chạy automated prompt tests, provider calls hay model inference; việc review lúc đó chỉ đối chiếu template với schema/tài liệu, không phải prompt quality evaluation. Offline rendering/integration tests được bổ sung ở LLM-03.3.4–03.3.7; prompt quality với model thật vẫn chưa được đánh giá.
 
-## 5. Testing and Validation
+## 5. LLM-03.3.4 — Prompt Registry & Versioning
+
+### Triển khai
+
+| Tệp | Trách nhiệm |
+|---|---|
+| <code>apps/llm-service/app/prompts/registry.py</code> | Định nghĩa <code>PromptBundle</code>, allowlist prompt version và tải template. |
+| <code>apps/llm-service/app/prompts/__init__.py</code> | Khởi tạo package prompts. |
+| <code>apps/llm-service/tests/unit/prompts/test_registry.py</code> | Kiểm tra version mapping, file Markdown, UTF-8, lỗi tải và độc lập working directory. |
+
+<code>PromptBundle</code> là dataclass immutable gồm <code>prompt_version</code>, <code>candidate_schema_version</code>, <code>system_template</code> và <code>extraction_template</code>. Registry chỉ nhận version trong allowlist; <code>extract-v1.0</code> ánh xạ cố định tới <code>v1/system.md</code> và <code>v1/summary_actions.md</code>, không tạo path từ version tùy ý. Candidate version lấy từ <code>CANDIDATE_SCHEMA_VERSION</code>.
+
+Template được đọc UTF-8 theo đường dẫn tương đối với package, giữ nguyên nội dung, từ chối file thiếu/rỗng và cache bundle đã tải thành công trong từng registry instance. Lỗi ngoài có thông báo tổng quát. Ngoại lệ hiện được raise bằng <code>from error</code>; traceback nội bộ định dạng đầy đủ có thể chứa version đầu vào trong <code>KeyError</code> hoặc filesystem path trong <code>OSError</code>. Đây là rủi ro chẩn đoán nội bộ; hiện không có registry-to-HTTP mapping hoặc ExtractionService gọi luồng này để đưa cause vào public response. Cause không chứa transcript/provider output. Registry không được chỉnh sửa trong LLM-03.3.7; cần cân nhắc suppress cause hoặc giới hạn log ở bước tích hợp runtime.
+
+**Unit tests:** <code>tests/unit/prompts/test_registry.py</code> — 8 passed trong lần xác minh LLM-03.3.4–03.3.6.
+
+## 6. LLM-03.3.5 — Prompt Renderer & Context Builder
+
+### Triển khai
+
+| Tệp | Trách nhiệm |
+|---|---|
+| <code>apps/llm-service/app/prompts/renderer.py</code> | Validate module selection, dựng context/transcript JSON và tạo provider request. |
+| <code>apps/llm-service/tests/unit/prompts/test_renderer.py</code> | Kiểm tra module, language, placeholders, serialization và message boundaries. |
+
+<code>PromptRenderer.render(request, bundle)</code> trả <code>RenderedPrompt</code> giữ <code>ProviderRequest</code>, prompt version và candidate schema version. Renderer chỉ nhận <code>meeting_summary</code>/<code>action_items</code>; module khác bị từ chối trước provider. Ngôn ngữ lấy từ <code>request.extraction.output_language</code> (<code>vi</code>/<code>en</code>).
+
+Meeting context chỉ gồm participant <code>display_name</code> và mapping <code>speaker_ids</code> có sẵn; không đưa meeting/participant/request IDs hoặc title vào JSON context. Transcript giữ thứ tự segment và các trường <code>id</code>, <code>start</code>, <code>end</code>, <code>speaker_id</code>, <code>text</code>. JSON dùng <code>ensure_ascii=False</code>/<code>allow_nan=False</code>; renderer không dịch, gộp, tóm tắt hay suy đoán người nói.
+
+Renderer xác thực cú pháp và tập đúng bốn placeholder trong template nguồn trước khi serialize/chèn dữ liệu, dùng <code>string.Template.substitute()</code> đúng một lượt. Output gồm hai <code>ProviderMessage</code> theo thứ tự <code>system</code>, <code>user</code> và <code>structured_output_mode="json_object"</code>. Transcript chỉ nằm trong user message; generation không gọi provider tại renderer.
+
+**Unit tests:** <code>tests/unit/prompts/test_renderer.py</code> — 11 passed trong lần xác minh LLM-03.3.4–03.3.6.
+
+## 7. LLM-03.3.6 — Candidate JSON Parser
+
+### Triển khai
+
+| Tệp | Trách nhiệm |
+|---|---|
+| <code>apps/llm-service/app/parsing/candidates.py</code> | Parse provider content thành Candidate Schema v1 và kiểm tra module theo request. |
+| <code>apps/llm-service/app/parsing/__init__.py</code> | Khởi tạo package parsing. |
+| <code>apps/llm-service/tests/unit/parsing/test_candidate_parser.py</code> | Kiểm tra JSON/schema, request mismatch và sanitization. |
+
+<code>parse_candidate(content, request)</code> dùng <code>SummaryActionsCandidate.model_validate_json()</code>, sau đó gọi <code>validate_candidate_for_request()</code> hiện có. Lỗi JSON/schema được phân loại thành <code>CandidateFormatError</code>; sai lệch module thành <code>CandidateRequestMismatchError</code>. Thông báo không chứa raw model output; lỗi Pydantic/helper không bị lộ qua exception chaining.
+
+Parser không strip Markdown fences, sửa JSON, retry, điền field, map HTTP errors hoặc tạo public <code>ExtractionResponse</code>. Parser chỉ kiểm tra cấu trúc và module selection: source ID không tồn tại vẫn có thể qua; owner sentinel như <code>"Unknown"</code> vẫn hợp lệ theo Candidate Schema v1; tính đúng claim, owner, deadline, priority và evidence thuộc các bước sau.
+
+**Unit tests:** <code>tests/unit/parsing/test_candidate_parser.py</code> — 25 passed trong lần xác minh LLM-03.3.4–03.3.6.
+
+## 8. LLM-03.3.7 — Offline Integration Tests
+
+### Kiến trúc kiểm thử
+
+<code>apps/llm-service/tests/integration/test_prompt_candidate_flow.py</code> compose trực tiếp Registry → Renderer → FakeProvider → Candidate Parser bằng interface thật. Helper trong test chỉ nối các bước kiểm thử; không thêm service hay production orchestration. Request lấy từ fixture tổng hợp hiện có <code>tests/fixtures/requests/summary_actions_request.json</code>; candidate JSON được khai báo tổng hợp trong test. FakeProvider là boundary mô phỏng duy nhất.
+
+### Kịch bản
+
+| Kịch bản | Kiểm tra |
+|---|---|
+| IT-01 Full Summary + Actions | Version metadata, hai messages đúng role/order, JSON mode, đúng một FakeProvider request, candidate fields/source IDs/raw deadline. |
+| IT-02 Summary-only | Summary object và Actions null; module selection được render. |
+| IT-03 Actions-only | Summary null; raw deadline và các nullable fields được giữ. |
+| IT-04 Empty Actions | <code>action_items: []</code> được chấp nhận cho module đã yêu cầu. |
+| IT-05 Malformed JSON | Parser lỗi sanitized; không candidate giả, repair hoặc retry. |
+| IT-06 Candidate sai schema | Thiếu field, extra field, sai type và priority sai đều bị từ chối. |
+| IT-07 Module mismatch | JSON parse được nhưng candidate/request mismatch bị từ chối. |
+| IT-08 Unsupported module | Renderer từ chối trước khi FakeProvider nhận request. |
+| IT-09 Provider failures | Timeout, rate limit, upstream failure truyền nguyên trạng; không retry và parser không chạy. |
+| IT-10 vi/en | Prompt nhận language cấu hình; transcript, source IDs và system prompt giữ nguyên. |
+| IT-11 Prompt-injection boundary | Chỉ dẫn và literal <code>${...}</code> trong transcript vẫn là data, không đổi system/configuration. |
+| IT-12 Sources/speakers | Thứ tự segment, Unicode IDs/text, speaker mapping, unmapped/null speaker và source references được giữ. |
+| IT-13 Version/template source | Registry dùng đúng hai file <code>.md</code>; Renderer giữ prompt/schema version. |
+
+Các test xác nhận boundary và data flow offline; chúng không chứng minh model thật tuân thủ language/prompt hoặc chống prompt injection. Không có API key, external network call hay model inference.
+
+## 9. Testing and Validation
 
 ### Chiến lược
 
@@ -301,7 +376,9 @@ Test dùng Pydantic thật với synthetic JSON/request fixture hiện có. Khô
 - Malformed JSON.
 - Owner sentinel <code>"Unknown"</code> được kiểm chứng là vẫn structural-valid theo quyết định đã duyệt.
 
-### Kết quả thực tế
+### Kết quả lịch sử
+
+Các kết quả dưới đây được giữ lại từ lần xác minh ban đầu của Candidate Schema/Pydantic models; chúng không đại diện cho lượt chạy mới nhất:
 
 Lệnh chạy trong <code>apps/llm-service/</code>:
 
@@ -311,55 +388,79 @@ uv run --locked --extra test pytest -q tests/unit/schemas/test_candidates.py
 
 Kết quả: **54 passed**.
 
-Full regression suite:
+Full regression suite ở giai đoạn đó:
 
 ~~~bash
 uv run --locked --extra test pytest -q
 ~~~
 
-Kết quả ở lượt xác minh cuối: **284 passed, 0 failed, 0 skipped** (<code>3.04s</code>). Bộ test candidate mới có 54 test; phần suite còn lại có 230 test trước đó. Không có hạn chế thực thi pytest sau khi vượt lỗi sandbox startup. Không chạy lệnh smoke test live.
+Kết quả lịch sử: **284 passed** (<code>3.04s</code>); bộ candidate có 54 test và phần suite còn lại có 230 test tại thời điểm đó. Sau khi hoàn thành LLM-03.3.4–03.3.6, lượt xác minh trước đó ghi nhận **44 focused tests passed** và **328 full-suite tests passed**. Hai mốc lịch sử này được giữ nguyên để truy vết.
+
+### Kết quả LLM-03.3.7 — xác minh mới nhất
+
+Tất cả lệnh chạy từ <code>apps/llm-service/</code>, dùng môi trường test hiện có và FakeProvider; không gọi OpenRouter, không đọc API key, không truy cập network và không dùng model inference.
+
+~~~bash
+uv run --locked --extra test pytest -q tests/integration/test_prompt_candidate_flow.py
+~~~
+
+Kết quả: **18 passed, 0 failed, 0 skipped** (<code>0.36s</code>).
+
+~~~bash
+uv run --locked --extra test pytest -q tests/unit/prompts tests/unit/parsing
+~~~
+
+Kết quả: **44 passed, 0 failed, 0 skipped** (<code>0.38s</code>).
+
+~~~bash
+uv run --locked --extra test pytest -q
+~~~
+
+Kết quả xác minh mới nhất ngày 2026-11-13: **346 passed, 0 failed, 0 skipped** (<code>2.85s</code>), không có collection errors. Tổng số tăng từ lượt trước do 18 integration cases mới. Không chạy manual/live provider smoke test.
 
 ### Giới hạn kiểm thử
 
 Các test chỉ xác nhận parsing/structural rules và module selection. Chúng không đánh giá chất lượng tóm tắt, phát hiện claim không có bằng chứng, xác minh speaker/owner, resolve thời gian, xác định review state hoặc khả năng chống prompt injection.
 
-## 6. Security and Reliability
+## 10. Security and Reliability
 
-- Test chỉ dùng dữ liệu tổng hợp; không có API credential hoặc transcript thật trong fixture mới.
-- Suite mặc định offline và không gọi provider.
+- Integration tests dùng request fixture tổng hợp hiện có cùng response JSON tổng hợp; không có API credential hoặc transcript thật.
+- FakeProvider là provider boundary duy nhất trong integration flow. Renderer và Parser là implementation thật; tests không dựng HTTP client/provider adapter và không gọi network.
 - Strict Pydantic validation, required nullable fields và <code>extra="forbid"</code> ngăn thiếu trường, coercion và metadata ngoài schema.
 - Source ID uniqueness/shape được kiểm tra; nội dung claim và source existence không được giả vờ là đã xác minh.
-- Không ghi log hoặc phát sinh credential; các thay đổi này không đụng tới provider/API key configuration.
+- Transcript được đặt trong user message như JSON data; test xác nhận system message, module selection, language và template placeholders không bị nội dung transcript ghi đè. Đây chỉ là kiểm tra trust-boundary serialization, không phải chứng minh model chống prompt injection.
+- Parser exception messages không lộ raw provider output. Registry ngoài trả thông báo tổng quát, nhưng exception chaining có thể đưa prompt version hoặc filesystem path vào internal traceback; đây là rủi ro chẩn đoán nội bộ, không phải raw transcript/provider disclosure hay public-response mapping hiện có. Không đổi Registry trong scope này.
+- Không ghi log credential hoặc sửa provider/API key configuration.
 
-## 7. Remaining LLM-03.3 Work
+## 11. Remaining LLM-03.3 Work
 
-Các mục sau vẫn **Pending**; hoàn thành 03.3.1–03.3.3 không đồng nghĩa hoàn thành toàn bộ LLM-03.3:
+Không còn task **Pending** trong LLM-03.3.1–LLM-03.3.7. Candidate schema, templates, registry, renderer, parser, offline integration và báo cáo milestone đã được thực hiện/kiểm tra. Hoàn thành milestone này không đồng nghĩa production extraction hoặc semantic verification đã hoàn tất.
 
-- **LLM-03.3.4 — Pending:** Prompt Registry & Versioning; resolve prompt bundle/schema version trong runtime và chuyển prompt version thực tế vào processing metadata.
-- **LLM-03.3.5 — Pending:** Prompt Renderer & Context Builder; điền placeholder từ request với JSON serialization và context tối thiểu.
-- **LLM-03.3.6 — Pending:** Candidate JSON Parser; parse provider content thành Pydantic candidate và xử lý lỗi malformed/invalid output.
-- **LLM-03.3.7 — Pending:** Offline Tests & Documentation; bổ sung test cho prompt rendering/versioning/parser và ghi lại kết quả. Report này ghi nhận review template, nhưng chưa có test prompt mới.
-- **Pending:** prompt-injection test cases và kiểm tra final-check instructions.
-- **Pending:** tích hợp FakeProvider với extraction orchestration; provider-level FakeProvider hiện có không được thay đổi ở scope này.
+- **LLM-03.3.1–03.3.2 — Completed:** Candidate Schema Specification v1 và Pydantic Candidate Models.
+- **LLM-03.3.3 — Completed:** Versioned Prompt Templates (`system.md`, `summary_actions.md`).
+- **LLM-03.3.4 — Completed:** Prompt Registry & Versioning.
+- **LLM-03.3.5 — Completed:** Prompt Renderer & Context Builder.
+- **LLM-03.3.6 — Completed:** Candidate JSON Parser.
+- **LLM-03.3.7 — Completed:** Offline Integration Tests & Documentation.
 
-## 8. Handoff to LLM-03.4
+## 12. Handoff to LLM-03.4
 
-Luồng dự kiến và trạng thái hiện tại:
+Các component LLM-03.3 hiện có thể được LLM-03.4 tiêu thụ; chúng chưa được nối thành production extraction service:
 
 ~~~text
-ExtractionRequest                         [schema implemented]
+ExtractionRequest                         [implemented]
     ↓
-Prompt Registry                            [planned: LLM-03.3.4]
+Prompt Registry                            [implemented: LLM-03.3.4]
     ↓
-Prompt Renderer & Context Builder          [planned: LLM-03.3.5]
+Prompt Renderer & Context Builder          [implemented: LLM-03.3.5]
     ↓
 LLMProvider                                [interface/adapter implemented; not wired to extraction]
     ↓
-Candidate Parser                           [planned: LLM-03.3.6; Pydantic candidate models exist]
+Candidate Parser                           [implemented: LLM-03.3.6]
     ↓
 Evidence Validation / Post-processing      [planned; no candidate evidence pipeline yet]
     ↓
 ExtractionResponse                         [public schema implemented; response construction not wired]
 ~~~
 
-Trong LLM-03.4, extraction orchestration dự kiến phối hợp các phần trên: parse output thành <code>SummaryActionsCandidate</code>, kiểm tra module theo request, đối chiếu source IDs với transcript, xác minh evidence, lấy meeting metadata từ request, xử lý temporal rules và gán IDs/timestamps/review metadata trước khi dựng response Contract v1. Hiện <code>ExtractionService</code> vẫn là <code>UnconfiguredExtractionService</code>; pipeline đầy đủ chưa được triển khai hoặc chứng minh.
+Trong LLM-03.4, production ExtractionService cần phối hợp các component trên. Các trách nhiệm còn lại gồm provider invocation/retry và output-repair policy rõ ràng, source ID existence verification, semantic evidence, owner/commitment correctness, temporal resolution, artifact IDs/timestamps, review-state assignment, public <code>ExtractionResponse</code> construction và real-model quality evaluation. Những trách nhiệm này chưa được triển khai hoặc kiểm chứng. Hiện <code>ExtractionService</code> vẫn là <code>UnconfiguredExtractionService</code>; pipeline đầy đủ chưa tồn tại.
