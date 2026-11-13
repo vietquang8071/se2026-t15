@@ -76,3 +76,10 @@ pnpm --filter @meeting-minutes/audio start
 # In another terminal:
 pnpm audio:file /path/to/meeting.mp4 artifacts/private/audio-result 30
 ```
+
+## VT-059 export contract tests
+
+An opt-in NestJS meeting-export slice and its unit, HTTP, real Prisma and
+100-task concurrency tests are documented in [VT-059 reproduction](docs/testing-vt059.md).
+Production identity and persisted meeting membership are still required before
+registering this slice in the default application.
