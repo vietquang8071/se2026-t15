@@ -11,7 +11,7 @@
 | Coverage, risk coverage, ≥2 flaky risks và lặp | PASS | [Coverage](coverage-report.md), [flaky](flaky-review.md) |
 | 40 request, raw p95, threshold và giới hạn | PASS | [Performance](performance-report.md) |
 | Traceability và AI usage, hai output cần kiểm tra | PASS | [Traceability](traceability.md), [AI log](ai-usage-log.md) |
-| Reflection 250–350 từ | PASS | [Bản nháp AI hỗ trợ](reflection.md); sinh viên xác nhận trước nộp |
+| Reflection 250–350 từ | PASS | [Nội dung do sinh viên cung cấp](reflection.md) |
 | Report MD/PDF, ≤8 trang chính | PASS | [Report](report/BT3_23001922_VT-060.pdf); kiểm tra PDF kèm evidence |
 | Xác nhận của sinh viên/cam kết | PARTIAL | Nội dung được trình bày để sinh viên tự kiểm tra và xác nhận; không tuyên bố đã review |
 | Real provider E2E/external exactly-once | NOT RUN | Không thuộc phạm vi bằng chứng fake provider; còn rủi ro crash window |

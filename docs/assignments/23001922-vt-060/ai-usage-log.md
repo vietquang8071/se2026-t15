@@ -9,6 +9,7 @@ Nhật ký mô tả hoạt động có evidence; các phase không có timestamp
 | 02:49 | Codex: patch và diff review | Transaction cho hai update; chấp nhận sau GREEN | 12e9cdc, [green](evidence/green.log) |
 | 14/11, phase verification | Codex: regression, mutation, coverage, tải | Chấp nhận kết quả trong giới hạn được đo | [evidence](evidence/) |
 | 14/11, lượt hoàn thiện | Codex: audit, lặp test và viết báo cáo | Báo cáo AI-assisted; cần sinh viên tự kiểm tra | Các tài liệu cùng thư mục |
+| Lượt cập nhật reflection | Sinh viên cung cấp trực tiếp nội dung reflection; Codex cập nhật báo cáo | Giữ nguyên văn; không suy ra sinh viên đã xác nhận toàn bộ báo cáo hay cam kết | reflection.md và báo cáo |
 
 Prompt chính và yêu cầu tiếp tục có trong cuộc hội thoại; không có transcript độc lập đầy đủ của mọi thao tác trước trong repo. Không tự nhận human review.
 

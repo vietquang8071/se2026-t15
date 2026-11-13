@@ -1,1 +1,1 @@
-PDF: 15 trang A4; nội dung chính trang 1–8, phụ lục A–G trang 9–15; 0 hyperlink URI; kiểm tra trích xuất Unicode, thông tin cá nhân, p95, RED/GREEN, mutation, luồng xử lý và biên khối chữ; đã xem render các phụ lục D–G.
+PDF: 13 trang A4; nội dung chính trang 1–8, phụ lục A–E trang 9–13; 0 hyperlink URI; reflection 344 từ do sinh viên cung cấp được kiểm tra với Markdown và văn bản trích xuất PDF; không còn phụ lục F, G.
