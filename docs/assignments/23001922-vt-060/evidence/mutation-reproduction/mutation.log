@@ -1,0 +1,48 @@
+✖ job retry cap stops repeated paid processing (1326.846186ms)
+✖ failed job with two attempts can be queued for its final attempt (180.499931ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2259.895087
+
+✖ failing tests:
+
+test at test/http/audio-http.test.mjs:656:1
+✖ job retry cap stops repeated paid processing (1326.846186ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  202 !== 409
+  
+      at TestContext.<anonymous> (file:///tmp/vt060-mutation-IytwWR/worktree/apps/audio/test/http/audio-http.test.mjs:664:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 202,
+    expected: 409,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/http/audio-http.test.mjs:674:1
+✖ failed job with two attempts can be queued for its final attempt (180.499931ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  409 !== 202
+  
+      at TestContext.<anonymous> (file:///tmp/vt060-mutation-IytwWR/worktree/apps/audio/test/http/audio-http.test.mjs:683:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 409,
+    expected: 202,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

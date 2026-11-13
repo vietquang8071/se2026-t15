@@ -1,0 +1,13 @@
+✔ starting a job rolls back asset status when both job writes fail (1596.271132ms)
+✔ retry reuses a persisted diarization checkpoint without another provider call (2387.62763ms)
+✔ provider failure records failed job and asset together (924.225666ms)
+✔ DELETE aborts active provider work and no output is resurrected (1089.12835ms)
+✔ startup recovers an interrupted v2 job using its checkpoint (1633.844517ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11224.241411

@@ -1,0 +1,93 @@
+[
+  {
+    "group": "flaky",
+    "run": "1",
+    "at": "2026-11-14T03:18:53.428268+07:00",
+    "seconds": 11.201,
+    "exit_code": 0,
+    "command": [
+      "node",
+      "--test",
+      "--test-name-pattern=starting a job rolls back|retry reuses a persisted|provider failure records|startup recovers|DELETE aborts",
+      "test/http/audio-http.test.mjs"
+    ]
+  },
+  {
+    "group": "flaky",
+    "run": "2",
+    "at": "2026-11-14T03:19:04.629942+07:00",
+    "seconds": 11.344,
+    "exit_code": 0,
+    "command": [
+      "node",
+      "--test",
+      "--test-name-pattern=starting a job rolls back|retry reuses a persisted|provider failure records|startup recovers|DELETE aborts",
+      "test/http/audio-http.test.mjs"
+    ]
+  },
+  {
+    "group": "flaky",
+    "run": "3",
+    "at": "2026-11-14T03:19:15.974513+07:00",
+    "seconds": 11.418,
+    "exit_code": 0,
+    "command": [
+      "node",
+      "--test",
+      "--test-name-pattern=starting a job rolls back|retry reuses a persisted|provider failure records|startup recovers|DELETE aborts",
+      "test/http/audio-http.test.mjs"
+    ]
+  },
+  {
+    "group": "performance",
+    "run": "warmup",
+    "at": "2026-11-14T03:19:27.392925+07:00",
+    "seconds": 9.49,
+    "exit_code": 0,
+    "command": [
+      "node",
+      "--test",
+      "--test-name-pattern=40 independent audio tasks",
+      "test/http/audio-http.test.mjs"
+    ]
+  },
+  {
+    "group": "performance",
+    "run": "run1",
+    "at": "2026-11-14T03:19:36.882830+07:00",
+    "seconds": 9.42,
+    "exit_code": 0,
+    "command": [
+      "node",
+      "--test",
+      "--test-name-pattern=40 independent audio tasks",
+      "test/http/audio-http.test.mjs"
+    ]
+  },
+  {
+    "group": "performance",
+    "run": "run2",
+    "at": "2026-11-14T03:19:46.302749+07:00",
+    "seconds": 9.528,
+    "exit_code": 0,
+    "command": [
+      "node",
+      "--test",
+      "--test-name-pattern=40 independent audio tasks",
+      "test/http/audio-http.test.mjs"
+    ]
+  },
+  {
+    "group": "performance",
+    "run": "run3",
+    "at": "2026-11-14T03:19:55.831208+07:00",
+    "seconds": 9.393,
+    "exit_code": 0,
+    "command": [
+      "node",
+      "--test",
+      "--test-name-pattern=40 independent audio tasks",
+      "test/http/audio-http.test.mjs"
+    ]
+  }
+]

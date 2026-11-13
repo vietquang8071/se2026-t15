@@ -1,29 +1,51 @@
-# VT-060 — kết quả đang hoàn thiện
+# BT3 — AI-05, VT-060
 
-Nhánh `bt3/23001922-vt-060`; baseline trước ba commit BT3 `34455552b6ebcef4ea155b2ba6dc86719a14220d`, baseline lượt này `db34fa50cf98730f4adf733dd4937585915acb71`. Plan trước code `409fa7d`; RED `f55a0d10c36d8b01c28b6f0062e7530374507e14`; GREEN `12e9cdc33dfd03536c957bb1820e93b4fe518569`. Đây chưa phải báo cáo nộp bài hoàn chỉnh.
+Nguyễn Huy Sơn, 23001922, SE2026-T15. Thay đổi nhỏ trong audio service bảo vệ transaction khi bắt đầu job; retry và checkpoint giữ nguyên. Nhánh [bt3/23001922-vt-060](https://github.com/vietquang8071/se2026-t15/tree/bt3/23001922-vt-060). Original baseline 34455552b6ebcef4ea155b2ba6dc86719a14220d; baseline lượt cải tiến db34fa50cf98730f4adf733dd4937585915acb71; plan 409fa7d1e7549bfd70895c2091466169991513c1; RED f55a0d10c36d8b01c28b6f0062e7530374507e14; GREEN 12e9cdc33dfd03536c957bb1820e93b4fe518569; snapshot evidence fab6f98da18e35df1ba106f8f2d786244776cea0.
 
-## Kết quả kiểm chứng
+- Code: apps/audio/src/audio/audio.service.ts; tests/harness: apps/audio/test/http/audio-http.test.mjs và test/audio/media-provider.test.mjs.
+- [Báo cáo PDF](report/BT3_23001922_VT-060.pdf) · [Markdown](report/BT3_23001922_VT-060.md) · [Evidence](evidence/) · [Rubric](rubric-checklist.md).
 
-Trên Node 25.8.2, pnpm 11.1.1, PostgreSQL 17 riêng trong Docker, FFmpeg và provider giả: baseline 44 audio + 20 HTTP pass, lint và typecheck pass. Test mới chặn hai lệnh ghi job bằng trigger trong database test: RED vì asset `processing` trong khi job còn `queued`; sau transaction cả hai cập nhật khởi đầu, test pass. Regression 44 audio + 21 HTTP pass; chạy lại toàn bộ HTTP sau thêm bài tải: 22/22 pass với coverage. Log tại [evidence](evidence/).
+## Môi trường test
 
-Mutation trong worktree tách biệt: đảo `job.attempts >= 3`; hai test biên đều bắt được (202 thay vì 409 và 409 thay vì 202). Khôi phục code, hai test lại pass. Diff và log được lưu; không có mutation trên nhánh nộp.
+Node >=22.18, pnpm 11, PostgreSQL, FFmpeg/FFprobe, Docker nếu dùng server test dưới đây. Test HTTP tạo và xóa database ngẫu nhiên; bắt buộc dùng PostgreSQL riêng, user có quyền CREATE DATABASE, không dùng production. Chỉ dùng audio tổng hợp và fake provider; không cần OpenAI key thật.
 
-40 POST cùng asset trong regression: 40 thành công, một job, p95 289,44 ms. 40 asset độc lập: 40 thành công, 40 job ánh xạ đúng, p95 200,75 ms theo nearest-rank; chỉ một lượt, không có warm-up chính thức. Đây là thời gian tiếp nhận API local, không phải thời gian phiên âm hoặc benchmark production. Dữ liệu và cấu hình máy có thể ảnh hưởng kết quả. Không khẳng định external exactly-once: response provider có thể thành công trước khi checkpoint được commit.
+Tại root repository:
 
-Node coverage trên JS đã biên dịch, suite HTTP, bao gồm mã Prisma sinh: `audio.service.js` dòng 96,67%, nhánh 76,69%, hàm 94,44%; `audio-provider.js` dòng 15,15% vì provider giả. Không suy ra correctness từ coverage. Test đang dùng polling/timer và mutable `service.provider`; timeout, thứ tự chạy và shared state là rủi ro flaky chưa được lượng hóa bằng nhiều lượt lặp.
-
-## Chạy lại
-
-Yêu cầu Node >=22.18, pnpm 11, FFmpeg/FFprobe và PostgreSQL test riêng, tài khoản có quyền tạo/xóa database test. KHÔNG trỏ vào production. Thiết lập URL test qua biến môi trường trước các lệnh sau; test tạo database ngẫu nhiên, và xóa database đó sau khi chạy. Provider HTTP là giả.
-
-```sh
+~~~sh
+pnpm install --frozen-lockfile
+docker run -d --name vt060-test-postgres -e POSTGRES_USER=bt3 -e POSTGRES_PASSWORD=bt3-test-only -e POSTGRES_DB=postgres -p 127.0.0.1:55433:5432 postgres:17-alpine
 export AUDIO_DATABASE_URL='postgresql://bt3:bt3-test-only@127.0.0.1:55433/postgres?schema=public'
+pnpm --filter @meeting-minutes/audio db:generate
 pnpm --filter @meeting-minutes/audio test:audio
 pnpm --filter @meeting-minutes/audio test:http
 pnpm --filter @meeting-minutes/audio lint
 pnpm --filter @meeting-minutes/audio typecheck
-cd apps/audio
-node --test --test-name-pattern='starting a job rolls back|40 independent audio tasks|40 concurrent process' test/http/audio-http.test.mjs
-```
+~~~
 
-Chỉ chạy lệnh trên sau khi chuẩn bị server PostgreSQL test ở cổng 55433, không dùng thông tin kết nối thật. Harness nằm trong `apps/audio/test/http/audio-http.test.mjs`; output raw lưu thời gian từng request. Chưa có script tự động hóa mutation hoặc tài liệu báo cáo và PDF cuối; các phần chưa làm không được coi là đã nghiệm thu.
+Chờ server sẵn sàng trước test. Mật khẩu trên là mật khẩu chỉ dùng cho test local; không đặt secret thật vào source hay log. Dừng server đã tạo bằng docker stop vt060-test-postgres khi kết thúc.
+
+## Chạy riêng state transition và performance
+
+Sau khi chạy db:generate và biên dịch bằng test:http:
+
+~~~sh
+cd apps/audio
+node --test --test-name-pattern='starting a job rolls back|retry reuses a persisted|job retry cap|failed job with two attempts|startup recovers' test/http/audio-http.test.mjs
+node --test --test-name-pattern='40 concurrent process|40 independent audio tasks' test/http/audio-http.test.mjs
+~~~
+
+Test in raw latencies; p95 nearest-rank chỉ đo acceptance. Chi tiết môi trường, 3 lượt và warm-up xem [performance](performance-report.md). Test tạo rồi xóa database test và thư mục tạm.
+
+## Mutation trong worktree cô lập
+
+Về root, sau khi cài dependency và tạo Prisma client:
+
+~~~sh
+bash docs/assignments/23001922-vt-060/scripts/reproduce-mutation.sh
+~~~
+
+Script tạo worktree detached tạm, chạy original, đảo rule trong worktree đó, kiểm tra hai assertion, restore và chạy lại; trap xóa worktree tạm. Log nằm tại thư mục tạm được in ra. Xem [mutation report](mutation-report.md) và diff/log của thí nghiệm trước.
+
+## Giới hạn
+
+Không có exactly-once ở provider: crash sau response trước checkpoint có thể gọi lại. Lượt tải không chứng minh thời gian hoàn tất phiên âm hoặc 40 worker; service dùng worker tuần tự. Chưa chạy real-provider E2E. AI đã hỗ trợ plan, code, test và báo cáo; sinh viên cần kiểm tra reflection và cam kết trước khi nộp.

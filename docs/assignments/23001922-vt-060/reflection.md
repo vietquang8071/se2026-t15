@@ -1,0 +1,9 @@
+# Reflection — bản nháp AI hỗ trợ, cần sinh viên xác nhận
+
+Confidence tăng vì test không chỉ kiểm tra response mà còn quan sát trạng thái lưu trong PostgreSQL. Trước patch, trigger từ chối ghi trạng thái job đã làm assertion thất bại: asset là processing trong khi job vẫn queued. Đây là RED có ý nghĩa vì kết quả sai xuất hiện ngay tại invariant cần bảo vệ. Sau khi đặt hai cập nhật trong một transaction, cùng test trả về trạng thái trước đó và pass. Test này không mô phỏng mọi kiểu mất điện hay lỗi hệ điều hành.
+
+Integration test dùng HTTP, worker, PostgreSQL thật và provider giả cho thấy các trạng thái được cập nhật nhất quán trong những kịch bản đã thử, cùng với khả năng tái sử dụng checkpoint. Nó không chứng minh chất lượng phiên âm hay tương tác với OpenAI thật. Mutation đảo điều kiện giới hạn retry bị hai test phát hiện ở cả hai phía ranh giới, làm tăng confidence rằng assertion có thể bắt lỗi nghiệp vụ tương ứng, nhưng không kiểm tra mọi business rule.
+
+Coverage của service trên JavaScript biên dịch đạt 96,67% dòng và 76,69% nhánh trong suite HTTP. Các số này hữu ích để tìm vùng chưa chạy, song không chứng minh tất cả kết hợp trạng thái đều an toàn. Phép tải 40 asset chỉ đo thời gian API tiếp nhận; worker xử lý tuần tự nên không thể suy ra thời gian hoàn tất 40 phiên âm. Provider giả không đại diện độ trễ, lỗi mạng hoặc phí của dịch vụ thật.
+
+Rủi ro quan trọng còn lại là provider thành công nhưng tiến trình dừng trước khi lưu checkpoint; request có thể được gửi lại, nên không thể hứa exactly-once phía ngoài. Test tiếp theo có giá trị là tiêm crash đúng cửa sổ này, khởi động lại và đối chiếu số call, checkpoint cùng transcript. AI giúp lập kế hoạch, tạo test, đọc diff và tổng hợp số liệu; các kết luận vẫn cần người học kiểm tra so với code và log trước khi nhận trách nhiệm nộp bài.
