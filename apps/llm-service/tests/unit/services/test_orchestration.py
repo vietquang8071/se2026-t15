@@ -338,10 +338,15 @@ def test_cancellation_propagates_without_retry_or_completed_result() -> None:
         task = asyncio.create_task(
             make_orchestrator(provider).run(make_request(("action_items",)))
         )
-        await provider.entered.wait()
+        try:
+            await asyncio.wait_for(provider.entered.wait(), timeout=5.0)
+        except BaseException:
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+            raise
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
-            await task
+            await asyncio.wait_for(task, timeout=5.0)
         assert provider.calls == 1
 
     asyncio.run(cancel_during_generation())
