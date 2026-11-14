@@ -696,3 +696,35 @@ uv run --locked --extra test pytest -q
 - **Toàn bộ suite:** `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q` — **542 passed in 4.23s**; tăng 18 test so với baseline 524.
 - Không gọi live provider, không thêm dependency, không đổi Contract v1, không thêm lần generation thứ ba. `git diff --check` sạch; không stage, commit hoặc push.
 - Kết quả scripted provider xác nhận chính sách xử lý verdict và mapping trong pipeline; không chứng minh khả năng hiểu ngữ nghĩa của model thật.
+
+## Khắc phục sau đánh giá code đã commit — F1 & F2
+
+### F1 — Bảo toàn owner sau khi giao lại công việc
+
+- **Nguyên nhân:** `_speaker_owner_matches()` dùng regex tìm commitment ngôi thứ nhất trên các segment được trích dẫn rồi có thể xem commitment cũ là mâu thuẫn với owner hiện tại. Guard không đủ thông tin để xác định việc giao lại, hủy, thay thế hoặc chia sẻ trách nhiệm theo thời gian.
+- **Hành vi trước khi sửa:** Verdict `supported` của EvidenceVerifier vẫn có thể bị Python ghi đè; owner hợp lệ như Lan sau khi được giao lại công việc bị xóa và Action Item bị đưa vào review.
+- **Giải pháp:** Xóa `_speaker_owner_matches()` cùng các regex/helper phụ thuộc. Khi owner có verdict `supported`, giữ candidate owner. Verdict `uncertain` hoặc `unsupported` tiếp tục xóa owner và gắn review. Speaker mapping vẫn là ngữ cảnh cho verifier; Python chỉ dùng mapping để gắn `speaker_unmapped` khi owner đã không được công bố, không dùng speaker để tự suy ra hoặc bác bỏ owner.
+- **Quyết định kiến trúc:** Attribution owner-task, gồm chronology và reassignment, thuộc EvidenceVerifier. Phần R2 ở checkpoint trước mô tả guard hẹp; remediation này thay thế guard đó vì vẫn có thể suy diễn quan hệ ngữ nghĩa không an toàn.
+- **File thay đổi:** `apps/llm-service/app/services/temporal_safeguards.py`; unit tests tại `tests/unit/services/test_temporal_safeguards.py`; integration tests tại `tests/integration/test_verified_extraction_service.py`.
+- **Regression tests:** Reassignment qua hai segment; commitment cũ bị hủy; nhiều người cùng nhận một task; hai assignment khác nhau trong một câu; named assignment; owner verdict thiếu speaker mapping; verdict `uncertain`/`unsupported`. Các test phủ nhận kỳ vọng cũ rằng regex có thể bác bỏ owner dù verifier trả `supported`.
+- **Kết quả:** Temporal safeguard unit tests — **39 passed**; integration file — **44 passed**. Kết quả toàn bộ cuối cùng được ghi ở phần dưới.
+- **Giới hạn còn lại:** Nếu verifier trả nhầm `supported`, Python không còn một kiểm tra độc lập để phát hiện một số owner attribution sai; đây là tradeoff MVP đã chấp thuận. Verdict chưa xác nhận vẫn không được công bố như owner đã xác minh.
+
+### F2 — Chính sách xác minh Action Items rỗng
+
+- **Nguyên nhân:** `actions.absence` được tạo có `source_segment_ids` rỗng theo thiết kế, trong khi hướng dẫn grounding chung nhấn mạnh claim cần nguồn trích dẫn. Prompt cũ chưa nói rõ ngoại lệ này.
+- **Mâu thuẫn trong prompt:** Cơ chế runtime xem `actions.absence` là kiểm tra completeness trên toàn transcript, nhưng hướng dẫn chung có thể khiến model áp dụng yêu cầu cited-source grounding của claim dương tính vào claim vắng mặt.
+- **Giải pháp:** Thêm quy tắc riêng cho `actions.absence`: không yêu cầu source ID; đánh giá toàn transcript; `supported` chỉ khi có cơ sở rằng không bỏ sót commitment rõ ràng; `unsupported` nếu có commitment đủ điều kiện bị bỏ sót; `uncertain` nếu không thể xác định chắc chắn. Quy tắc grounding nghiêm ngặt cho claim dương tính thông thường vẫn giữ nguyên.
+- **Prompt version:** Tạo prompt bất biến `evidence-v1.3` và đặt runtime sử dụng phiên bản này. `evidence-v1.0`, `evidence-v1.1` và `evidence-v1.2` vẫn được đăng ký và file cũ không bị sửa. Response metadata lấy phiên bản thực chạy từ verifier và trả `evidence-v1.3`.
+- **File thay đổi:** `apps/llm-service/app/prompts/registry.py`; `apps/llm-service/app/services/evidence.py`; hai prompt mới `app/prompts/v1_3/evidence_system.md` và `app/prompts/v1_3/evidence_verification.md`; unit và integration tests tương ứng.
+- **Regression tests:** Claim vắng mặt có danh sách nguồn rỗng; nội dung prompt mới nêu ngoại lệ và vẫn giữ grounding cho claim thường; empty result với verdict `supported` được chấp nhận; `unsupported` và `uncertain` fail closed; phiên bản cũ giữ nguyên; response ghi `evidence-v1.3`; request thành công thường vẫn có đúng hai provider generations.
+- **Kết quả:** Evidence verifier unit tests — **21 passed**; prompt registry unit tests — **19 passed**; integration file — **44 passed**. Fake provider kiểm tra prompt được render và pipeline áp dụng verdict, không kiểm chứng độ chính xác của model thật trong việc phát hiện commitment bị bỏ sót.
+- **Giới hạn còn lại:** Khả năng đánh giá absence phụ thuộc vào model và có thể sai. Claim uncertain không trả về empty list như kết quả đã xác minh; người dùng vẫn cần review thông tin chưa chắc chắn.
+
+### Kiểm thử hồi quy cuối
+
+- **Unit:** `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/unit` — **335 passed**.
+- **Integration:** `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/integration` — **104 passed**.
+- **Contract:** `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/contract` — **111 passed**.
+- **Toàn bộ suite:** `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q` — **550 passed in 4.30s**, tăng 8 test so với baseline đã xác nhận 542.
+- Không gọi live provider. Scripted provider chứng minh kiểm tra schema, prompt selection, verdict handling, hai lần generation và Contract v1 trong pipeline; không chứng minh semantic accuracy ngoài thực tế. Python không thể tự chứng minh mọi quan hệ owner-task hoặc sự vắng mặt của commitment. Review của con người vẫn cần thiết cho thông tin chưa chắc chắn; temporal resolution phức tạp vẫn nằm ngoài milestone này.

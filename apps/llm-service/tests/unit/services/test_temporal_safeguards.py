@@ -497,7 +497,7 @@ def test_unsupported_owner_is_cleared_and_reviewed():
     assert result.action_review_reasons[0] == ("owner_unconfirmed",)
 
 
-def test_first_person_owner_without_speaker_mapping_is_not_attributed():
+def test_uncertain_first_person_owner_without_speaker_mapping_remains_unconfirmed():
     result = TemporalReviewProcessor().process(
         make_verified(
             mapped_speaker=False,
@@ -513,6 +513,18 @@ def test_first_person_owner_without_speaker_mapping_is_not_attributed():
     )
 
 
+def test_supported_owner_is_preserved_when_speaker_mapping_is_missing():
+    result = TemporalReviewProcessor().process(
+        make_verified(
+            mapped_speaker=False,
+            status_overrides={"actions[0].owner": "supported"},
+        )
+    )
+
+    assert result.action_items[0].owner == "Alex"
+    assert result.action_review_reasons[0] == ()
+
+
 def test_verified_speaker_mapping_allows_explicit_first_person_owner():
     result = TemporalReviewProcessor().process(make_verified())
 
@@ -520,7 +532,7 @@ def test_verified_speaker_mapping_allows_explicit_first_person_owner():
     assert result.action_review_reasons[0] == ()
 
 
-def test_supported_owner_conflicting_with_first_person_speaker_mapping_is_cleared():
+def test_supported_owner_is_not_overridden_by_first_person_speaker_mapping():
     result = TemporalReviewProcessor().process(
         make_verified(
             owner="Minh",
@@ -528,8 +540,8 @@ def test_supported_owner_conflicting_with_first_person_speaker_mapping_is_cleare
         )
     )
 
-    assert result.action_items[0].owner is None
-    assert result.action_review_reasons[0] == ("owner_unconfirmed",)
+    assert result.action_items[0].owner == "Minh"
+    assert result.action_review_reasons[0] == ()
 
 
 def test_explicit_named_assignment_is_not_rejected_for_different_speaker():
@@ -561,6 +573,105 @@ def test_explicit_named_assignment_is_not_rejected_for_different_speaker():
     )
 
     assert result.action_items[0].owner == "Minh"
+    assert result.action_review_reasons[0] == ()
+
+
+def test_supported_owner_survives_reassignment_after_earlier_commitment():
+    result = TemporalReviewProcessor().process(
+        make_verified(
+            owner="Lan",
+            action_task="Sửa giao diện",
+            action_source_ids=["seg-a1", "seg-a2"],
+            transcript_segments=[
+                {
+                    "id": "seg-a1",
+                    "start": 1.0,
+                    "end": 2.0,
+                    "speaker_id": "speaker_1",
+                    "text": "Tôi sẽ sửa giao diện.",
+                },
+                {
+                    "id": "seg-a2",
+                    "start": 2.1,
+                    "end": 3.0,
+                    "speaker_id": "speaker_1",
+                    "text": "Chốt lại, Lan sẽ sửa giao diện thay tôi.",
+                },
+            ],
+            participants=[
+                {"id": "participant-minh", "display_name": "Minh", "speaker_ids": ["speaker_1"]},
+                {"id": "participant-lan", "display_name": "Lan", "speaker_ids": ["speaker_2"]},
+            ],
+        )
+    )
+
+    assert result.action_items[0].owner == "Lan"
+    assert result.action_review_reasons[0] == ()
+
+
+def test_supported_owner_survives_multiple_participants_committing_same_task():
+    result = TemporalReviewProcessor().process(
+        make_verified(
+            owner="Lan",
+            action_task="Kiểm thử API",
+            action_source_ids=["seg-a1", "seg-a2"],
+            transcript_segments=[
+                {
+                    "id": "seg-a1",
+                    "start": 1.0,
+                    "end": 2.0,
+                    "speaker_id": "speaker_1",
+                    "text": "Tôi sẽ kiểm thử API.",
+                },
+                {
+                    "id": "seg-a2",
+                    "start": 2.1,
+                    "end": 3.0,
+                    "speaker_id": "speaker_2",
+                    "text": "Tôi cũng sẽ kiểm thử API cùng Minh.",
+                },
+            ],
+            participants=[
+                {"id": "participant-minh", "display_name": "Minh", "speaker_ids": ["speaker_1"]},
+                {"id": "participant-lan", "display_name": "Lan", "speaker_ids": ["speaker_2"]},
+            ],
+        )
+    )
+
+    assert result.action_items[0].owner == "Lan"
+    assert result.action_review_reasons[0] == ()
+
+
+def test_supported_reassignment_survives_cancelled_earlier_commitment():
+    result = TemporalReviewProcessor().process(
+        make_verified(
+            owner="Lan",
+            action_task="Viết tài liệu",
+            action_source_ids=["seg-a1", "seg-a2"],
+            transcript_segments=[
+                {
+                    "id": "seg-a1",
+                    "start": 1.0,
+                    "end": 2.0,
+                    "speaker_id": "speaker_1",
+                    "text": "Tôi sẽ viết tài liệu.",
+                },
+                {
+                    "id": "seg-a2",
+                    "start": 2.1,
+                    "end": 3.0,
+                    "speaker_id": "speaker_1",
+                    "text": "Tôi không làm phần đó nữa. Lan sẽ viết tài liệu.",
+                },
+            ],
+            participants=[
+                {"id": "participant-minh", "display_name": "Minh", "speaker_ids": ["speaker_1"]},
+                {"id": "participant-lan", "display_name": "Lan", "speaker_ids": ["speaker_2"]},
+            ],
+        )
+    )
+
+    assert result.action_items[0].owner == "Lan"
     assert result.action_review_reasons[0] == ()
 
 
@@ -649,7 +760,7 @@ def test_ambiguous_or_quoted_first_person_does_not_confirm_owner(text: str):
     assert result.action_review_reasons[0] == ("owner_unconfirmed", "claim_uncertain")
 
 
-def test_multiple_first_person_sources_with_different_speakers_do_not_confirm_one_owner():
+def test_multiple_first_person_sources_do_not_override_supported_owner_verdict():
     result = TemporalReviewProcessor().process(
         make_verified(
             owner="Alex",
@@ -677,8 +788,8 @@ def test_multiple_first_person_sources_with_different_speakers_do_not_confirm_on
         )
     )
 
-    assert result.action_items[0].owner is None
-    assert result.action_review_reasons[0] == ("owner_unconfirmed",)
+    assert result.action_items[0].owner == "Alex"
+    assert result.action_review_reasons[0] == ()
 
 
 def test_unrelated_task_in_another_cited_segment_does_not_contradict_owner():

@@ -12,6 +12,7 @@ _EVIDENCE_PROMPT_FILES: dict[str, tuple[str, str]] = {
     "evidence-v1.0": ("v1/evidence_system.md", "v1/evidence_verification.md"),
     "evidence-v1.1": ("v1_1/evidence_system.md", "v1_1/evidence_verification.md"),
     "evidence-v1.2": ("v1_2/evidence_system.md", "v1_2/evidence_verification.md"),
+    "evidence-v1.3": ("v1_3/evidence_system.md", "v1_3/evidence_verification.md"),
 }
 
 

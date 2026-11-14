@@ -20,7 +20,7 @@ from app.services.validation_models import (
     VerificationVerdict,
 )
 
-EVIDENCE_PROMPT_VERSION = "evidence-v1.2"
+EVIDENCE_PROMPT_VERSION = "evidence-v1.3"
 
 
 class EvidenceVerifier:

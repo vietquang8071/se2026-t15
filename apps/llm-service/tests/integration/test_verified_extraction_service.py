@@ -219,7 +219,7 @@ def test_verified_pipeline_returns_contract_response_for_requested_modules(modul
     assert body["requested_modules"] == list(modules)
     assert body["modules"]["meeting_summary"] is not None if "meeting_summary" in modules else body["modules"]["meeting_summary"] is None
     assert body["modules"]["action_items"] is not None if "action_items" in modules else body["modules"]["action_items"] is None
-    assert body["processing"]["evidence_prompt_version"] == "evidence-v1.2"
+    assert body["processing"]["evidence_prompt_version"] == "evidence-v1.3"
     assert len(provider.requests) == 2
 
 
@@ -329,6 +329,34 @@ def test_verified_empty_actions_returns_empty_list_for_discussion_without_commit
 
     assert response.status_code == 200
     assert response.json()["modules"]["action_items"] == []
+    assert len(provider.requests) == 2
+
+
+def test_uncertain_empty_action_absence_fails_closed():
+    provider = ScriptedProvider(
+        [
+            result(json.dumps({"meeting_summary": None, "action_items": []}), model="offline-model"),
+            result(
+                verifier_content(
+                    ["actions.absence"], overrides={"actions.absence": "uncertain"}
+                ),
+                model="offline-model",
+            ),
+        ]
+    )
+
+    with client_for(provider) as client:
+        response = post(
+            client,
+            make_request(
+                modules=("action_items",),
+                transcript_text="Có lẽ tôi sẽ làm phần API nếu còn thời gian.",
+            ),
+        )
+
+    assert response.status_code == 502
+    assert ErrorEnvelope.model_validate(response.json()).code == "UNVERIFIED_EVIDENCE"
+    assert len(provider.requests) == 2
 
 
 def test_unknown_source_id_returns_unverified_evidence_error():
@@ -505,7 +533,7 @@ def test_named_owner_remains_valid_when_another_participant_spoke():
     assert response.json()["modules"]["action_items"][0]["owner"] == "Lan"
 
 
-def test_first_person_commitment_without_speaker_mapping_has_no_owner():
+def test_supported_owner_verdict_survives_missing_speaker_mapping():
     provider = supported_provider(
         modules=("action_items",),
         overrides={"actions[0].owner": "supported"},
@@ -520,14 +548,12 @@ def test_first_person_commitment_without_speaker_mapping_has_no_owner():
 
     assert response.status_code == 200
     action = response.json()["modules"]["action_items"][0]
-    assert action["owner"] is None
-    assert action["review_reasons"] == [
-        "owner_unconfirmed",
-        "speaker_unmapped",
-    ]
+    assert action["owner"] == "Alex"
+    assert action["needs_review"] is False
+    assert action["review_reasons"] == []
 
 
-def test_wrong_owner_is_cleared_even_when_task_is_supported():
+def test_supported_owner_verdict_is_not_overridden_by_first_person_regex():
     provider = supported_provider(
         modules=("action_items",),
         task="Gửi bản ghi chú",
@@ -547,8 +573,63 @@ def test_wrong_owner_is_cleared_even_when_task_is_supported():
     assert response.status_code == 200
     action = response.json()["modules"]["action_items"][0]
     assert action["task"] == "Gửi bản ghi chú"
-    assert action["owner"] is None
-    assert action["review_reasons"] == ["owner_unconfirmed"]
+    assert action["owner"] == "Minh"
+    assert action["needs_review"] is False
+    assert action["review_reasons"] == []
+
+
+def test_supported_owner_is_preserved_after_reassignment_across_segments():
+    candidate = {
+        "meeting_summary": None,
+        "action_items": [
+            {
+                "task": "Sửa giao diện",
+                "owner": "Lan",
+                "raw_due_expression": None,
+                "priority": None,
+                "context": None,
+                "source_segment_ids": ["seg-a1", "seg-a2"],
+            }
+        ],
+    }
+    provider = ScriptedProvider(
+        [
+            result(json.dumps(candidate, ensure_ascii=False)),
+            result(
+                verifier_content(["actions[0].task", "actions[0].owner"])
+            ),
+        ]
+    )
+    request = make_request(modules=("action_items",))
+    request["transcript"]["segments"] = [
+        {
+            "id": "seg-a1",
+            "start": 1.0,
+            "end": 2.0,
+            "speaker_id": "speaker_1",
+            "text": "Tôi sẽ sửa giao diện.",
+        },
+        {
+            "id": "seg-a2",
+            "start": 2.1,
+            "end": 3.0,
+            "speaker_id": "speaker_1",
+            "text": "Chốt lại, Lan sẽ sửa giao diện thay tôi.",
+        },
+    ]
+    request["meeting"]["participants"] = [
+        {"id": "participant-minh", "display_name": "Minh", "speaker_ids": ["speaker_1"]},
+        {"id": "participant-lan", "display_name": "Lan", "speaker_ids": ["speaker_2"]},
+    ]
+
+    with client_for(provider) as client:
+        response = post(client, request)
+
+    assert response.status_code == 200
+    action = response.json()["modules"]["action_items"][0]
+    assert action["owner"] == "Lan"
+    assert action["needs_review"] is False
+    assert len(provider.requests) == 2
 
 
 @pytest.mark.parametrize(
@@ -592,6 +673,23 @@ def test_uncertain_owner_is_null_and_reviewable():
     assert action["owner"] is None
     assert action["needs_review"] is True
     assert action["review_reasons"] == ["owner_unconfirmed", "claim_uncertain"]
+
+
+def test_unsupported_owner_is_cleared_while_supported_task_remains():
+    provider = supported_provider(
+        modules=("action_items",),
+        overrides={"actions[0].owner": "unsupported"},
+    )
+
+    with client_for(provider) as client:
+        response = post(client, make_request(modules=("action_items",)))
+
+    assert response.status_code == 200
+    action = response.json()["modules"]["action_items"][0]
+    assert action["task"] == "Gửi bản ghi chú"
+    assert action["owner"] is None
+    assert action["needs_review"] is True
+    assert action["review_reasons"] == ["owner_unconfirmed"]
 
 
 def test_verifier_schema_failure_returns_invalid_structured_output():

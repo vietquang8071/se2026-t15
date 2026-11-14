@@ -116,7 +116,7 @@ def test_supported_summary_and_action_claims_are_bound_to_verifier_metadata():
     )
 
     assert {verdict.status for verdict in result.verdicts} == {VerificationStatus.SUPPORTED}
-    assert result.metadata.prompt_version == "evidence-v1.2"
+    assert result.metadata.prompt_version == "evidence-v1.3"
     assert result.metadata.model_id == "fake-model"
     assert result.metadata.token_usage == ProviderUsage(input_tokens=30, output_tokens=8)
     assert len(provider.requests) == 1
@@ -225,7 +225,7 @@ def test_evidence_v1_2_prompt_preserves_source_rules_and_adds_semantic_policy():
     assert "never rewrite the candidate" in system
 
 
-def test_v1_1_bundle_remains_available_and_v1_2_render_includes_action_context():
+def test_v1_1_and_v1_2_remain_available_and_v1_3_render_includes_action_context():
     source = make_source(
         transcript_segments=[
             {
@@ -263,7 +263,8 @@ def test_v1_1_bundle_remains_available_and_v1_2_render_includes_action_context()
 
     registry = PromptRegistry()
     previous = registry.get_evidence("evidence-v1.1")
-    executed = registry.get_evidence("evidence-v1.2")
+    prior = registry.get_evidence("evidence-v1.2")
+    executed = registry.get_evidence("evidence-v1.3")
     user_message = provider.requests[0].messages[1].content
     claim_data = json.loads(user_message.split("Claims to check:\n", maxsplit=1)[1])
     transcript_data = json.loads(
@@ -275,11 +276,14 @@ def test_v1_1_bundle_remains_available_and_v1_2_render_includes_action_context()
         item for item in claim_data if item["claim_id"] == "actions[0].raw_due_expression"
     )
 
-    assert result_value.metadata.prompt_version == "evidence-v1.2"
+    assert result_value.metadata.prompt_version == "evidence-v1.3"
     assert previous.system_template == (
         Path(__file__).parents[3] / "app/prompts/v1_1/evidence_system.md"
     ).read_text(encoding="utf-8")
     assert executed.system_template == (
+        Path(__file__).parents[3] / "app/prompts/v1_3/evidence_system.md"
+    ).read_text(encoding="utf-8")
+    assert prior.system_template == (
         Path(__file__).parents[3] / "app/prompts/v1_2/evidence_system.md"
     ).read_text(encoding="utf-8")
     assert due_claim["source_segment_ids"] == ["seg-a1", "seg-a2"]
@@ -408,12 +412,45 @@ def test_empty_action_absence_verification_prompt_contains_complete_transcript()
 
     _, provider = run_verifier(source, statuses)
 
+    system_message = provider.requests[0].messages[0].content
     user_message = provider.requests[0].messages[1].content
     transcript = json.loads(user_message.split("Transcript segments:\n", maxsplit=1)[1].split("\n\nClaims to check:", maxsplit=1)[0])
     claims = json.loads(user_message.split("Claims to check:\n", maxsplit=1)[1])
     assert [segment["id"] for segment in transcript] == ["seg-a1", "seg-a2"]
     assert claims[-1]["claim_id"] == "actions.absence"
     assert claims[-1]["source_segment_ids"] == []
+    assert "special claim: `actions.absence`" in system_message.lower()
+    assert "`source_segment_ids` is empty by design" in system_message.lower()
+    assert "uncited context cannot rescue" in system_message.lower()
+
+
+def test_evidence_v1_3_keeps_ordinary_claim_grounding_and_preserves_prior_versions():
+    registry = PromptRegistry()
+    bundle = registry.get_evidence("evidence-v1.3")
+    system = bundle.system_template.lower()
+
+    assert bundle.prompt_version == "evidence-v1.3"
+    assert "special claim: `actions.absence`" in system
+    assert "evaluate the complete transcript" in system
+    assert "use `unsupported` if at least one clear qualifying commitment was omitted" in system
+    assert "use `uncertain` if absence cannot be established reliably" in system
+    assert "ordinary extracted claim" in system
+    assert "only the cited segments provide positive grounding" in system
+    assert "uncited context cannot rescue missing positive grounding" in system
+
+    prompt_root = Path(__file__).parents[3] / "app/prompts"
+    for version, folder in (
+        ("evidence-v1.0", "v1"),
+        ("evidence-v1.1", "v1_1"),
+        ("evidence-v1.2", "v1_2"),
+    ):
+        previous = registry.get_evidence(version)
+        assert previous.system_template == (
+            prompt_root / folder / "evidence_system.md"
+        ).read_text(encoding="utf-8")
+        assert previous.verification_template == (
+            prompt_root / folder / "evidence_verification.md"
+        ).read_text(encoding="utf-8")
 
 
 def test_empty_action_candidate_requires_an_explicit_absence_claim():

@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
-import re
 
-from app.schemas.candidates import ActionItemCandidate
-from app.schemas.request import TranscriptSegment
 from app.schemas.temporal import TemporalResolution
 from app.services.validation_models import (
     EvidenceVerificationFailure,
@@ -26,105 +23,9 @@ _REVIEW_REASON_ORDER = (
     "claim_uncertain",
 )
 
-_FIRST_PERSON_COMMITMENT = re.compile(
-    r"(?<!\w)(?:tôi|i)\s+"
-    r"(?:sẽ|nhận|cam kết|phụ trách|will|shall|commit(?:\s+to)?|"
-    r"take responsibility for)\b",
-    re.IGNORECASE,
-)
-_HYPOTHETICAL_PREFIX = re.compile(
-    r"\b(?:nếu|giả sử|trong trường hợp|if|suppose)\b", re.IGNORECASE
-)
-_NEGATION_AFTER_COMMITMENT = re.compile(
-    r"^\s*(?:không|chưa|not|never|won't|will not)\b", re.IGNORECASE
-)
-_QUOTE_PAIRS = (("“", "”"), ("‘", "’"), ("«", "»"), ("「", "」"), ("『", "』"))
+
 def _ordered_reasons(reasons: set[str]) -> tuple[str, ...]:
     return tuple(reason for reason in _REVIEW_REASON_ORDER if reason in reasons)
-
-
-def _inside_quote(text: str, position: int) -> bool:
-    for opening, closing in _QUOTE_PAIRS:
-        start = text.rfind(opening, 0, position)
-        end = text.find(closing, position)
-        if start >= 0 and end > position:
-            return True
-    preceding_quotes = text[:position].count('"')
-    return preceding_quotes % 2 == 1 and text.find('"', position) >= 0
-
-
-def _first_person_state(clause: str, match: re.Match[str]) -> str:
-    """Classify only a narrow, explicit first-person commitment construction."""
-
-    if (
-        _inside_quote(clause, match.start())
-        or _HYPOTHETICAL_PREFIX.search(clause[: match.start()])
-        or _NEGATION_AFTER_COMMITMENT.search(clause[match.end() : match.end() + 32])
-        or "?" in clause
-    ):
-        return "ambiguous"
-    return "direct"
-
-
-def _contains_exact_text(phrase: str, text: str) -> bool:
-    words = phrase.strip().split()
-    if not words:
-        return False
-    pattern = r"(?<!\w)" + r"\s+".join(re.escape(word) for word in words) + r"(?!\w)"
-    return re.search(pattern, text, re.IGNORECASE) is not None
-
-
-def _speaker_owner_matches(
-    action: ActionItemCandidate,
-    source_by_id: dict[str, TranscriptSegment],
-    speaker_to_owner: dict[str, str],
-) -> tuple[bool, bool]:
-    """Check only exact-task first-person speaker contradictions.
-
-    Returns ``(confirmed, has_unmapped_speaker)``. This deliberately recognizes
-    only a direct first-person construction whose exact task text occurs in the
-    same simple clause. Task attribution and named assignments otherwise remain
-    the semantic verifier's responsibility.
-    """
-
-    owner = action.owner
-    if owner is None:
-        return False, False
-
-    direct_speakers: list[str | None] = []
-    for source_id in action.source_segment_ids:
-        segment = source_by_id[source_id]
-        text = segment.text
-        clauses = re.split(
-            r",|;|\b(?:và|and)\b|(?<=[.!?])\s+|\n", text, flags=re.IGNORECASE
-        )
-        for clause in clauses:
-            normalized_clause = " ".join(clause.casefold().split())
-            if not _contains_exact_text(action.task, normalized_clause):
-                continue
-            if _contains_exact_text(owner, normalized_clause):
-                continue
-            for match in _FIRST_PERSON_COMMITMENT.finditer(clause):
-                if _first_person_state(clause, match) != "direct":
-                    continue
-                direct_speakers.append(
-                    speaker_to_owner.get(segment.speaker_id)
-                    if segment.speaker_id is not None
-                    else None
-                )
-
-    normalized_owner = " ".join(owner.casefold().split())
-    normalized_speakers = {
-        " ".join(name.casefold().split()) for name in direct_speakers if name is not None
-    }
-    has_unmapped = any(name is None for name in direct_speakers)
-    if direct_speakers and (
-        has_unmapped or normalized_speakers != {normalized_owner}
-    ):
-        return False, has_unmapped
-    if direct_speakers:
-        return True, False
-    return True, False
 
 
 class TemporalReviewProcessor:
@@ -228,15 +129,6 @@ class TemporalReviewProcessor:
                 reasons.add("owner_unconfirmed")
                 if statuses[owner_claim_id] == VerificationStatus.UNCERTAIN:
                     reasons.add("claim_uncertain")
-            else:
-                owner_confirmed, has_unmapped_speaker = _speaker_owner_matches(
-                    action, source_by_id, speaker_to_owner
-                )
-                if not owner_confirmed:
-                    owner = None
-                    reasons.add("owner_unconfirmed")
-                    if has_unmapped_speaker:
-                        reasons.add("speaker_unmapped")
 
             if owner is None:
                 cited_speakers = [
