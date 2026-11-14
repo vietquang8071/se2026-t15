@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 from pydantic import SecretStr, ValidationError
-from fastapi.testclient import TestClient
+from asgi_client import ASGITestClient as TestClient
 
 from app.core.config import Settings
 from app.main import create_app
@@ -120,15 +120,22 @@ def test_extraction_rejects_missing_or_invalid_bearer_token(
     assert TEST_TOKEN not in response.text
 
 
-def test_extraction_skeleton_returns_not_configured_error(
+def test_default_verified_service_fails_closed_without_provider_configuration(
     full_request: dict[str, Any],
 ) -> None:
     app = create_test_app()
+    supported_request = {
+        **full_request,
+        "extraction": {
+            **full_request["extraction"],
+            "requested_modules": ["action_items"],
+        },
+    }
 
     with TestClient(app) as client:
         response = client.post(
             "/v1/extractions",
-            json=full_request,
+            json=supported_request,
             headers={"Authorization": f"Bearer {TEST_TOKEN}"},
         )
 
@@ -325,7 +332,10 @@ def test_dependency_override_returns_typed_extraction_response(
             return response_model
 
     app = create_test_app()
-    app.dependency_overrides[get_extraction_service] = lambda: FakeExtractionService()
+    async def provide_fake_service() -> FakeExtractionService:
+        return FakeExtractionService()
+
+    app.dependency_overrides[get_extraction_service] = provide_fake_service
 
     with TestClient(app) as client:
         response = client.post(
@@ -346,7 +356,10 @@ def test_unexpected_service_error_is_safe_and_standardized(
             raise RuntimeError(f"private failure with secret {TEST_TOKEN}")
 
     app = create_test_app()
-    app.dependency_overrides[get_extraction_service] = lambda: BrokenExtractionService()
+    async def provide_broken_service() -> BrokenExtractionService:
+        return BrokenExtractionService()
+
+    app.dependency_overrides[get_extraction_service] = provide_broken_service
 
     with TestClient(app) as client:
         response = client.post(
@@ -376,7 +389,10 @@ def test_request_timeout_maps_to_retryable_contract_error(
         llm_service_request_timeout_seconds=0.001,
     )
     app = create_app(settings=settings)
-    app.dependency_overrides[get_extraction_service] = lambda: SlowExtractionService()
+    async def provide_slow_service() -> SlowExtractionService:
+        return SlowExtractionService()
+
+    app.dependency_overrides[get_extraction_service] = provide_slow_service
 
     with TestClient(app) as client:
         response = client.post(

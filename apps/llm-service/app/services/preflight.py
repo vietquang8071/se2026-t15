@@ -27,6 +27,15 @@ class PromptPreparationError(ExtractionPreflightError):
         super().__init__("The extraction prompt could not be prepared.")
 
 
+class SummaryDurationNotRepresentableError(ExtractionPreflightError):
+    """Requested Summary duration rounds to a value forbidden by Contract v1."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Summary duration cannot be represented as a positive Contract v1 value."
+        )
+
+
 class ExtractionPreflight:
     """Validate capabilities and render one provider-neutral request."""
 
@@ -41,6 +50,12 @@ class ExtractionPreflight:
 
     def prepare(self, request: ExtractionRequest) -> PreparedRequest:
         """Return a rendered request or raise a sanitized preflight error."""
+
+        if (
+            "meeting_summary" in request.extraction.requested_modules
+            and round(request.meeting.duration_seconds / 60, 2) <= 0
+        ):
+            raise SummaryDurationNotRepresentableError
 
         if any(
             module not in SUPPORTED_MODULES

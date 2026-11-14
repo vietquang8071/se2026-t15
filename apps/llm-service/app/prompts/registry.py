@@ -8,6 +8,11 @@ from app.schemas.candidates import CANDIDATE_SCHEMA_VERSION
 _PROMPT_FILES: dict[str, tuple[str, str]] = {
     "extract-v1.0": ("v1/system.md", "v1/summary_actions.md"),
 }
+_EVIDENCE_PROMPT_FILES: dict[str, tuple[str, str]] = {
+    "evidence-v1.0": ("v1/evidence_system.md", "v1/evidence_verification.md"),
+    "evidence-v1.1": ("v1_1/evidence_system.md", "v1_1/evidence_verification.md"),
+    "evidence-v1.2": ("v1_2/evidence_system.md", "v1_2/evidence_verification.md"),
+}
 
 
 class PromptRegistryError(Exception):
@@ -22,6 +27,15 @@ class PromptBundle:
     candidate_schema_version: str
     system_template: str
     extraction_template: str
+
+
+@dataclass(frozen=True, slots=True)
+class EvidencePromptBundle:
+    """Immutable versioned templates for semantic evidence verification."""
+
+    prompt_version: str
+    system_template: str
+    verification_template: str
 
 
 class PromptRegistry:
@@ -53,6 +67,22 @@ class PromptRegistry:
         )
         self._bundles[prompt_version] = bundle
         return bundle
+
+    def get_evidence(self, prompt_version: str) -> EvidencePromptBundle:
+        """Return an approved evidence-verification prompt bundle."""
+
+        try:
+            system_path, verification_path = _EVIDENCE_PROMPT_FILES[prompt_version]
+        except (KeyError, TypeError) as error:
+            raise PromptRegistryError("Unsupported evidence prompt version.") from error
+
+        system_template = self._read_template(system_path)
+        verification_template = self._read_template(verification_path)
+        return EvidencePromptBundle(
+            prompt_version=prompt_version,
+            system_template=system_template,
+            verification_template=verification_template,
+        )
 
     def _read_template(self, relative_path: str) -> str:
         try:

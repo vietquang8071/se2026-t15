@@ -5,7 +5,7 @@
 > **Nhánh tham chiếu:** `feature/llm-03-provider-integration`  
 > **Tài liệu:** Thiết kế kỹ thuật kiêm báo cáo triển khai LLM-03.5  
 > **Ngày khởi tạo bản thiết kế:** 14/11/2026  
-> **Trạng thái:** **Đã chốt phương án thiết kế; chưa triển khai LLM-03.5**  
+> **Trạng thái:** **Đã xử lý R1–R3; regression cuối đạt 542 tests offline**
 > **Phụ thuộc:** LLM-01, LLM-02, LLM-03.2, LLM-03.3 và LLM-03.4 (Phương án A)
 
 ## 1. Mục tiêu và phạm vi
@@ -76,7 +76,7 @@ Báo cáo LLM-03.4 Group D ghi nhận **412 tests passed**, là mốc regression
 | D-13 | Test | Automated tests offline với fake provider; HTTP integration và regression bắt buộc trước nghiệm thu |
 | D-14 | Contract | Giữ nguyên public Contract v1; không tự thêm feature flag cho phép bỏ qua verification |
 
-**Quy tắc cụ thể hóa cho duration rất ngắn (D-15):** Không sửa schema/không tự ép `duration_minutes=0.01`. Nếu request yêu cầu `meeting_summary` và `round(duration_seconds / 60, 2) <= 0`, từ chối sớm với `400 VALIDATION_ERROR` trước khi gọi provider. Quy tắc này là một ràng buộc nghiệp vụ **đề xuất trong bản thiết kế** cần được kiểm thử và đối chiếu với API contract khi triển khai. Request chỉ yêu cầu Actions không bị từ chối vì quy tắc projection của Summary. Nếu việc áp dụng đòi hỏi thay đổi contract, phải đưa ra review riêng.
+**Quy tắc cụ thể hóa cho duration rất ngắn (D-15):** Không sửa schema/không tự ép `duration_minutes=0.01`. Nếu request yêu cầu `meeting_summary` và `round(duration_seconds / 60, 2) <= 0`, từ chối sớm với `400 VALIDATION_ERROR` trước khi gọi provider. Quy tắc đã triển khai trong preflight và được kiểm tra cả ở unit lẫn HTTP integration; request chỉ yêu cầu Actions không bị từ chối vì quy tắc projection của Summary. Contract v1 không thay đổi.
 
 ## 4. Kiến trúc và ranh giới dữ liệu
 
@@ -117,7 +117,7 @@ ProjectedExtraction                                 [UNVERIFIED]
     +-- Bất kỳ gate bắt buộc thất bại --------> ErrorEnvelope non-2xx
 ```
 
-Các tên `SourceValidatedExtraction`, `EvidenceVerifiedExtraction`, `ValidatedExtraction`, `SourceValidator`, `EvidenceVerifier`, `TemporalReviewProcessor`, `ResponseBuilder` là **đề xuất interface**, chưa tồn tại trong source tại thời điểm viết tài liệu.
+Các tên `SourceValidatedExtraction`, `EvidenceVerifiedExtraction`, `ValidatedExtraction`, `SourceValidator`, `EvidenceVerifier`, `TemporalReviewProcessor`, `ResponseBuilder` được đề xuất khi viết thiết kế và hiện đã được triển khai trong `apps/llm-service/app/`.
 
 ### 4.2. Nguyên tắc kiến trúc
 
@@ -168,13 +168,11 @@ Mô hình minh họa để thống nhất giao diện, **không phải API Contr
   "checks": [
     {
       "claim_id": "actions[0].task",
-      "status": "supported",
-      "reason": "explicit_commitment"
+      "status": "supported"
     },
     {
       "claim_id": "actions[0].owner",
-      "status": "uncertain",
-      "reason": "owner_not_confirmed"
+      "status": "uncertain"
     }
   ]
 }
@@ -182,10 +180,29 @@ Mô hình minh họa để thống nhất giao diện, **không phải API Contr
 
 - `status` chỉ nhận một trong ba giá trị đã chốt.
 - `claim_id` do application kiểm soát, không phải artifact ID do model sinh.
-- `reason` là thông tin nội bộ cần giới hạn/chuẩn hóa; **không** đưa lý do tự do của LLM vào `review_reasons` công khai.
+- Output triển khai chỉ nhận `claim_id` và `status`; không nhận explanation/reason tự do từ verifier.
 - Verdict phải được parse bằng schema strict; không coi lời giải thích tự do là chứng cứ để bypass gate.
 - Với provider timeout, output thiếu/truncated hoặc verdict bất hợp lệ, trả lỗi theo policy; không tự cho phép `supported`.
 - Có thể tách verdict theo từng thuộc tính để `owner` hoặc `priority` trở về `null` mà không làm mất task đã được xác minh.
+
+### 5.4. Interface đã triển khai — LLM-03.5.1
+
+Các model nội bộ được triển khai trong `apps/llm-service/app/services/validation_models.py`:
+
+- `ClaimIdentity` mang `request_id`, `transcript_revision_id`, `claim_id`, nội dung claim và source IDs; nội dung và nguồn bị ẩn khỏi `repr`.
+- `SourceSegmentReference` ghi ID, thời điểm bắt đầu và vị trí gốc của segment.
+- `SourceValidatedExtraction` gắn projection với claim/source index, kiểm tra request/revision và ID trùng.
+- `VerificationStatus` chỉ nhận `supported`, `uncertain`, `unsupported`; `VerificationVerdict` yêu cầu status tường minh.
+- `VerificationMetadata` lưu provider, model, prompt version, usage và thời điểm thực tế.
+- `EvidenceVerifiedExtraction` kiểm tra trọn vẹn claim set, không nhận claim lạ/trùng/thiếu hoặc verdict thuộc request/revision khác.
+- `ValidatedExtraction` chỉ nhận evidence-verified state và kiểm tra số lượng safeguard metadata theo Action Items.
+- `ValidationStageFailure` cùng các subtype `SourceValidationFailure`, `EvidenceVerificationFailure`, `TemporalSafeguardFailure`, `ResponseConstructionFailure` mang lỗi đã sanitize, không mang transcript/candidate.
+
+Test `apps/llm-service/tests/unit/services/test_validation_models.py` kiểm tra khởi tạo hợp lệ, status lạ, claim trùng, verdict thiếu/thừa, cách ly request và ẩn dữ liệu trong `repr`. Chạy `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/unit/services/test_validation_models.py` từ `apps/llm-service/`: **7 passed**. Chạy ban đầu không cấu hình cache dừng trước pytest do `/home/vitquay1708/.cache/uv` chỉ đọc; lần chạy nêu trên dùng cache trong `/tmp` và đã thực thi test.
+
+### 5.5. Interface verifier đã triển khai — nhóm B
+
+`EvidenceVerifier.verify(SourceValidatedExtraction) -> EvidenceVerifiedExtraction` chỉ phụ thuộc `LLMProvider`, `PromptRegistry` và `PromptRenderer`; verifier nhận prompt version từ `EvidencePromptBundle` đã thực sự render. `EvidenceVerificationOutput`/`VerificationCheck` là schema private strict; `EvidenceVerifiedExtraction` cưỡng chế cùng `request_id`/revision và một verdict cho mỗi claim. Không có field cho verifier sửa candidate hoặc cấp artifact ID.
 
 ## 6. Nhóm A — Source Reference Validation
 
@@ -203,6 +220,14 @@ Mô hình minh họa để thống nhất giao diện, **không phải API Contr
 **File dự kiến:** `app/services/source_validation.py` (mới), các bài test `tests/unit/services/` và `tests/integration/` tương ứng.
 
 **Tiêu chí nghiệm thu:** Unknown IDs, duplicate IDs, cross-request leakage và thứ tự source sai đều được xử lý deterministic; không phát sinh provider calls ở nhóm A.
+
+### 6.1. Triển khai và kiểm chứng nhóm A
+
+`apps/llm-service/app/services/source_validation.py` triển khai `SourceValidator.validate(ProjectedExtraction)`. Validator tạo index theo request/revision hiện tại; sắp source IDs theo `(segment.start, transcript_order)`; cấp claim IDs deterministic cho Summary, từng topic, từng Action Item và `actions.absence`. Nó không có dependency lên `LLMProvider`.
+
+Summary overview thiếu nguồn hợp lệ làm stage thất bại. Topic hoặc Action Item riêng lẻ có source sai bị loại mà không sửa ID; nếu mọi Action Item không rỗng đều bị loại thì stage thất bại thay vì phát sinh `[]` giả. Candidate bản gốc được giữ trong projection; source-validated copy chỉ chứa các item còn dùng được và IDs đã chuẩn hóa.
+
+`apps/llm-service/tests/unit/services/test_source_validation.py` kiểm tra nguồn hợp lệ nhiều segment, source lạ, duplicate, thứ tự thời gian và tie-break, loại topic lỗi an toàn, cùng cách ly hai request dùng chung segment IDs. Chạy `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/unit/services/test_source_validation.py tests/unit/services/test_validation_models.py` từ `apps/llm-service/`: **13 passed** (6 source-validation cases, 7 interface cases). Không gọi provider.
 
 ## 7. Nhóm B — Semantic Evidence Verification
 
@@ -258,6 +283,16 @@ Khi cần lọc bỏ item, nguồn và thứ tự của item còn lại phải �
 
 **File dự kiến:** `app/services/evidence.py`, schema verdict nội bộ tại `app/schemas/` hoặc `app/services/`, prompt versioned trong `app/prompts/`, test unit/integration bằng Fake Provider.
 
+### 7.6. Triển khai verifier và kiểm chứng
+
+Verifier triển khai tại `apps/llm-service/app/services/evidence.py` (`EvidenceVerifier`) và phụ thuộc `LLMProvider`. Output strict nằm trong `app/schemas/verification.py` (`EvidenceVerificationOutput`, `VerificationCheck`). Prompt bundle/version được đăng ký trong `app/prompts/registry.py`, render provider-neutral bởi `app/prompts/renderer.py`; bundle ban đầu `evidence-v1.0` nằm tại `app/prompts/v1/evidence_system.md` và `app/prompts/v1/evidence_verification.md`. Sau hardening F7, runtime thực thi bundle `evidence-v1.1` tại `app/prompts/v1_1/evidence_system.md` và `app/prompts/v1_1/evidence_verification.md`; `evidence-v1.0` được giữ nguyên. Verifier dùng một generation, `json_object`, temperature 0; không retry/repair. Model/provider phải khớp kết quả extraction. Metadata ghi usage và thời gian của provider result thật, được response builder ở nhóm D kết hợp.
+
+Kiểm tra status và complete claim-set được thực hiện trước khi trả `EvidenceVerifiedExtraction`; mọi lỗi parse/schema/ID ánh xạ `INVALID_STRUCTURED_OUTPUT`. Prompt chỉ trình bày transcript/claim dưới dạng JSON data và system prompt cấm thực thi instruction nằm trong dữ liệu. `actions.absence` là claim bắt buộc khi extraction trả danh sách rỗng và yêu cầu verifier rà toàn transcript.
+
+`tests/unit/services/test_evidence_verification.py` sử dụng `FakeProvider`, không gọi OpenRouter. Case cover supported output, thiếu/thừa/trùng claim, status lạ, field thừa, JSON sai, question bị gán nhầm thành task nhưng verdict `unsupported` vẫn giữ nguyên, empty-actions assessment, prompt injection text và timeout không retry. Chạy `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/unit/services/test_evidence_verification.py tests/unit/services/test_source_validation.py tests/unit/services/test_validation_models.py` từ `apps/llm-service/`: **24 passed** (11 verifier, 6 source, 7 interface).
+
+**Giới hạn đánh giá:** fake provider chứng minh hợp đồng, ranh giới prompt và xử lý verdict; không chứng minh độ chính xác ngữ nghĩa của model thật. Enforcement chính sách lọc unsupported/uncertain claims nằm ở safeguard nhóm C, sau đó được kiểm thử end-to-end ở nhóm E.
+
 ## 8. Nhóm C — Temporal & Review Safeguards
 
 ### 8.1. Thời gian
@@ -308,6 +343,16 @@ Các invariants:
 
 **File dự kiến:** `app/services/temporal_safeguards.py` hoặc `app/services/review.py`, test unit/integration; tái sử dụng `app/schemas/temporal.py` và `app/schemas/response.py` thay vì tạo public schema mới.
 
+### 8.4. Triển khai Temporal & Review Safeguards
+
+`apps/llm-service/app/services/temporal_safeguards.py` cung cấp `TemporalReviewProcessor.process(EvidenceVerifiedExtraction) -> ValidatedExtraction`. `supported` là bắt buộc cho Action task; unsupported/uncertain task bị loại và nếu không còn task dùng được thì trả `UNVERIFIED_EVIDENCE`. Empty Actions chỉ được giữ khi `actions.absence` được xác minh `supported`. Overview unsupported làm thất bại; unsupported topic có thể được loại; uncertainty an toàn được giữ với reason `claim_uncertain`.
+
+Deadline chỉ resolve nếu chuỗi ISO hợp lệ và canonical; ngày tương đối, mơ hồ hoặc invalid giữ raw expression, `due_date=null`, `unresolved`, `temporal_unresolved`. Unsupported deadline bị xóa và đánh `evidence_unverified`. Owner không được suy ra: thiếu/không được xác minh sẽ thành null; nếu không có source speaker mapping thì thêm `speaker_unmapped`. Priority/context thiếu evidence thành null. Review reasons được unique và sắp theo thứ tự enum Contract v1. `TemporalResolution.source_segment_ids` lấy từ claim deadline đã source-validate, là subset nguồn của Action.
+
+Kiểm thử tại `tests/unit/services/test_temporal_safeguards.py` cover ISO, relative, ambiguous/invalid date, không có deadline, unsupported owner/priority/task/overview, speaker unmapped/mapped, verified empty Actions và empty Actions bị mâu thuẫn. Chạy `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/unit/services/test_temporal_safeguards.py tests/unit/services/test_source_validation.py tests/unit/services/test_evidence_verification.py tests/unit/services/test_validation_models.py` từ `apps/llm-service/`: **36 passed** (12 safeguard, 6 source, 11 verifier, 7 interface).
+
+**Giới hạn:** verifier chỉ trả ba status, không phát reason chuyên biệt cho mâu thuẫn; hiện uncertainty được biểu diễn bằng `claim_uncertain`. Cách đánh giá verdict ngữ nghĩa trên model thật chưa được thực hiện.
+
 ## 9. Nhóm D — Verified Response Construction
 
 **Đầu vào bắt buộc:** `ValidatedExtraction` đã qua A, B và C. Không nhận candidate/projection chưa xác minh.
@@ -335,6 +380,14 @@ Các invariants:
 - Thời gian thực thi và token usage từ một request không được lẫn với request khác.
 
 **File dự kiến:** `app/services/response_builder.py`, test unit/integration; tái sử dụng `app/schemas/response.py`.
+
+### 9.3. ResponseBuilder đã triển khai
+
+`apps/llm-service/app/services/response_builder.py` cung cấp `ResponseBuilder.build(ValidatedExtraction)`. Hàm từ chối input ngoài type đã safeguarded, echo chính xác identity và module order, tạo đủ sáu module keys, dựng Summary metadata từ request, dùng verified candidate text, và tạo Action Items sau khi sort theo source time với candidate order ổn định. IDs `ACT-nnn` cấp sau lọc/sort; timestamp lấy từ segment sớm nhất và định dạng millisecond. Builder aggregate usage chỉ khi hai lần provider đều có usage, dùng prompt versions từ hai lần chạy thật, tạo UTC interval và chạy `ExtractionResponse` cùng `validate_response_for_request()`.
+
+`apps/llm-service/app/services/preflight.py` bổ sung `SummaryDurationNotRepresentableError`: Summary request bị chặn trước provider nếu `round(duration_seconds / 60, 2) <= 0`; Actions-only không chịu guard này. Public schema/Contract v1 không đổi.
+
+`tests/unit/services/test_response_builder.py` cover Summary-only, Actions-only, combined, verified empty Actions, sorting/IDs/timestamps, request metadata, usage đầy đủ/thiếu, thiếu evidence prompt metadata, dữ liệu meeting/source sai và guard short-duration/provider invocation. Chạy `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/unit/services/test_response_builder.py` từ `apps/llm-service/`: **13 passed**. Chạy chung với tests 03.5.1/A/B/C: **49 passed**.
 
 ## 10. Nhóm E — HTTP Integration & Error Mapping
 
@@ -369,18 +422,28 @@ Các invariants:
 
 **File dự kiến:** `app/services/extraction.py`, `app/services/factory.py`, `app/main.py`, `app/core/errors.py`, `app/api/` (chỉ nếu cần), cùng tests tương ứng.
 
+### 10.3. HTTP pipeline đã triển khai
+
+`apps/llm-service/app/services/verified_extraction.py` triển khai `VerifiedExtractionService.extract()` theo thứ tự preflight/extraction, projection, source validation, verifier, temporal/review và `ResponseBuilder`. `services/factory.py` dùng cùng một provider identity/model và `ProviderTimeoutBound` cho cả hai lần gọi; `main.py` composition mặc định đi qua pipeline này, nên thiếu `OPENROUTER_API_KEY` trả lỗi cấu hình thay vì fallback unverified. `core/errors.py` ánh xạ lỗi typed sang `ErrorEnvelope` đã có; provider retry-after chỉ được chuyển tiếp nếu hữu hạn, dương và không vượt một ngày. Unexpected exception trả thông báo nội bộ đã sanitize. `/health` không phụ thuộc provider.
+
+`apps/llm-service/app/api/dependencies.py` chuyển app-state getters sang `async def`. Trong HTTP integration, synchronous FastAPI dependencies bị treo trong AnyIO worker thread trước khi endpoint chạy; sau chuyển đổi, pipeline chạy bình thường. Tests mới dùng `httpx.ASGITransport` vì `fastapi.testclient.TestClient` treo khi khởi tạo trong môi trường này ngay cả với app tối thiểu. Bearer auth và middleware giới hạn body được giữ nguyên.
+
+Test `apps/llm-service/tests/integration/test_verified_extraction_service.py` chạy qua FastAPI, composition production-like và fake provider, verifier thật; không dùng OpenRouter. Chạy `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/integration/test_verified_extraction_service.py` từ `apps/llm-service/`: **32 passed**. Cover ba tổ hợp Summary/Actions success, empty Actions có/không có evidence, source sai, claim trung tâm unsupported, question/conditional/rejected task, source đúng nhưng text không liên quan, owner đúng/sai và mapping speaker có/không, unsupported priority/deadline, lỗi schema extraction/verifier, provider config/rate limit/provider timeout/failure, request timeout/cancellation, Summary duration làm tròn về 0, auth thiếu/sai, health và fail-closed mặc định, isolation concurrency, cùng sanitize exception.
+
+**Giới hạn checkpoint:** full unit/integration/contract regression được ghi nhận tại 13.3. Starlette `TestClient` treo khi khởi tạo trong môi trường này; test integration dùng `httpx.ASGITransport` cùng ASGI lifespan và đã kiểm tra cancellation đến provider call. Không có live provider calls.
+
 ## 11. Kế hoạch thực hiện và phụ thuộc
 
 | Mốc | Nội dung | Phụ thuộc | Đầu ra | Trạng thái |
 |---|---|---|---|---|
-| 03.5.0 | Chốt tài liệu thiết kế A–E và policy | 03.4 | Tài liệu này | **Đã soạn; chờ review/commit** |
-| 03.5.1 | Internal interfaces / typed failures / claim identities | 03.5.0 | Contracts nội bộ + tests | Chưa triển khai |
-| 03.5.A | Source reference validation | 03.5.1 | `SourceValidatedExtraction` + unit tests | Chưa triển khai |
-| 03.5.B | Evidence verifier + versioned prompt | 03.5.A | Verdicts + verifier tests | Chưa triển khai |
-| 03.5.C | Temporal & review safeguards | 03.5.A, interfaces; phối hợp với B | `ValidatedExtraction` + tests | Chưa triển khai |
-| 03.5.D | Verified response builder | 03.5.B + C | `ExtractionResponse` + tests | Chưa triển khai |
-| 03.5.E | HTTP composition, error mapping | 03.5.D | Verified endpoint + integration tests | Chưa triển khai |
-| 03.5.F | Full regression, review và nghiệm thu | A–E | Báo cáo kết quả thực tế | Chưa thực hiện |
+| 03.5.0 | Chốt tài liệu thiết kế A–E và policy | 03.4 | Tài liệu này | **Đã chốt; nội dung thiết kế được giữ và cập nhật bằng kết quả triển khai** |
+| 03.5.1 | Internal interfaces / typed failures / claim identities | 03.5.0 | Contracts nội bộ + tests | **Hoàn tất; unit tests 7/7 passed** |
+| 03.5.A | Source reference validation | 03.5.1 | `SourceValidatedExtraction` + unit tests | **Hoàn tất; 6 source cases và 7 interface cases passed** |
+| 03.5.B | Evidence verifier + versioned prompt | 03.5.A | Verdicts + verifier tests | **Hoàn tất; hardening cập nhật bundle thực thi lên `evidence-v1.1`** |
+| 03.5.C | Temporal & review safeguards | 03.5.A, interfaces; phối hợp với B | `ValidatedExtraction` + tests | **Hoàn tất; 12 safeguard cases, 36 combined tests passed** |
+| 03.5.D | Verified response builder | 03.5.B + C | `ExtractionResponse` + tests | **Hoàn tất; 13 builder cases, 49 combined tests passed** |
+| 03.5.E | HTTP composition, error mapping | 03.5.D | Verified endpoint + integration tests | **Hoàn tất; 32 HTTP integration tests passed** |
+| 03.5.F | Full regression, review và nghiệm thu | A–E | Báo cáo kết quả thực tế | **Hardening hoàn tất; 319 unit + 94 integration + 111 contract = 524 passed** |
 
 Nhóm B và C có thể code song song **sau khi** thống nhất interfaces và đầu ra A. Tests của D/E có thể chuẩn bị với fake verified data nhưng không được nối production public success trước khi B/C hoàn thiện.
 
@@ -389,7 +452,21 @@ Nhóm B và C có thể code song song **sau khi** thống nhất interfaces và
 - Một thay đổi logic nên có commit riêng, không bắt buộc mỗi tiểu mục là một commit.
 - Commit message tuân theo Conventional Commits trong `CONTRIBUTING.md` (bằng tiếng Anh).
 - Cập nhật **chính file tài liệu này** khi từng nhóm hoàn thành; không tạo báo cáo milestone mới không cần thiết.
-- Mọi thay đổi code/repo thực tế phải được chủ repository phê duyệt trước; **bản thiết kế không tự cấp quyền triển khai**.
+- Phần triển khai này được người dùng ủy quyền trực tiếp; không tạo branch, commit, push, merge hoặc PR.
+
+### 11.2. Trạng thái hậu kiểm và hardening
+
+| Finding | Trạng thái | Kiểm chứng hiện tại |
+|---|---|---|
+| F9 — Cô lập provider/network trong test | **Đã xử lý; nghiệm thu pass** | 101 focused tests pass; final full regression 524 passed |
+| F6/F8 — Test empty Actions và duration | **Đã xử lý; nghiệm thu pass** | 4 focused tests pass; final full regression 524 passed |
+| F7 — Grounding theo cited sources | **Đã xử lý; nghiệm thu pass** | 60 focused tests pass; fake verdict không chứng minh semantic accuracy model thật; final 524 passed |
+| F2 — Attribution owner theo speaker | **Đã xử lý; nghiệm thu pass** | 13 focused tests pass, gồm fake verifier `supported` nhưng mapping mâu thuẫn; final 524 passed |
+| F1 — Summary uncertain publication | **Đã xử lý; nghiệm thu pass** | 19 safeguard tests pass; final full regression 524 passed |
+| F3 — Exact-date evidence | **Đã xử lý; nghiệm thu pass** | 24 safeguard tests pass; exact date chỉ resolve khi literal ISO ở cited source và không có correction rõ; final 524 passed |
+| F4 — Claim-level provenance | **Đã harden phần có thể chứng minh; giới hạn còn lại được ghi rõ** | Temporal sources hẹp về segment chứa literal raw deadline khi có; 25 safeguard tests; final 524 passed |
+| F5 — Verified-data invariants | **Đã xử lý; nghiệm thu pass** | 91 focused tests pass; final full regression 524 passed |
+| HTTP mapping / ASGI review | **Đã rà soát; hành vi hiện hữu đúng, thêm lifecycle regression tests** | 59 focused tests pass; final full regression 524 passed |
 
 ## 12. Kế hoạch kiểm thử và tiêu chí nghiệm thu
 
@@ -429,15 +506,15 @@ Nhóm B và C có thể code song song **sau khi** thống nhất interfaces và
 
 ### 12.2. Điều kiện hoàn thành LLM-03.5
 
-- [ ] Test nhóm A–E thành công với provider giả; không dùng OpenRouter thật trong automated tests.
-- [ ] Các invalid source IDs, unsupported claims, thiếu evidence hoặc verifier failure không trở thành HTTP 200.
-- [ ] Một request Summary/Actions hợp lệ trả HTTP 200 **qua pipeline verification thực**, không phải service mock dựng sẵn response.
-- [ ] Metadata, timestamp, artifact IDs, null/empty states và review reasons đúng Contract v1.
-- [ ] `evidence_prompt_version` chỉ xuất hiện khi prompt verification đã được sử dụng thực tế.
-- [ ] HTTP errors, retry policy và privacy guarantees được chứng minh bằng tests.
-- [ ] Các bài test LLM-01 đến LLM-03.4 vẫn pass (full regression).
-- [ ] Không có thay đổi không được duyệt ở public Contract v1 hoặc ngoài phạm vi LLM-03.5.
-- [ ] File tài liệu này được cập nhật với source paths, kết quả test thật, giới hạn và handoff.
+- [x] Test nhóm A–E thành công với provider giả; không dùng OpenRouter thật trong automated tests.
+- [x] Các invalid source IDs, unsupported claims, thiếu evidence hoặc verifier failure không trở thành HTTP 200.
+- [x] Summary/Actions hợp lệ trả HTTP 200 qua pipeline verification thực.
+- [x] Metadata, timestamp, artifact IDs, null/empty states và review reasons theo Contract v1.
+- [x] `evidence_prompt_version` lấy từ prompt verification thực tế.
+- [x] HTTP errors, retry policy và privacy guarantees được kiểm tra.
+- [x] Regression unit/integration/contract/full suite đều pass.
+- [x] Public Contract v1 không đổi; không có implementation ngoài phạm vi đã ủy quyền.
+- [x] Báo cáo ghi source paths, kết quả test, giới hạn và handoff.
 
 **Lệnh kiểm thử dự kiến**, chạy từ `apps/llm-service/` sau khi triển khai:
 
@@ -448,40 +525,99 @@ uv run --locked --extra test pytest -q tests/contract
 uv run --locked --extra test pytest -q
 ```
 
+### 12.3. Test coverage đã chạy theo checkpoint
+
+- **03.5.1:** `tests/unit/services/test_validation_models.py` — 7 passed (status, duplicate/missing/extra claim, request isolation và `repr`).
+- **03.5.A:** `tests/unit/services/test_source_validation.py` — 6 source cases; chạy cùng interfaces: 13 passed. Cover source IDs hợp lệ/lạ/trùng, ordering/tie-break, loại topic riêng lẻ và request IDs độc lập.
+- **03.5.B:** `tests/unit/services/test_evidence_verification.py` — 11 verifier cases; chạy cùng A/interfaces: 24 passed. Tất cả provider output là fixture/fake; không gọi OpenRouter.
+- **03.5.C:** `tests/unit/services/test_temporal_safeguards.py` — 12 safeguard cases; chạy cùng các unit test A/B/interfaces: 36 passed.
+- **03.5.D:** `tests/unit/services/test_response_builder.py` — 13 builder cases; chạy cùng A–C/interfaces: 49 passed.
+- **03.5.E:** `tests/integration/test_verified_extraction_service.py` — **32 passed**. Fake provider qua production-like service factory; HTTP success/failure, evidence/temporal/owner, auth, timeout/cancellation, concurrency, default fail-closed và privacy cases; không có live OpenRouter calls.
+- **03.5.F:** 290 unit, 92 integration, 111 contract và 493 full regression tests passed. Mỗi lệnh được chạy với `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q ...` từ `apps/llm-service/`.
+- **Hậu kiểm F9:** baseline trước hardening chạy full suite: **493 passed in 2.77s**. Sau cô lập môi trường/network, `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/integration/test_verified_extraction_service.py tests/unit/providers/test_openrouter.py` — **101 passed**. Ca mới mô phỏng `OPENROUTER_API_KEY` có giá trị và kiểm tra default runtime vẫn fail-closed; test harness chặn outbound HTTP mặc định. Final full regression sau hardening: **524 passed** (xem 13.3).
+- **Hậu kiểm F6/F8:** `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/integration/test_verified_extraction_service.py -k 'empty_actions or duration'` — **4 passed, 30 deselected**. Positive empty Actions dùng transcript thảo luận không chốt việc; negative giữ cam kết rõ và verdict `unsupported`. Hai duration tests gọi `ExtractionRequest.model_validate()` trước HTTP, kiểm tra segment hợp lệ, Summary bị chặn trước provider và Actions-only vẫn chạy hai provider calls thành công.
+- **Hậu kiểm F7:** `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/unit/services/test_evidence_verification.py tests/unit/prompts/test_registry.py tests/integration/test_verified_extraction_service.py` — **60 passed**. Tests dùng fake provider; kiểm tra correct/incorrect cited source mapping, uncited fact, contradiction, proposal, Summary grounding, prompt injection, complete-transcript empty-action review và version thực thi.
+- **Hậu kiểm F2:** `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/unit/services/test_temporal_safeguards.py tests/integration/test_verified_extraction_service.py -k 'owner or speaker or first_person or hypothetical or quoted or explicit_named or different_speakers'` — **12 passed, 39 deselected**. Bao gồm explicit named assignment khác speaker, first-person đúng/sai/mất mapping dù verdict fake là `supported`, quoted/hypothetical, nhiều speakers và HTTP pipeline.
+- **Hậu kiểm F1:** `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/unit/services/test_temporal_safeguards.py` — **19 passed**. Thêm ca assertive overview “Nhóm đã hoàn thành triển khai.” với verdict `uncertain` phải fail `UNVERIFIED_EVIDENCE`; Key Topic uncertain bị loại, không rewrite wording và không phát cờ review để hợp thức hóa claim.
+- **Hậu kiểm F3:** `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/unit/services/test_temporal_safeguards.py` — **24 passed**. Cover literal ISO trong cited source, date chỉ ở uncited source, ngày ISO sai, leap date hợp lệ, relative/ambiguous/invalid expressions, diễn đạt khác chuẩn để lại unresolved và correction ISO mâu thuẫn ở segment khác.
+- **Hậu kiểm F4:** `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/unit/services/test_temporal_safeguards.py` — **25 passed**. Khi raw deadline xuất hiện nguyên văn trong một subset của Action Item sources, `TemporalResolution.source_segment_ids` chỉ giữ subset đó, theo source order đã chuẩn hóa.
+- **Hậu kiểm F5:** `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/unit/services/test_validation_models.py tests/unit/services/test_source_validation.py tests/unit/services/test_temporal_safeguards.py tests/unit/services/test_response_builder.py tests/integration/test_verified_extraction_service.py` — **91 passed**. Bao gồm stale/foreign source và revision, complete claim/verdict coverage, requested-module state, unsupported retained field, review/temporal consistency, mutable nested-source corruption, builder type boundary và full verified pipeline.
+- **Hậu kiểm HTTP/ASGI:** `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/unit/test_asgi_client.py tests/integration/test_runtime.py tests/integration/test_verified_extraction_service.py` — **59 passed**. Error/status/retryability tests hiện hữu pass; hai test mới xác nhận app lifespan được shutdown khi HTTPX client enter/exit lỗi. Không có code sản xuất mapping lỗi thay đổi.
+- **Rà soát bổ sung F2:** Sau review lần cuối, phạm vi từ vựng ngôi thứ nhất được thu hẹp: chỉ `tôi`/`I` được dùng để ánh xạ speaker trực tiếp; `mình`/`em`/`anh`/`chị`/`we` được coi là ambiguous và owner bị null nếu không có assignment nêu tên. Lệnh focused speaker/owner tương ứng — **13 passed, 47 deselected**.
+- **Rà soát bổ sung F1:** Assertive overview test dùng chính câu “Nhóm đã hoàn thành triển khai.” với verdict `uncertain`; temporal safeguard suite sau cập nhật test — **26 passed**.
+
 ## 13. Nhật ký triển khai (cập nhật khi code)
 
-> **Quy ước:** Mục này cố ý để ở trạng thái chưa triển khai. Khi hoàn thành một nhóm, ghi rõ **file đã sửa**, **thay đổi thực tế**, **test đã chạy/kết quả**, **giới hạn** và **commit/PR**. Không đổi trạng thái chỉ vì có thiết kế.
+> **Quy ước:** Mỗi checkpoint ghi file thay đổi, implementation, lệnh và kết quả test, giới hạn, cùng commit/PR nếu có. Không ghi commit/PR không tồn tại.
 
 | Nhóm | Thiết kế | Triển khai | Kiểm chứng | File/commit/ghi chú |
 |---|---|---|---|---|
-| Interfaces | Đã chốt | Chưa | Chưa | Cập nhật sau |
-| A — Source Validation | Đã chốt | Chưa | Chưa | Cập nhật sau |
-| B — Evidence Verification | Đã chốt | Chưa | Chưa | Cập nhật sau |
-| C — Temporal/Review | Đã chốt | Chưa | Chưa | Cập nhật sau |
-| D — Response Builder | Đã chốt | Chưa | Chưa | Cập nhật sau |
-| E — HTTP Integration | Đã chốt | Chưa | Chưa | Cập nhật sau |
-| F — Regression/Handoff | Đã lập kế hoạch | Chưa | Chưa | Cập nhật sau |
+| Interfaces | Đã chốt | Hoàn tất | Đã kiểm chứng | `app/services/validation_models.py`; `tests/unit/services/test_validation_models.py`; 7 passed |
+| A — Source Validation | Đã chốt | Hoàn tất | Đã kiểm chứng | `app/services/source_validation.py`; `tests/unit/services/test_source_validation.py`; 13 kết hợp với interface tests passed |
+| B — Evidence Verification | Đã chốt | Hoàn tất; sau hardening runtime dùng `evidence-v1.1` | Đã kiểm chứng | Ban đầu `evidence-v1.0`; v1.1 bổ sung cited-source grounding; fake provider |
+| C — Temporal/Review | Đã chốt | Hoàn tất | Đã kiểm chứng | `app/services/temporal_safeguards.py`; 12 safeguard cases; 36 combined passed |
+| D — Response Builder | Đã chốt | Hoàn tất | Đã kiểm chứng | `app/services/response_builder.py`, preflight Summary duration guard; 13 builder cases; 49 combined passed |
+| E — HTTP Integration | Đã chốt | Hoàn tất | Đã kiểm chứng | `services/verified_extraction.py`, `services/factory.py`, `core/errors.py`, `main.py`, `api/dependencies.py`; 32 focused integration tests passed |
+| F — Regression/Handoff | Đã lập kế hoạch | Hoàn tất | Đã kiểm chứng | 290 unit, 92 integration, 111 contract; full suite 493 passed; `git diff --check` sạch |
 
 ### 13.1. Ghi nhận theo nhóm
 
-**Interfaces:** Chưa triển khai.  
-**A — Source Validation:** Chưa triển khai.  
-**B — Evidence Verification:** Chưa triển khai.  
-**C — Temporal & Review:** Chưa triển khai.  
-**D — Response Construction:** Chưa triển khai.  
-**E — HTTP Integration:** Chưa triển khai.  
-**F — Full regression:** Chưa thực hiện.
+**Interfaces — LLM-03.5.1:** Hoàn tất; `validation_models.py` định nghĩa `ClaimIdentity`, `SourceValidatedExtraction`, `VerificationVerdict`/`VerificationStatus`, `VerificationMetadata`, `EvidenceVerifiedExtraction`, `ValidatedExtraction` và typed failures. Test: `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/unit/services/test_validation_models.py` — **7 passed**. Giới hạn: stage factories và runtime wiring được bổ sung ở các checkpoint A–E; full regression đã hoàn tất.
+
+**A — Source Validation:** Hoàn tất; `source_validation.py` kiểm tra và sắp xếp sources theo thời gian, loại topic/item riêng lẻ không hợp lệ theo policy, fail khi Summary overview không có source hoặc không còn Action Item có thể dùng. Chạy `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/unit/services/test_source_validation.py tests/unit/services/test_validation_models.py` — **13 passed**; source validator không phụ thuộc provider. Giới hạn: semantic assessment thuộc nhóm B.
+
+**B — Evidence Verification (checkpoint triển khai ban đầu):** `EvidenceVerifier` ban đầu dùng `evidence-v1.0` registry bundle, strict `EvidenceVerificationOutput`, một call qua provider abstraction, request-bound verdicts và metadata. Chạy `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/unit/services/test_evidence_verification.py tests/unit/services/test_source_validation.py tests/unit/services/test_validation_models.py` — **24 passed**. Sau hậu kiểm F7, runtime dùng prompt mới immutable `evidence-v1.1`; chi tiết và test mới ở 13.4. Fake provider kiểm chứng schema/policy boundary, không đo accuracy model thật; C thực thi cách công bố theo verdict.
+
+**C — Temporal & Review:** Hoàn tất implementation; `TemporalReviewProcessor` áp dụng exact-ISO-only resolution, null hóa field không đủ evidence, chặn Action task không được supported, kiểm tra empty-result verdict và sinh review reasons deterministic. Chạy `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/unit/services/test_temporal_safeguards.py tests/unit/services/test_source_validation.py tests/unit/services/test_evidence_verification.py tests/unit/services/test_validation_models.py` — **36 passed**. Giới hạn: chưa benchmark semantic model thật; conflicts không có status riêng trong verifier schema.
+
+**D — Response Construction:** Hoàn tất; `ResponseBuilder` chỉ nhận `ValidatedExtraction`, dựng sáu module states, metadata/timestamps/usage thật, Action IDs và timestamps deterministic, rồi validate Contract v1. `preflight.py` từ chối Summary duration bị round về 0 trước provider. Chạy `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/unit/services/test_response_builder.py` — **13 passed**; combined A–D/interfaces — **49 passed**. Public schemas giữ nguyên.
+
+**E — HTTP Integration:** Hoàn tất; composition mặc định dùng `VerifiedExtractionService`, error mapping dùng thông điệp cố định theo code, không phản chiếu raw exception. HTTP integration tests dùng `ASGITransport` — **32 passed**; `api/dependencies.py` dùng async app-state getters sau khi trace thấy sync dependency treo trước endpoint trong AnyIO worker ở môi trường này. Test cancellation xác nhận hủy request truyền xuống provider call.
+
+**F — Full regression:** Hoàn tất; lệnh unit **290 passed**, integration **92 passed**, contract **111 passed**, full suite **493 passed**. Suite integration cũ được chuyển sang helper `tests/asgi_client.py`, giữ app lifespan và loop cho test context, vì `TestClient` bị treo ở môi trường hiện tại. Các test mặc định được cập nhật để kỳ vọng `VerifiedExtractionService` fail-closed; không dùng live provider.
 
 ### 13.2. Các quyết định phát sinh trong triển khai
 
-Nếu phát hiện ràng buộc source/schema khiến một quyết định trên không khả thi, ghi **vấn đề, các phương án, ảnh hưởng và quyết định được phê duyệt** tại đây trước khi thay đổi quy tắc. Không tự sửa silent policy hoặc khai báo milestone hoàn thành khi acceptance chưa đạt.
+- Không phát hiện xung đột cần thay đổi API Contract v1 hoặc quyết định D-01 đến D-15.
+- `create_app()` mặc định được nối vào `VerifiedExtractionService` theo scope E; thiếu provider credentials vẫn trả `PROVIDER_CONFIGURATION_ERROR` và không có đường unverified.
+- `get_settings`/`get_extraction_service` chuyển sang async sau khi integration trace cho thấy sync dependency bị treo trong AnyIO worker tại môi trường hiện tại.
+- Integration test harness chuyển từ Starlette `TestClient` sang helper `tests/asgi_client.py` dựa trên `ASGITransport`, vì `TestClient` treo trước khi app lifespan bắt đầu; đây là thay đổi test-only để chạy regression trong môi trường hiện tại.
+- Không thêm dependency. Không dùng provider thật. Không tạo branch, commit, push, merge hoặc PR.
 
-### 13.3. Kết quả regression cuối cùng
+### 13.3. Kết quả regression trước remediations R1–R3
 
 - **Baseline tham khảo:** 412 passed theo báo cáo LLM-03.4 Group D.
-- **Kết quả sau LLM-03.5:** Chưa thực hiện.
-- **Các test bổ sung:** Chưa có.
+- **Baseline trước hardening:** 290 unit + 92 integration + 111 contract = **493 passed** (kết quả lịch sử LLM-03.5, không dùng làm kết quả hiện tại).
+- **Kết quả checkpoint trước remediation:** 319 unit + 94 integration + 111 contract = **524 passed**; full suite **524 passed in 2.95s**, không có test thất bại.
+- **Lệnh tại checkpoint trước remediation** (chạy từ `apps/llm-service/`, dùng uv cache ở `/tmp` do cache mặc định chỉ đọc):
+  - `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/unit` — **319 passed in 1.36s**.
+  - `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/integration` — **94 passed in 1.83s**.
+  - `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/contract` — **111 passed in 0.49s**.
+  - `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q` — **524 passed in 2.95s**.
+- **Các test bổ sung:** 31 test mới sau hậu kiểm: F9 isolation, F6/F8 scenario correction, F7 prompt/source grounding, F2 owner attribution, F1/F3/F4 temporal/review, F5 internal invariants và ASGI lifecycle. Fake provider/verifier toàn bộ; không có live provider calls.
 - **Số liệu provider thật / chi phí:** Không thuộc offline acceptance; chỉ ghi khi đã được cấp phép kiểm thử và có kết quả thật.
+
+### 13.4. Nhật ký hậu kiểm và hardening
+
+**F9 — Cô lập provider trong test (đã xử lý):** Review xác nhận `make_settings()` trước đây không truyền rõ `openrouter_api_key`, nên `Settings` có thể đọc credential từ môi trường. Thêm `tests/conftest.py` autouse fixture xóa biến môi trường provider và chặn `httpx.HTTPTransport`/`AsyncHTTPTransport` outbound; helper pipeline đặt `openrouter_api_key=None` tường minh. Thêm integration test mô phỏng biến `OPENROUTER_API_KEY` được export, xác minh default runtime trả lỗi cấu hình, `/health` vẫn hoạt động và response không lộ khóa. Files: `apps/llm-service/tests/conftest.py`, `apps/llm-service/tests/integration/test_verified_extraction_service.py`. Test: integration verified-pipeline + OpenRouter adapter **101 passed**; baseline full suite ngay trước sửa đổi **493 passed**. Không sửa production credential-loading. Giới hạn: test isolation chặn HTTPX transports phổ biến; test thủ công `tests/manual/openrouter_smoke.py` vẫn là công cụ chủ ý gọi mạng và không thuộc pytest.
+
+**F6/F8 — Sửa test empty Actions và Summary duration (đã xử lý):** Positive empty Actions nay dùng transcript thảo luận không có commitment; test đối chứng vẫn dùng cam kết “Tôi sẽ gửi...” và yêu cầu fake verifier trả `unsupported`. Docstring nêu rõ fake verdict kiểm tra pipeline policy chứ không chứng minh semantic accuracy. Duration cases đặt segment start/end hợp lệ và validate payload bằng `ExtractionRequest` trước HTTP; Summary phải trả `VALIDATION_ERROR` mà không gọi provider, còn Actions-only với cùng duration vẫn hoàn tất. File đổi: `apps/llm-service/tests/integration/test_verified_extraction_service.py`. Test mục tiêu: **4 passed, 30 deselected**. Không thêm heuristic tổng quát để phát hiện commitments.
+
+**F7 — Grounding theo đúng cited segments (đã xử lý):** Nguyên nhân xác nhận: prompt `evidence-v1.0` không phân biệt đủ rõ cited evidence với ngữ cảnh transcript khác. Giữ nguyên bundle đã công bố và đăng ký prompt mới bất biến `evidence-v1.1`; verifier runtime lấy phiên bản từ bundle đã render. System prompt yêu cầu claim chỉ được `supported` nếu chính các segment trong `source_segment_ids` đủ chứng minh nội dung; segment khác chỉ hỗ trợ context, chronology, contradiction/qualification và phát hiện commitment bị bỏ sót trong empty Actions. User prompt cung cấp toàn transcript và JSON claim/source map; transcript vẫn là untrusted data. Files: `apps/llm-service/app/prompts/registry.py`, `app/prompts/v1_1/evidence_system.md`, `app/prompts/v1_1/evidence_verification.md`, `app/services/evidence.py`, tests verifier và HTTP version assertion. Chạy verifier/registry/integration focus: **60 passed**. Tests dùng fake verdict, vì vậy xác nhận bundle/mapping/policy plumbing chứ không chứng minh model thật luôn tuân thủ. Giới hạn: claim-level source IDs cho các field thuộc Action Item vẫn kế thừa source của item như giới hạn F4 ở checkpoint sau.
+
+**F2 — Owner attribution chống verdict sai (đã xử lý):** Tái hiện: `TemporalReviewProcessor` trước đây chỉ xem speaker mapping khi owner đã null; verdict `supported` có thể giữ owner trái với mapping của phát biểu ngôi thứ nhất. Thêm safeguard xác định hẹp cho cấu trúc `tôi`/`I` commitment trong cited segment, ánh xạ speaker ID sang participant display name, và null hóa owner khi mapping thiếu/mâu thuẫn hoặc nhiều speaker attribution xung đột. Các đại từ tiếng Việt/Anh mơ hồ như `mình`/`em`/`anh`/`chị`/`we` không được dùng để suy ra speaker owner; quote, giả định và phủ định cũng không được coi là commitment trực tiếp. Có nhận diện riêng một số assignment nêu tên như “Minh nhận ...”; không loại owner chỉ vì speaker khác. Khi không đủ chắc chắn, owner thành null và review. Files: `apps/llm-service/app/services/temporal_safeguards.py`, unit safeguards và HTTP integration tests. Checkpoint ban đầu: **12 passed**; review bổ sung sau thu hẹp pronoun: **13 passed, 47 deselected**. Giới hạn: đây là safeguard từ vựng/cấu trúc hẹp, không phải classifier tiếng Việt tổng quát; paraphrase, câu ghép phức tạp và attribution ngầm vẫn phụ thuộc verifier; fake tests không đo semantic accuracy model thật.
+
+**F1 — Không publish Summary uncertain như sự kiện (đã xử lý):** Tái hiện: overview `uncertain` trước đó được giữ nguyên assertive text với `claim_uncertain`; Key Topic uncertain cũng được giữ. Processor nay fail request bằng `UNVERIFIED_EVIDENCE` nếu overview requested không supported, và bỏ Key Topic có verdict `uncertain` giống claim unsupported tùy chọn. Không tự sửa câu, không dùng cờ review để xuất bản nội dung assertive chưa xác minh. Files: `apps/llm-service/app/services/temporal_safeguards.py`, `tests/unit/services/test_temporal_safeguards.py`. Kết quả: **19 passed**. Test fake kiểm tra policy mapping, không kết luận độ chính xác verifier model.
+
+**F3 — Exact date phải được cited evidence hỗ trợ (đã xử lý):** Nguyên nhân xác nhận: parse canonical ISO và verdict `supported` trước đó đủ để publish exact dù chuỗi ngày không có trong cited segment. Processor hiện chỉ resolve exact ISO canonical nếu ngày hợp lệ, literal ISO xuất hiện trong chính các cited source của Action Item, verifier trả `supported`, và không có correction rõ chứa candidate cùng ngày ISO khác. Nếu thiếu literal/có correction thì `due_date=null`, resolution `unresolved` và review reasons `evidence_unverified` hoặc `conflicting_statements`; ngày diễn đạt khác chuẩn giữ unresolved, không normalize. Files: `apps/llm-service/app/services/temporal_safeguards.py`, temporal unit tests. Kết quả: **24 passed**. Giới hạn: correction detector chỉ nhận diện các marker rõ ràng cùng nhiều ISO dates; mâu thuẫn diễn đạt tự nhiên khác vẫn thuộc semantic verifier/LLM-04.
+
+**F4 — Độ chính xác temporal provenance (đã harden một phần, giới hạn ghi nhận):** Review xác nhận `ClaimIdentity` hiện nhận source IDs của toàn Action Item cho task/owner/deadline/priority/context; Contract v1 không có field claim-level và candidate schema hiện tại cũng không cung cấp claim-level references. Không suy diễn IDs mới. Bổ sung narrowing an toàn cho `TemporalResolution`: nếu raw deadline xuất hiện literal trong một hoặc một số cited item segments, chỉ các segment khớp được ghi ở resolution, giữ thứ tự nguồn; test xác nhận segment không liên quan bị loại. Nếu biểu thức tương đối/paraphrase không xuất hiện nguyên văn, hệ thống giữ source list item-level do verifier phải đánh giá ngữ nghĩa trong tập đó; không giả vờ có claim-level attribution. Files: `apps/llm-service/app/services/temporal_safeguards.py`, `tests/unit/services/test_temporal_safeguards.py`. Kết quả: **25 passed**. Giới hạn còn lại cần thiết: claim-level nguồn riêng cho task/owner/priority/context và deadline paraphrase đòi hỏi schema/verifier capability mở rộng, ngoài remediation scope; source validation + v1.1 cited-set verifier vẫn bắt buộc.
+
+**F5 — Ràng buộc verified data và response boundary (đã xử lý):** Thêm `SourceValidatedExtraction.validate_invariants()` để đối chiếu request/module state, transcript source index + revision, source membership/order, candidate-to-claim content/source map và claim completeness. `EvidenceVerifiedExtraction.validate_invariants()` tái kiểm tra source state cùng complete verdict set. `ValidatedExtraction.validate_invariants()` kiểm tra request/module compatibility, overview/task/field verdict support, retained topics/items, source references, deadline-resolution consistency và review reason enum/order/state. `ResponseBuilder.build()` gọi lại các invariant và chạy `TemporalReviewProcessor` deterministic lần nữa; nếu state không bằng kết quả safeguards tính lại thì không xây response. Tests còn mô phỏng nested Pydantic source list bị sửa sau khi dataclass được tạo. Files: `apps/llm-service/app/services/validation_models.py`, `app/services/response_builder.py`, `tests/unit/services/test_validation_models.py`, `tests/unit/services/test_response_builder.py`. Focus set unit + end-to-end fake-provider: **91 passed**. Contract v1 không đổi; không có đường `ProjectedExtraction` trực tiếp sang builder. Giới hạn: semantic accuracy tiếp tục phụ thuộc verifier; deterministic revalidation chỉ kiểm tra state/policy và không xác nhận phán đoán model.
+
+**Task 6 — HTTP error mapping và ASGI harness (đã rà soát):** Đọc đầy đủ `app/core/errors.py`, `app/schemas/errors.py`, `app/services/verified_extraction.py`, provider errors/timeout wrapper, middleware, route và `tests/asgi_client.py`. Xác nhận source validation/unsupported mandatory evidence → 502 `UNVERIFIED_EVIDENCE`; candidate/verifier schema → 502 `INVALID_STRUCTURED_OUTPUT`; provider config/rate limit/timeout/failure → 503/503/504/502 với retry invariants; request budget → 504 `REQUEST_TIMEOUT`; request validation giữ contract hiện hữu. Cancellation `asyncio.CancelledError` không bị swallow; exception/log sanitize không phản chiếu nội dung. ASGI helper quản lý lifespan trên cùng event loop, và `asyncio.Runner.close()` shutdown async generators kể cả khi client context enter/exit lỗi; thêm hai regression tests trực tiếp cho hai nhánh này. Files mới: `apps/llm-service/tests/unit/test_asgi_client.py`; production mapping/helper không đổi vì chưa thấy lỗi hành vi. Lệnh runtime + verified pipeline + ASGI focus: **59 passed**. Hạn chế: test helper vẫn dựa trên HTTPX ASGITransport và asyncio.Runner; live network tiếp tục bị chặn bởi `tests/conftest.py`.
+
+**Kiểm tra Contract v1 và phạm vi:** Không thay đổi `app/schemas/request.py`, `app/schemas/response.py` hoặc `app/schemas/errors.py`; không thêm dependency, provider retry, structured-output repair, verification bypass hay business module. `git diff --check` pass; không có staged changes.
 
 ## 14. Giới hạn, rủi ro và handoff
 
@@ -491,7 +627,10 @@ Nếu phát hiện ràng buộc source/schema khiến một quyết định trê
 4. **Temporal parsing giới hạn:** Relative dates, date ranges và timezone semantics phức tạp chuyển sang LLM-04; LLM-03.5 không tự suy diễn.
 5. **Evidence verification tổng quát:** Mở rộng sang sáu module thuộc LLM-06 và các milestone liên quan.
 6. **Backend integration:** LLM Service vẫn là component độc lập; kết nối NestJS/Web là công việc khác.
-7. **Duration dương cực ngắn:** Quy tắc reject sớm phải được test, ghi nhận giới hạn và rà soát tương thích với contract khi triển khai.
+7. **Duration dương cực ngắn:** Summary request làm tròn thành `0.0` bị reject trước provider; Actions-only vẫn được chấp nhận theo projection hiện tại. Unit và HTTP tests xác nhận hai nhánh.
+8. **Semantic accuracy:** Prompt v1.1 và fake-provider tests không thay thế đánh giá model thật; chưa có live-model benchmark trong remediation.
+9. **Owner attribution:** Guard xác định hẹp cho `tôi`/`I`, quote, giả định và một số assignment pattern; paraphrase hoặc câu tiếng Việt phức tạp vẫn cần verifier và có thể phải review.
+10. **Claim-level provenance:** Deadline literal được narrow theo segment khớp; task/owner/priority/context và deadline paraphrase vẫn dùng source set của Action Item do schema hiện tại không có provenance riêng theo field.
 
 ## 15. Tài liệu tham chiếu
 
@@ -504,4 +643,56 @@ Nếu phát hiện ràng buộc source/schema khiến một quyết định trê
 
 ---
 
-**Kết luận thiết kế:** LLM-03.5 chỉ hoàn thành khi dữ liệu đã qua source validation, semantic evidence verification, temporal/review safeguards và response construction mới được publish. Mọi đường lỗi phải fail-closed theo Contract v1. Tài liệu này sẽ được cập nhật bằng bằng chứng triển khai và kiểm thử thực tế sau khi các thay đổi được phê duyệt.
+**Kết luận checkpoint trước remediation:** LLM-03.5 hardening tại thời điểm ghi nhận đã đạt **524 passed**. Kết quả chỉ publish sau source validation, semantic evidence verification, temporal/review safeguards và response construction; mọi lỗi bắt buộc fail-closed theo Contract v1. Không có live provider call hoặc commit/push/PR.
+
+## MVP Final Remediation — R1, R2, R3
+
+### R1 — Deadline Verification & Human Review
+
+- **Nguyên nhân:** Safeguard cũ yêu cầu biểu thức deadline xuất hiện nguyên văn trong transcript và quét từ khóa correction trên toàn transcript. So sánh literal làm rớt ngày tự nhiên tương đương ISO; việc chọn source bằng literal cũng tạo độ chính xác provenance không có căn cứ.
+- **Quyết định MVP:** Dùng verdict semantic verifier cho quan hệ deadline/evidence; Python chỉ parse ngày ISO canonical và giữ trạng thái review nhất quán.
+- **Giải pháp triển khai:** Bỏ điều kiện deadline phải khớp nguyên văn để công bố `exact_date`. Với ngày canonical và verdict `supported`, giữ deadline; với `uncertain`, giữ expression, để ngày null và resolution unresolved; với `unsupported`, xóa expression và resolution nhưng giữ task đã được xác minh. Temporal resolution giữ nguyên claim-level source IDs.
+- **File thay đổi:** `apps/llm-service/app/services/temporal_safeguards.py`; unit/integration tests tương ứng.
+- **Test bổ sung:** ISO nguyên văn, ngày tiếng Việt/Anh tương đương, deadline thiếu năm/tương đối uncertain, ngày không hợp lệ, deadline unsupported cùng task supported, source hợp lệ nhưng verifier unsupported và review state của Contract v1.
+- **Kết quả kiểm thử:** `tests/unit/services/test_temporal_safeguards.py` — **31 passed**; `tests/integration/test_verified_extraction_service.py` — **38 passed**. Đây là kiểm chứng chính sách pipeline với verdict scripted, không phải đánh giá độ chính xác semantic của model thật.
+- **Giới hạn còn lại:** Python không chứng minh nội dung ngày bằng NLP; kết quả semantic phụ thuộc verifier. Ngày không canonical được giữ unresolved để người dùng xác nhận.
+
+### R2 — Owner Attribution
+
+- **Nguyên nhân:** Guard cũ so task bằng phần giao từ khóa trên cả câu, nên commitment ngôi thứ nhất cho task trước có thể bị ghép nhầm với task được giao tên sau đó trong cùng segment.
+- **Quyết định MVP:** EvidenceVerifier quyết định owner của từng Action Item; Python chỉ giữ một integrity check hẹp cho mâu thuẫn speaker mapping rõ ràng.
+- **Giải pháp triển khai:** Bỏ overlap từ khóa, nhận diện assignment theo nhiều mẫu và suy luận owner từ mọi speaker trong source. Guard chỉ xét commitment ngôi thứ nhất tường minh khi nguyên văn task xuất hiện trong cùng clause đơn giản; tách clause ở dấu câu liên kết thông dụng. Named owner trong clause không bị speaker của segment ghi đè. Verdict uncertain/unsupported tiếp tục xóa owner và gắn review.
+- **File thay đổi:** `apps/llm-service/app/services/temporal_safeguards.py`; unit/integration tests tương ứng.
+- **Test bổ sung:** Hai assignment trong một câu; named assignment từ speaker khác; first-person có mapping/mâu thuẫn; speaker mapping thiếu; câu hypothetical/quoted theo verdict uncertain; nhiều cited segments với task khác nhau; verdict supported/uncertain/unsupported.
+- **Kết quả kiểm thử:** `tests/unit/services/test_temporal_safeguards.py` — **33 passed**; `tests/integration/test_verified_extraction_service.py` — **40 passed**. Hai lời hứa trong cùng segment được giữ đúng owner; ordinary successful request vẫn có đúng hai provider generations.
+- **Giới hạn còn lại:** Guard chỉ nhận diện exact task phrase trong clause rõ ràng; paraphrase và quan hệ owner-task phức tạp thuộc verifier. Test quote/hypothetical đã đổi sang verdict uncertain vì kỳ vọng Python tự phân loại ngữ nghĩa trước đây không phù hợp ranh giới đã duyệt.
+
+### R3 — Deadline Correction
+
+- **Nguyên nhân:** Regex correction gom các ngày và từ khóa trong một segment mà không biết ngày nào thuộc Action Item nào; scan cục bộ cũng không hiểu chronology xuyên nhiều segment.
+- **Quyết định MVP:** Verifier chịu trách nhiệm liên hệ deadline với task, chronology và trạng thái xác nhận cuối; Python không sửa candidate hoặc suy diễn correction.
+- **Giải pháp triển khai:** Xóa `_explicit_date_conflict()`, `_DATE_CORRECTION`, `_ISO_DATE` và nhánh review conflict phát sinh từ global scan. Ngày chỉ được giữ exact khi candidate ISO canonical và verdict deadline là `supported`; verdict `uncertain` giữ unresolved; `unsupported` xóa deadline mà không thay bằng ngày khác.
+- **File thay đổi:** `apps/llm-service/app/services/temporal_safeguards.py`; unit/integration tests tương ứng.
+- **Test bổ sung:** Correction UI không ảnh hưởng deadline API dù cùng segment có ngày cũ/mới; final natural-language date được giữ khi verdict supported; correction proposal uncertain vẫn unresolved; obsolete candidate unsupported bị xóa không thay thế; có đúng hai provider generations.
+- **Kết quả kiểm thử:** `tests/unit/services/test_temporal_safeguards.py` — **35 passed**; `tests/integration/test_verified_extraction_service.py` — **41 passed**. Các test chứng minh Python xử lý đúng verdict giả lập, không chứng minh model thật nhận diện correction chính xác.
+- **Giới hạn còn lại:** Verifier chỉ trả verdict, không sửa candidate; ngày cuối đúng chỉ được xuất nếu extraction ban đầu đưa ngày đó và verifier hỗ trợ, nếu không người dùng cần sửa khi review.
+
+### Cập nhật Evidence Verification Prompt
+
+- **Phiên bản mới:** Runtime chuyển sang prompt bất biến `evidence-v1.2`; `evidence-v1.0` và `evidence-v1.1` vẫn được đăng ký, file cũ không bị ghi đè.
+- **Chính sách bổ sung:** Prompt yêu cầu attribution theo task riêng, phân biệt first-person/named assignment, câu nhiều assignment, quote/question/proposal/conditional/rejected; đối chiếu deadline với task, chronology, later references, correction confirmed vs đề xuất, date natural-language tương đương ISO và không chuyển correction qua task khác.
+- **Grounding:** Các cited segment được xét kết hợp để support; uncited transcript chỉ cung cấp chronology/correction/contradiction/context và không thay thế positive grounding. Giữ strict `checks` output, claim IDs và verdict enum hiện tại.
+- **Context nội bộ:** Renderer bổ sung `action_item_context` cho các claim của Action Item (task/owner/deadline/priority/context), cùng anchor date/timezone; transcript đầy đủ và participant mapping đã có tiếp tục được gửi. Không thêm field vào public Contract v1 hoặc output verifier.
+- **File thay đổi:** `app/prompts/registry.py`, `app/prompts/renderer.py`, `app/prompts/v1_2/evidence_system.md`, `app/prompts/v1_2/evidence_verification.md`, `app/services/evidence.py`; prompt/evidence/integration tests.
+- **Kết quả kiểm thử:** `tests/unit/services/test_evidence_verification.py` — **20 passed**; `tests/unit/prompts/test_registry.py tests/unit/prompts/test_renderer.py` — **19 passed**; `tests/integration/test_verified_extraction_service.py` — **41 passed**. HTTP integration xác nhận public response ghi đúng `evidence-v1.2` và vẫn đúng hai provider generations.
+- **Giới hạn còn lại:** Prompt là hướng dẫn cho model, không phải đảm bảo semantic accuracy; cần human review cho thông tin uncertain.
+
+### Regression cuối sau remediations
+
+- **Baseline được xác nhận trước remediation:** **524 passed** trên working tree hiện tại.
+- **Unit:** `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/unit` — **330 passed**.
+- **Integration:** `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/integration` — **101 passed**.
+- **Contract:** `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q tests/contract` — **111 passed**.
+- **Toàn bộ suite:** `uv --cache-dir /tmp/se-llm-uv-cache run --locked --extra test pytest -q` — **542 passed in 4.23s**; tăng 18 test so với baseline 524.
+- Không gọi live provider, không thêm dependency, không đổi Contract v1, không thêm lần generation thứ ba. `git diff --check` sạch; không stage, commit hoặc push.
+- Kết quả scripted provider xác nhận chính sách xử lý verdict và mapping trong pipeline; không chứng minh khả năng hiểu ngữ nghĩa của model thật.

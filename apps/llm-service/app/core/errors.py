@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from fastapi import Request
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from pydantic import ValidationError
 from starlette.responses import JSONResponse
@@ -17,6 +18,16 @@ from app.schemas.errors import (
 )
 
 _SAFE_PATH_PART = re.compile(r"^(?:[A-Za-z_][A-Za-z0-9_]*|[0-9]+)$")
+SAFE_EXTRACTION_ERROR_MESSAGES: dict[ErrorCode, str] = {
+    "VALIDATION_ERROR": "Yêu cầu trích xuất không hợp lệ.",
+    "PROVIDER_CONFIGURATION_ERROR": "Cấu hình hoặc xác thực provider không hợp lệ.",
+    "PROVIDER_RATE_LIMIT": "LLM provider tạm thời giới hạn request.",
+    "PROVIDER_TIMEOUT": "LLM provider đã vượt quá thời gian xử lý cho phép.",
+    "PROVIDER_FAILURE": "LLM provider không thể hoàn tất request.",
+    "INVALID_STRUCTURED_OUTPUT": "Extraction backend trả về cấu trúc dữ liệu không hợp lệ.",
+    "UNVERIFIED_EVIDENCE": "Không thể xác minh đầy đủ evidence cho kết quả trích xuất.",
+    "INTERNAL_ERROR": "Đã xảy ra lỗi nội bộ.",
+}
 
 
 class ExtractionUnavailableError(RuntimeError):
@@ -29,6 +40,24 @@ class AuthenticationRequiredError(RuntimeError):
 
 class ExtractionRequestTimeoutError(RuntimeError):
     """Raised when an extraction use case exceeds its configured budget."""
+
+
+class ExtractionServiceError(RuntimeError):
+    """Sanitized typed error ready for public ErrorEnvelope mapping."""
+
+    def __init__(
+        self,
+        *,
+        code: ErrorCode,
+        retryable: bool = False,
+        retry_after_seconds: float | None = None,
+    ) -> None:
+        self.code = code
+        self.retryable = retryable
+        self.retry_after_seconds = retry_after_seconds
+        super().__init__(
+            SAFE_EXTRACTION_ERROR_MESSAGES.get(code, "Đã xảy ra lỗi nội bộ.")
+        )
 
 
 def valid_request_id(value: object) -> str | None:
@@ -181,6 +210,19 @@ async def extraction_timeout_handler(
         "Yêu cầu trích xuất đã vượt quá thời gian xử lý cho phép.",
         request_id=valid_request_id(getattr(request.state, "request_id", None)),
         retryable=True,
+    )
+
+
+async def extraction_service_error_handler(
+    request: Request,
+    exc: ExtractionServiceError,
+) -> JSONResponse:
+    return error_response(
+        exc.code,
+        SAFE_EXTRACTION_ERROR_MESSAGES.get(exc.code, "Đã xảy ra lỗi nội bộ."),
+        request_id=valid_request_id(getattr(request.state, "request_id", None)),
+        retryable=exc.retryable,
+        retry_after_seconds=exc.retry_after_seconds,
     )
 
 

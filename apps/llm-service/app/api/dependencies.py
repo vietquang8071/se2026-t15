@@ -14,11 +14,11 @@ from app.services.extraction import ExtractionService
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
-def get_settings(request: Request) -> Settings:
+async def get_settings(request: Request) -> Settings:
     return request.app.state.settings
 
 
-def get_extraction_service(request: Request) -> ExtractionService:
+async def get_extraction_service(request: Request) -> ExtractionService:
     return request.app.state.extraction_service
 
 

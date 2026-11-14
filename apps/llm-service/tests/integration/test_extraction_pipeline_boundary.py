@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from fastapi.testclient import TestClient
+from asgi_client import ASGITestClient as TestClient
 from pydantic import SecretStr
 
 from app.core.config import Settings

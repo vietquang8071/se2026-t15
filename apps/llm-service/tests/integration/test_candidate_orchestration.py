@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 
 import pytest
-from fastapi.testclient import TestClient
+from asgi_client import ASGITestClient as TestClient
 from pydantic import SecretStr
 
 from app.core.config import Settings
@@ -17,7 +17,7 @@ from app.providers.openrouter import OpenRouterAdapter
 from app.schemas.errors import ErrorEnvelope
 from app.schemas.request import ExtractionRequest
 from app.services.models import PreparedExtraction
-from app.services.extraction import UnconfiguredExtractionService
+from app.services.verified_extraction import VerifiedExtractionService
 from app.services.factory import create_candidate_orchestrator
 from app.services.orchestration import CandidateExtractionOrchestrator
 from app.services.preflight import ExtractionPreflight
@@ -300,7 +300,7 @@ def test_it04_fastapi_health_and_extraction_remain_fail_closed() -> None:
         openrouter_api_key=None,
     )
     app = create_app(settings=settings)
-    assert isinstance(app.state.extraction_service, UnconfiguredExtractionService)
+    assert isinstance(app.state.extraction_service, VerifiedExtractionService)
     request_payload = json.loads(REQUEST_FIXTURE.read_text(encoding="utf-8"))
 
     with TestClient(app) as client:
