@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
@@ -20,9 +21,14 @@ from app.schemas.errors import ErrorEnvelope
 from app.schemas.request import ExtractionRequest
 from app.schemas.response import ExtractionResponse
 from app.services.extraction import ExtractionService
-from app.services.notification import CompletionEvent, CompletionNotifier
+from app.services.notification import (
+    CompletionEvent,
+    CompletionNotifier,
+    dispatch_completion_safely,
+)
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class HealthResponse(BaseModel):
@@ -84,5 +90,13 @@ async def create_extraction(
         "meeting_id": request.meeting.id,
         "status": "completed",
     }
-    background_tasks.add_task(notifier.dispatch, event)
+    try:
+        background_tasks.add_task(
+            dispatch_completion_safely,
+            notifier,
+            event,
+            settings.llm_service_notification_timeout_seconds,
+        )
+    except Exception:
+        logger.warning("Completion notification scheduling failed.")
     return response

@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     llm_service_log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     llm_service_max_request_bytes: int = Field(default=10 * 1024 * 1024, ge=1)
     llm_service_request_timeout_seconds: float = Field(default=180.0, gt=0, allow_inf_nan=False)
+    llm_service_notification_timeout_seconds: float = Field(
+        default=1.0,
+        gt=0,
+        allow_inf_nan=False,
+    )
     llm_service_provider_timeout_seconds: float = Field(default=60.0, gt=0, allow_inf_nan=False)
     openrouter_api_key: SecretStr | None = None
     openrouter_base_url: str = "https://openrouter.ai/api/v1"

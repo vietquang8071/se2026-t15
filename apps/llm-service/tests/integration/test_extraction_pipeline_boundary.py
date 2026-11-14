@@ -261,13 +261,27 @@ def test_invalid_injected_extraction_response_maps_to_error_envelope() -> None:
     )
 
     class InvalidExtractionService:
+        def __init__(self) -> None:
+            self.calls = 0
+
         async def extract(self, request: ExtractionRequest) -> ExtractionResponse:
+            self.calls += 1
             return {"status": "completed"}  # type: ignore[return-value]
 
+    class RecordingNotifier:
+        def __init__(self) -> None:
+            self.dispatch_attempts: list[dict[str, str]] = []
+
+        async def dispatch(self, event: dict[str, str]) -> None:
+            self.dispatch_attempts.append(dict(event))
+
+    extraction_service = InvalidExtractionService()
+    recording_notifier = RecordingNotifier()
     app = create_app(
         settings=Settings(llm_service_token=SecretStr(TEST_TOKEN)),
-        extraction_service=InvalidExtractionService(),
+        extraction_service=extraction_service,
     )
+    app.state.completion_notifier = recording_notifier
 
     with TestClient(app) as client:
         response = client.post(
@@ -281,3 +295,5 @@ def test_invalid_injected_extraction_response_maps_to_error_envelope() -> None:
     assert envelope.code == "INVALID_STRUCTURED_OUTPUT"
     assert envelope.request_id == request_payload["request_id"]
     assert TEST_TOKEN not in response.text
+    assert extraction_service.calls == 1
+    assert recording_notifier.dispatch_attempts == []

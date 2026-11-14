@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
 from typing import Literal, Protocol, TypedDict
+
+
+logger = logging.getLogger(__name__)
 
 
 class CompletionEvent(TypedDict):
@@ -28,3 +33,20 @@ class NoOpCompletionNotifier:
         """Accept the event without external delivery."""
 
         return None
+
+
+async def dispatch_completion_safely(
+    notifier: CompletionNotifier,
+    event: CompletionEvent,
+    timeout_seconds: float,
+) -> None:
+    """Keep ordinary adapter failures from escaping the extraction response path."""
+
+    try:
+        async with asyncio.timeout(timeout_seconds):
+            await notifier.dispatch(event)
+    except TimeoutError:
+        logger.warning("Completion notification timed out.")
+    except Exception:
+        # Do not log event metadata or exception text; either may contain sensitive data.
+        logger.warning("Completion notification dispatch failed.")
