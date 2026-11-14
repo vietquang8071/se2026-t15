@@ -30,7 +30,7 @@ The actual Phase 06.1 test files were reviewed after both isolated mutations wer
 
 These rows share `over / size_reject / not_attempted` and differ in concurrency 8, 1, and 2. They are not recommended for removal: the approved dataset uses them to cover distinct concurrency values, and the test-local ASGI gate asserts all row requests arrive concurrently. Their evidence must continue to describe **concurrent HTTP rejection before extraction**, not concurrent extraction work. No row redesign was performed.
 
-## Human checkpoint — action required
+## Human checkpoint — status when this review was first issued
 
 Developer: please review and manually make corrections to at least two AI-generated test cases. Candidate 1 offers two separately retained test cases (N12 and N13); Candidate 2 is the pairwise verifier. After making your changes, provide:
 
@@ -38,4 +38,54 @@ Developer: please review and manually make corrections to at least two AI-genera
 2. A brief reason for each correction.
 3. Confirmation that the edits were developer-authored.
 
-No test source was edited by Codex in this checkpoint. Human corrections are **PENDING**. Validation of the actual developer diff, coverage, flaky-test analysis, final regression, and the remaining evidence documents must wait for that confirmation.
+No test source was edited by Codex in that checkpoint. At that time, human corrections were **PENDING** and validation awaited developer confirmation.
+
+## Developer checkpoint completion and actual diffs
+
+The previous sections preserve the recommendations and pending status as they stood before the checkpoint. The developer later confirmed that the following edits were manually authored. The claim was checked against the committed baseline `beae5161608cba48db81a10e892e5c743de55e10` and the preserved Phase 06.1 snapshot; both diffs match the stated changes. Git metadata alone does not independently establish authorship because the edits remain uncommitted, so authorship is recorded as the developer's explicit confirmation.
+
+### HC-01 — Shared N12/N13 extraction fake
+
+- **Path:** `apps/llm-service/tests/integration/test_runtime.py`.
+- **Before:** N12 and N13 each contained a local `CountingExtractionService` class. Each class captured request IDs and returned the test's validated response model.
+- **After:** One module-level `CountingExtractionService(response: ExtractionResponse)` stores the response and a request-ID list. N12 and N13 each construct a separate instance with `CountingExtractionService(response_model)`.
+- **Diff effect:** Only the duplicated class bodies and construction calls changed. The independent declared Content-Length=N and streamed two-chunk/no-Content-Length transports, UTF-8 byte construction, HTTP 200 assertions, response-model equality assertions, and extraction-call identity assertions remain unchanged.
+- **Validation:** Both tests passed together from the repository. Both also passed in the isolated unmutated copy; M01 still makes N12 fail with 413, and M02 still makes N13 fail with 413. Each restored test passed again after its corresponding isolated source restoration.
+- **Quality result:** This is a focused setup refactor and preserves separate mutation traceability. The shared class has only instance-local mutable state; each test creates a fresh object. Minor formatting consistency around the new module-level class can be left for a later style pass; no style command was part of this validation.
+
+### HC-02 — Exact ordered pairwise IDs
+
+- **Path:** `apps/llm-service/tests/integration/test_pairwise_completion_notification.py::test_pairwise_dataset_covers_every_feasible_factor_pair`.
+- **Before:** The verifier checked 39 feasible combinations, 61 feasible pairs, 21 rows, duplicate factor tuples, row feasibility, and no uncovered pairs, but did not directly assert row identifiers.
+- **After:** It additionally asserts that the first column is exactly PW01 through PW21 in order.
+- **Diff effect:** No factor values or rows changed. The feasibility and pair-coverage assertions remain intact. The exact-ID assertion passed in the verifier and all 21 parameterized scenarios still appeared once and passed.
+- **Quality result:** This makes test output identity deterministic and auditable. The inserted list-comprehension continuation is syntactically valid but less indented than conventional formatter output; no formatter was run, and this documentation-only validation did not alter the developer's source.
+
+### Human-review outcome
+
+Both required developer-authored test corrections are **COMPLETE** based on the developer's explicit authorship confirmation and the inspected diffs. The suite and mutation evidence below validate behavior after those corrections. No correction weakened an assertion or removed a scenario. The approved PW05/PW14/PW15 rows remain unchanged; each verifies concurrent HTTP rejection before extraction and must not be described as concurrent extraction work.
+
+### Actual diff excerpts against HEAD
+
+The following excerpts are from the actual uncommitted diff against HEAD `beae5161608cba48db81a10e892e5c743de55e10`; the same changes were confirmed against the preserved Phase 06.1 snapshot.
+
+HC-01 added the shared fake:
+
+    +class CountingExtractionService:
+    +    def __init__(self, response: ExtractionResponse) -> None:
+    +        self.response = response
+    +        self.requests: list[str] = []
+    +
+    +    async def extract(
+    +        self, request: ExtractionRequest
+    +    ) -> ExtractionResponse:
+    +        self.requests.append(request.request_id)
+    +        return self.response
+
+At both N12 and N13 call sites, the old local class definition was removed and the instance construction changed from `CountingExtractionService()` to `CountingExtractionService(response_model)`. The tests still create distinct fake instances.
+
+HC-02 added this exact identifier assertion; the factor rows were not edited:
+
+    +    assert [row[0] for row in PAIRWISE_ROWS] == [
+    +    f"PW{i:02d}" for i in range(1, 22)
+    +    ]

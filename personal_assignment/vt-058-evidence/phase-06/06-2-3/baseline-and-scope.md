@@ -63,6 +63,28 @@ The isolated service copy is at `/tmp/vt058-phase0623.J3ztKe/mutant/`. It was co
 
 The existing service virtual environment's Python 3.12.3 and pytest 8.4.2 were used to execute tests from the isolated copy, with `PYTHONPATH=.`. The isolated original middleware checksum matched the repository checksum. Its baseline N12/N13 run exited 0: **2 passed, 25 deselected in 0.99s**.
 
-## Scope status at the human checkpoint
+## Scope status at the initial human checkpoint
 
-No repository application source or test file was edited during Phase 06.2. The only repository additions so far are this and the two companion evidence documents under the authorized Phase 06.2–06.3 directory. The Phase 06.1 test snapshot remains available for comparison after the developer's manual corrections. The final regression, coverage instrumentation, flaky-test repeat runs, and remaining three evidence files are pending the human checkpoint and subsequent validation.
+No repository application source or test file was edited during Phase 06.2. The only repository additions so far are this and the two companion evidence documents under the authorized Phase 06.2–06.3 directory. The Phase 06.1 test snapshot remains available for comparison after the developer's manual corrections. The final regression, coverage instrumentation, flaky-test repeat runs, and remaining three evidence files were pending at that checkpoint.
+
+## Resumed validation after the developer checkpoint
+
+The previous section records the state before the developer checkpoint. The developer subsequently confirmed that HC-01 and HC-02 were manually authored. The current committed baseline at resumption is:
+
+- Branch: `feature/vt-058-llm-notification`.
+- HEAD: `beae5161608cba48db81a10e892e5c743de55e10` (`mutation testing`). This is later than the original Phase 06 baseline `a0a4ea40ce54193d694ce488f6319644b51d4c42`; the current commit contains the committed Phase 06.1 tests and Phase 06.2 evidence.
+- Initial working tree: only `test_runtime.py` and `test_pairwise_completion_notification.py` were modified. The diffs against HEAD match HC-01 and HC-02; no production source was changed.
+- `git diff --check`: exit 0.
+- Repository middleware SHA-256 before and after the resumed validation: `299f7cfd050a2114a5eae471d2f8f5bb5c50ba1311ef690613f1d4a82ef84a01`.
+
+The current two test files were diffed both against HEAD and against the preserved Phase 06.1 snapshot at `/tmp/vt058-phase0623.J3ztKe/phase061-baseline/`. Those diffs contain exactly the two reported human changes: one shared `CountingExtractionService` for N12/N13 with separate instances, and an exact ordered PW01–PW21 identifier assertion. All N12/N13 behavioral assertions and all 21 pairwise rows remain present.
+
+The corrected boundary tests were run from the repository at `2026-11-14 16:10:24 UTC` using the existing Python 3.12.3 / pytest 8.4.2 environment:
+
+    PYTHONDONTWRITEBYTECODE=1 uv run --no-sync --locked --extra test pytest -q -p no:cacheprovider tests/integration/test_runtime.py -k 'n12 or n13' -vv
+
+Exit code 0; **2 passed, 25 deselected**. The first sandboxed invocation could not create uv's temporary lock under the read-only cache; the same no-sync command then ran successfully with approved escalation. This was an environment launch failure, not a pytest failure.
+
+The corrected pairwise module was run at `2026-11-14 16:10:39 UTC` with the equivalent no-sync uv command and `-vv`. Exit code 0; **22 passed**, comprising the coverage verifier and PW01–PW21. Every named row was reported PASS. The verified fixture boundary body is N = **1,587 UTF-8 bytes**; N+1 is **1,588 bytes**.
+
+Post-HC mutation reruns, restoration checks, repeated timing-sensitive tests, focused regression, full suite, and coverage-tool availability are documented in the companion evidence files. No repository source or test file was changed during this resumed validation.
