@@ -25,6 +25,7 @@ from app.providers.models import ProviderRequest, ProviderResult, ProviderUsage
 from app.schemas.errors import ErrorEnvelope
 from app.schemas.request import ExtractionRequest
 from app.services.factory import create_verified_extraction_service
+from app.services.notification import CompletionEvent
 
 
 SERVICE_ROOT = Path(__file__).parents[2]
@@ -43,6 +44,26 @@ class ScriptedProvider:
         if isinstance(step, BaseException):
             raise step
         return step
+
+
+class RecordingCompletionNotifier:
+    def __init__(
+        self,
+        *,
+        failing_request_ids: set[str] | None = None,
+        failure_detail: str = "synthetic notification failure",
+    ) -> None:
+        self.failing_request_ids = failing_request_ids or set()
+        self.failure_detail = failure_detail
+        self.dispatch_attempts: list[dict[str, str]] = []
+        self.completed: list[dict[str, str]] = []
+
+    async def dispatch(self, event: CompletionEvent) -> None:
+        recorded_event = dict(event)
+        self.dispatch_attempts.append(recorded_event)
+        if event["request_id"] in self.failing_request_ids:
+            raise RuntimeError(self.failure_detail)
+        self.completed.append(recorded_event)
 
 
 def result(content: str, *, model: str = "offline-model", usage: ProviderUsage | None = None):
@@ -134,7 +155,10 @@ def make_settings(**kwargs: Any) -> Settings:
 
 
 def client_for(
-    provider: ScriptedProvider, *, settings: Settings | None = None
+    provider: ScriptedProvider,
+    *,
+    settings: Settings | None = None,
+    completion_notifier: RecordingCompletionNotifier | None = None,
 ) -> PipelineTestClient:
     runtime_settings = settings or make_settings()
     service = create_verified_extraction_service(
@@ -143,7 +167,11 @@ def client_for(
         provider_name="offline-test-provider",
     )
     return PipelineTestClient(
-        create_app(settings=runtime_settings, extraction_service=service)
+        create_app(
+            settings=runtime_settings,
+            extraction_service=service,
+            completion_notifier=completion_notifier,
+        )
     )
 
 
@@ -361,25 +389,30 @@ def test_uncertain_empty_action_absence_fails_closed():
 
 def test_unknown_source_id_returns_unverified_evidence_error():
     provider = supported_provider(modules=("action_items",), source_id="missing-source")
+    notifier = RecordingCompletionNotifier()
 
-    with client_for(provider) as client:
+    with client_for(provider, completion_notifier=notifier) as client:
         response = post(client, make_request(modules=("action_items",)))
 
     assert response.status_code == 502
     assert ErrorEnvelope.model_validate(response.json()).code == "UNVERIFIED_EVIDENCE"
     assert len(provider.requests) == 1
+    assert notifier.dispatch_attempts == []
 
 
 def test_unsupported_summary_overview_returns_non_success():
     provider = supported_provider(
         modules=("meeting_summary",), overrides={"summary.overview": "unsupported"}
     )
+    notifier = RecordingCompletionNotifier()
 
-    with client_for(provider) as client:
+    with client_for(provider, completion_notifier=notifier) as client:
         response = post(client, make_request(modules=("meeting_summary",)))
 
     assert response.status_code == 502
     assert ErrorEnvelope.model_validate(response.json()).code == "UNVERIFIED_EVIDENCE"
+    assert len(provider.requests) == 2
+    assert notifier.dispatch_attempts == []
 
 
 def test_question_extracted_as_commitment_is_rejected():
@@ -800,8 +833,9 @@ def test_missing_or_invalid_bearer_token_returns_401_without_provider_call(autho
 )
 def test_provider_errors_map_without_exposing_provider_details(provider_error, status, code, retryable):
     provider = ScriptedProvider([provider_error])
+    notifier = RecordingCompletionNotifier()
 
-    with client_for(provider) as client:
+    with client_for(provider, completion_notifier=notifier) as client:
         response = post(client, make_request(modules=("action_items",)))
 
     envelope = ErrorEnvelope.model_validate(response.json())
@@ -811,6 +845,8 @@ def test_provider_errors_map_without_exposing_provider_details(provider_error, s
     if code == "PROVIDER_RATE_LIMIT":
         assert envelope.retry_after_seconds == 12
     assert "transcript" not in response.text.lower()
+    assert len(provider.requests) == 1
+    assert notifier.dispatch_attempts == []
 
 
 def test_provider_timeout_setting_bounds_each_call():
@@ -894,25 +930,45 @@ def test_client_cancellation_propagates_to_active_provider_call():
     assert asyncio.run(cancel_active_request()) is True
 
 
-def test_full_pipeline_remains_request_isolated_under_concurrency():
+def test_full_pipeline_remains_request_isolated_under_concurrency(
+    caplog: pytest.LogCaptureFixture,
+):
     class ConcurrentProvider:
+        def __init__(self) -> None:
+            self.candidate_calls = 0
+            self.requests: list[ProviderRequest] = []
+            self.candidates_ready = asyncio.Event()
+
         async def generate(self, provider_request: ProviderRequest) -> ProviderResult:
+            self.requests.append(provider_request)
             user_message = provider_request.messages[1].content
             if "Claims to check:" in user_message:
                 claims_text = user_message.split("Claims to check:\n", maxsplit=1)[1]
                 claims = json.loads(claims_text)
                 content = verifier_content([claim["claim_id"] for claim in claims])
             else:
+                self.candidate_calls += 1
+                if self.candidate_calls == 2:
+                    self.candidates_ready.set()
+                await asyncio.wait_for(self.candidates_ready.wait(), timeout=1)
                 content = candidate_content()
-            await asyncio.sleep(0.005)
             return result(content, usage=ProviderUsage(input_tokens=1, output_tokens=1))
 
     provider = ConcurrentProvider()
+    notification_failure_canary = "N11-NOTIFIER-EXCEPTION-CANARY"
+    notifier = RecordingCompletionNotifier(
+        failing_request_ids={"request-a"},
+        failure_detail=notification_failure_canary,
+    )
     settings = make_settings()
     service = create_verified_extraction_service(
         settings, provider=provider, provider_name="concurrent-provider"
     )
-    app = create_app(settings=settings, extraction_service=service)
+    app = create_app(
+        settings=settings,
+        extraction_service=service,
+        completion_notifier=notifier,
+    )
 
     async def run_concurrently():
         async with app.router.lifespan_context(app):
@@ -920,15 +976,19 @@ def test_full_pipeline_remains_request_isolated_under_concurrency():
                 transport=ASGITransport(app=app), base_url="http://test"
             ) as client:
                 headers = {"Authorization": f"Bearer {TEST_TOKEN}"}
+                request_a = make_request(request_id="request-a")
+                request_a["meeting"]["id"] = "meeting-a"
+                request_b = make_request(request_id="request-b")
+                request_b["meeting"]["id"] = "meeting-b"
                 response_a, response_b = await asyncio.gather(
                     client.post(
                         "/v1/extractions",
-                        json=make_request(request_id="request-a"),
+                        json=request_a,
                         headers=headers,
                     ),
                     client.post(
                         "/v1/extractions",
-                        json=make_request(request_id="request-b"),
+                        json=request_b,
                         headers=headers,
                     ),
                 )
@@ -939,8 +999,32 @@ def test_full_pipeline_remains_request_isolated_under_concurrency():
     assert response_a.status_code == response_b.status_code == 200
     assert response_a.json()["request_id"] == "request-a"
     assert response_b.json()["request_id"] == "request-b"
+    assert response_a.json()["meeting_id"] == "meeting-a"
+    assert response_b.json()["meeting_id"] == "meeting-b"
     assert response_a.json()["processing"]["provider"] == "concurrent-provider"
     assert response_b.json()["processing"]["provider"] == "concurrent-provider"
+    assert provider.candidate_calls == 2
+    assert len(provider.requests) == 4
+    assert len(notifier.dispatch_attempts) == 2
+    assert {event["request_id"]: event["meeting_id"] for event in notifier.dispatch_attempts} == {
+        "request-a": "meeting-a",
+        "request-b": "meeting-b",
+    }
+    assert all(
+        set(event)
+        == {"event_type", "request_id", "meeting_id", "status"}
+        for event in notifier.dispatch_attempts
+    )
+    assert notifier.completed == [
+        {
+            "event_type": "extraction.completed",
+            "request_id": "request-b",
+            "meeting_id": "meeting-b",
+            "status": "completed",
+        }
+    ]
+    assert "Completion notification dispatch failed." in caplog.text
+    assert notification_failure_canary not in caplog.text
 
 
 def test_production_default_fails_closed_without_provider_configuration():
