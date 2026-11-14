@@ -28,12 +28,14 @@ from app.core.middleware import (
 )
 from app.services.extraction import ExtractionService
 from app.services.factory import create_verified_extraction_service
+from app.services.notification import CompletionNotifier, NoOpCompletionNotifier
 
 
 def create_app(
     *,
     settings: Settings | None = None,
     extraction_service: ExtractionService | None = None,
+    completion_notifier: CompletionNotifier | None = None,
 ) -> FastAPI:
     """Create an isolated ASGI application with injectable runtime dependencies."""
 
@@ -58,6 +60,11 @@ def create_app(
         extraction_service
         if extraction_service is not None
         else create_verified_extraction_service(runtime_settings)
+    )
+    application.state.completion_notifier = (
+        completion_notifier
+        if completion_notifier is not None
+        else NoOpCompletionNotifier()
     )
     application.add_middleware(
         ExtractionRequestBoundaryMiddleware,

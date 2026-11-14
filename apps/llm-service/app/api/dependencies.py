@@ -10,6 +10,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from app.core.config import Settings
 from app.core.errors import AuthenticationRequiredError
 from app.services.extraction import ExtractionService
+from app.services.notification import CompletionNotifier
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -20,6 +21,10 @@ async def get_settings(request: Request) -> Settings:
 
 async def get_extraction_service(request: Request) -> ExtractionService:
     return request.app.state.extraction_service
+
+
+async def get_completion_notifier(request: Request) -> CompletionNotifier:
+    return request.app.state.completion_notifier
 
 
 async def require_service_token(

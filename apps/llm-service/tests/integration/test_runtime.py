@@ -327,13 +327,29 @@ def test_dependency_override_returns_typed_extraction_response(
     response_model = ExtractionResponse.model_validate(full_response)
 
     class FakeExtractionService:
+        def __init__(self) -> None:
+            self.calls = 0
+
         async def extract(self, request: ExtractionRequest) -> ExtractionResponse:
+            self.calls += 1
             assert request.request_id == request_model.request_id
             return response_model
 
+    class RecordingNotifier:
+        def __init__(self) -> None:
+            self.dispatch_attempts: list[dict[str, str]] = []
+
+        async def dispatch(self, event: dict[str, str]) -> None:
+            self.dispatch_attempts.append(dict(event))
+
     app = create_test_app()
+    fake_service = FakeExtractionService()
+    recording_notifier = RecordingNotifier()
+    # Phase 05's injectable dependency will read this app-scoped test seam.
+    app.state.completion_notifier = recording_notifier
+
     async def provide_fake_service() -> FakeExtractionService:
-        return FakeExtractionService()
+        return fake_service
 
     app.dependency_overrides[get_extraction_service] = provide_fake_service
 
@@ -346,6 +362,15 @@ def test_dependency_override_returns_typed_extraction_response(
 
     assert response.status_code == 200
     assert ExtractionResponse.model_validate(response.json()) == response_model
+    assert fake_service.calls == 1
+    assert recording_notifier.dispatch_attempts == [
+        {
+            "event_type": "extraction.completed",
+            "request_id": request_model.request_id,
+            "meeting_id": request_model.meeting.id,
+            "status": "completed",
+        }
+    ]
 
 
 def test_unexpected_service_error_is_safe_and_standardized(
