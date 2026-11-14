@@ -112,6 +112,16 @@ class NeverCalledExtractionService:
         self.calls += 1
         raise AssertionError("extraction must not be reached for this request")
 
+class CountingExtractionService:
+    def __init__(self, response: ExtractionResponse) -> None:
+        self.response = response
+        self.requests: list[str] = []
+
+    async def extract(
+        self, request: ExtractionRequest
+    ) -> ExtractionResponse:
+        self.requests.append(request.request_id)
+        return self.response
 
 def run_raw_asgi_request(
     app: Any,
@@ -437,15 +447,7 @@ def test_n12_declared_content_length_accepts_exact_utf8_limit(
     limit = len(body)
     assert "Tôi".encode("utf-8") in body
 
-    class CountingExtractionService:
-        def __init__(self) -> None:
-            self.requests: list[str] = []
-
-        async def extract(self, request: ExtractionRequest) -> ExtractionResponse:
-            self.requests.append(request.request_id)
-            return response_model
-
-    extraction_service = CountingExtractionService()
+    extraction_service = CountingExtractionService(response_model)
     app = create_test_app(
         max_request_bytes=limit,
         extraction_service=extraction_service,
@@ -472,15 +474,7 @@ def test_n13_streamed_body_accepts_exact_utf8_limit(
     split_at = limit // 2
     assert 0 < split_at < limit
 
-    class CountingExtractionService:
-        def __init__(self) -> None:
-            self.requests: list[str] = []
-
-        async def extract(self, request: ExtractionRequest) -> ExtractionResponse:
-            self.requests.append(request.request_id)
-            return response_model
-
-    extraction_service = CountingExtractionService()
+    extraction_service = CountingExtractionService(response_model)
     app = create_test_app(
         max_request_bytes=limit,
         extraction_service=extraction_service,

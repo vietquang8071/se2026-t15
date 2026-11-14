@@ -102,6 +102,9 @@ def test_pairwise_dataset_covers_every_feasible_factor_pair() -> None:
     assert len(feasible) == 39
     assert len(feasible_pairs) == 61
     assert len(PAIRWISE_ROWS) == 21
+    assert [row[0] for row in PAIRWISE_ROWS] == [
+    f"PW{i:02d}" for i in range(1, 22)
+    ]
     assert len(selected) == len({tuple(row) for row in selected})
     assert all(
         all(
