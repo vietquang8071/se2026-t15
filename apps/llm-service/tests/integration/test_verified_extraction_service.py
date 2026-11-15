@@ -15,6 +15,9 @@ from pydantic import SecretStr
 
 from app.core.config import Settings
 from app.main import create_app
+from app.prompts.registry import PromptRegistry
+from app.prompts.renderer import PromptRenderer
+from app.providers.timeout import ProviderTimeoutBound
 from app.providers.errors import (
     ProviderConfigurationError,
     ProviderFailureError,
@@ -24,8 +27,17 @@ from app.providers.errors import (
 from app.providers.models import ProviderRequest, ProviderResult, ProviderUsage
 from app.schemas.errors import ErrorEnvelope
 from app.schemas.request import ExtractionRequest
+from app.schemas.response import ExtractionResponse, validate_response_for_request
+from app.services.evidence import EvidenceVerifier
 from app.services.factory import create_verified_extraction_service
+from app.services.orchestration import CandidateExtractionOrchestrator
 from app.services.notification import CompletionEvent
+from app.services.preflight import ExtractionPreflight
+from app.services.projection import ExtractionProjector
+from app.services.response_builder import ResponseBuilder
+from app.services.source_validation import SourceValidator
+from app.services.temporal_safeguards import TemporalReviewProcessor
+from app.services.verified_extraction import VerifiedExtractionService
 
 
 SERVICE_ROOT = Path(__file__).parents[2]
@@ -248,6 +260,222 @@ def test_verified_pipeline_returns_contract_response_for_requested_modules(modul
     assert body["modules"]["meeting_summary"] is not None if "meeting_summary" in modules else body["modules"]["meeting_summary"] is None
     assert body["modules"]["action_items"] is not None if "action_items" in modules else body["modules"]["action_items"] is None
     assert body["processing"]["evidence_prompt_version"] == "evidence-v1.3"
+    assert len(provider.requests) == 2
+
+
+def test_verified_pipeline_runs_mandatory_stages_in_order():
+    provider = supported_provider(modules=("action_items",))
+    events: list[str] = []
+    settings = make_settings()
+    bounded_provider = ProviderTimeoutBound(
+        provider,
+        timeout_seconds=settings.llm_service_provider_timeout_seconds,
+    )
+    base_orchestrator = CandidateExtractionOrchestrator(
+        provider=bounded_provider,
+        preflight=ExtractionPreflight(),
+        provider_name="offline-test-provider",
+    )
+
+    class RecordingOrchestrator:
+        async def run(self, request: ExtractionRequest):
+            events.append("candidate_extraction_orchestrator")
+            return await base_orchestrator.run(request)
+
+    class RecordingProjector(ExtractionProjector):
+        def project(self, extraction):
+            events.append("extraction_projector")
+            return super().project(extraction)
+
+    class RecordingSourceValidator(SourceValidator):
+        def validate(self, projected):
+            events.append("source_validator")
+            return super().validate(projected)
+
+    class RecordingEvidenceVerifier(EvidenceVerifier):
+        async def verify(self, extraction):
+            events.append("evidence_verifier")
+            return await super().verify(extraction)
+
+    class RecordingTemporalProcessor(TemporalReviewProcessor):
+        def process(self, extraction):
+            events.append("temporal_review_processor")
+            return super().process(extraction)
+
+    class RecordingResponseBuilder(ResponseBuilder):
+        def build(self, extraction):
+            events.append("response_builder")
+            return super().build(extraction)
+
+    verifier = RecordingEvidenceVerifier(
+        provider=bounded_provider,
+        provider_name="offline-test-provider",
+        registry=PromptRegistry(),
+        renderer=PromptRenderer(),
+    )
+    service = VerifiedExtractionService(
+        orchestrator=RecordingOrchestrator(),
+        projector=RecordingProjector(),
+        source_validator=RecordingSourceValidator(),
+        verifier=verifier,
+        temporal_processor=RecordingTemporalProcessor(),
+        response_builder=RecordingResponseBuilder(),
+    )
+
+    with PipelineTestClient(
+        create_app(settings=settings, extraction_service=service)
+    ) as client:
+        response = post(client, make_request(modules=("action_items",)))
+
+    assert response.status_code == 200
+    assert events == [
+        "candidate_extraction_orchestrator",
+        "extraction_projector",
+        "source_validator",
+        "evidence_verifier",
+        "temporal_review_processor",
+        "response_builder",
+    ]
+    assert len(provider.requests) == 2
+
+
+def test_contract_response_preserves_multiple_topics_and_independently_verified_actions():
+    request = make_request(modules=("meeting_summary", "action_items"))
+    request["meeting"]["duration_seconds"] = 60.0
+    request["transcript"]["segments"] = [
+        {
+            "id": "seg-a1",
+            "start": 12.5,
+            "end": 18.0,
+            "speaker_id": "speaker_1",
+            "text": "Alex sẽ gửi tài liệu trước hạn 2026-12-15.",
+        },
+        {
+            "id": "seg-a2",
+            "start": 35.25,
+            "end": 41.0,
+            "speaker_id": "speaker_2",
+            "text": "Minh sẽ cập nhật kế hoạch trước hạn 2026-12-20.",
+        },
+    ]
+    request["meeting"]["participants"] = [
+        {"id": "participant-alex", "display_name": "Alex", "speaker_ids": ["speaker_1"]},
+        {"id": "participant-minh", "display_name": "Minh", "speaker_ids": ["speaker_2"]},
+    ]
+    candidate = {
+        "meeting_summary": {
+            "overview": "Nhóm thống nhất tài liệu và kế hoạch cho đợt triển khai.",
+            "key_topics": [
+                {
+                    "topic": "Tài liệu",
+                    "brief_discussion": "Alex nhận gửi tài liệu.",
+                    "source_segment_ids": ["seg-a1"],
+                },
+                {
+                    "topic": "Kế hoạch",
+                    "brief_discussion": "Minh nhận cập nhật kế hoạch.",
+                    "source_segment_ids": ["seg-a2"],
+                },
+            ],
+            "source_segment_ids": ["seg-a1", "seg-a2"],
+        },
+        "action_items": [
+            {
+                "task": "Gửi tài liệu",
+                "owner": "Alex",
+                "raw_due_expression": "2026-12-15",
+                "priority": None,
+                "context": None,
+                "source_segment_ids": ["seg-a1"],
+            },
+            {
+                "task": "Cập nhật kế hoạch",
+                "owner": "Minh",
+                "raw_due_expression": "2026-12-20",
+                "priority": None,
+                "context": None,
+                "source_segment_ids": ["seg-a2"],
+            },
+        ],
+    }
+    claim_ids = [
+        "summary.overview",
+        "summary.key_topics[0]",
+        "summary.key_topics[1]",
+        "actions[0].task",
+        "actions[0].owner",
+        "actions[0].raw_due_expression",
+        "actions[1].task",
+        "actions[1].owner",
+        "actions[1].raw_due_expression",
+    ]
+    provider = ScriptedProvider(
+        [
+            result(
+                json.dumps(candidate, ensure_ascii=False),
+                usage=ProviderUsage(input_tokens=20, output_tokens=10),
+            ),
+            result(
+                verifier_content(claim_ids),
+                usage=ProviderUsage(input_tokens=30, output_tokens=8),
+            ),
+        ]
+    )
+
+    with client_for(provider) as client:
+        response = post(client, request)
+
+    assert response.status_code == 200
+    request_model = ExtractionRequest.model_validate(request)
+    response_model = ExtractionResponse.model_validate(response.json())
+    assert validate_response_for_request(request_model, response_model) == response_model
+    assert response_model.contract_version == request_model.contract_version == "1.0"
+    assert response_model.request_id == request_model.request_id
+    assert response_model.meeting_id == request_model.meeting.id
+    assert response_model.transcript_revision_id == request_model.transcript.revision_id
+    assert response_model.requested_modules == ["meeting_summary", "action_items"]
+
+    summary = response_model.modules.meeting_summary
+    assert summary is not None
+    assert summary.overview == "Nhóm thống nhất tài liệu và kế hoạch cho đợt triển khai."
+    assert [topic.topic for topic in summary.key_topics] == ["Tài liệu", "Kế hoạch"]
+    assert [topic.source_segment_ids for topic in summary.key_topics] == [
+        ["seg-a1"],
+        ["seg-a2"],
+    ]
+    assert response_model.modules.decision_log is None
+    assert response_model.modules.open_issues is None
+    assert response_model.modules.follow_up_items is None
+    assert response_model.modules.timeline_events is None
+
+    actions = response_model.modules.action_items
+    assert actions is not None
+    assert [
+        (
+            item.id,
+            item.task,
+            item.owner,
+            item.raw_due_expression,
+            item.due_date.isoformat() if item.due_date else None,
+        )
+        for item in actions
+    ] == [
+        ("ACT-001", "Gửi tài liệu", "Alex", "2026-12-15", "2026-12-15"),
+        ("ACT-002", "Cập nhật kế hoạch", "Minh", "2026-12-20", "2026-12-20"),
+    ]
+    assert [item.source_timestamp for item in actions] == [
+        "00:00:12.500",
+        "00:00:35.250",
+    ]
+    assert [item.source_segment_ids for item in actions] == [["seg-a1"], ["seg-a2"]]
+    assert all(item.needs_review is False for item in actions)
+    assert response_model.processing.provider == "offline-test-provider"
+    assert response_model.processing.model_id == "offline-model"
+    assert response_model.processing.prompt_version == "extract-v1.0"
+    assert response_model.processing.evidence_prompt_version == "evidence-v1.3"
+    assert response_model.processing.token_usage is not None
+    assert response_model.processing.token_usage.input_tokens == 50
+    assert response_model.processing.token_usage.output_tokens == 18
     assert len(provider.requests) == 2
 
 
@@ -706,6 +934,35 @@ def test_uncertain_owner_is_null_and_reviewable():
     assert action["owner"] is None
     assert action["needs_review"] is True
     assert action["review_reasons"] == ["owner_unconfirmed", "claim_uncertain"]
+
+
+@pytest.mark.parametrize(
+    ("mapped_speaker", "review_reasons"),
+    [
+        (True, ["owner_unconfirmed"]),
+        (False, ["owner_unconfirmed", "speaker_unmapped"]),
+    ],
+    ids=["mapped-speaker", "missing-speaker-mapping"],
+)
+def test_missing_owner_is_null_and_reviewable_in_contract_response(
+    mapped_speaker, review_reasons
+):
+    provider = supported_provider(modules=("action_items",), owner=None)
+    request = make_request(modules=("action_items",))
+    if not mapped_speaker:
+        request["meeting"]["participants"][0]["speaker_ids"] = []
+        request["transcript"]["segments"][0]["speaker_id"] = "speaker-unmapped"
+
+    with client_for(provider) as client:
+        response = post(client, request)
+
+    assert response.status_code == 200
+    action = response.json()["modules"]["action_items"][0]
+    assert action["task"] == "Gửi bản ghi chú"
+    assert action["owner"] is None
+    assert action["needs_review"] is True
+    assert action["review_reasons"] == review_reasons
+    assert len(provider.requests) == 2
 
 
 def test_unsupported_owner_is_cleared_while_supported_task_remains():
