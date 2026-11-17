@@ -1,0 +1,61 @@
+{
+  "contract_version": "1.0",
+  "request_id": "eval-llm037-case-005",
+  "meeting": {
+    "id": "meeting-llm037-case-005",
+    "title": "Chấp nhận yêu cầu gửi demo",
+    "anchor_date": "2026-11-19",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "duration_seconds": 18.663,
+    "participants": [
+      {
+        "id": "participant-speaker_1",
+        "display_name": "Huy",
+        "speaker_ids": [
+          "speaker_1"
+        ]
+      },
+      {
+        "id": "participant-speaker_2",
+        "display_name": "Minh",
+        "speaker_ids": [
+          "speaker_2"
+        ]
+      }
+    ]
+  },
+  "transcript": {
+    "revision_id": "transcript-case-005-r1",
+    "language": "vi",
+    "segments": [
+      {
+        "id": "SEG-0001",
+        "start": 1.0,
+        "end": 6.545,
+        "speaker_id": "speaker_1",
+        "text": "Minh, em gửi bản demo cho khách hàng trước chiều thứ Năm nhé?"
+      },
+      {
+        "id": "SEG-0002",
+        "start": 7.195,
+        "end": 11.377,
+        "speaker_id": "speaker_2",
+        "text": "Được, tôi sẽ gửi bản demo trước chiều thứ Năm."
+      },
+      {
+        "id": "SEG-0003",
+        "start": 12.027,
+        "end": 15.663,
+        "speaker_id": "speaker_1",
+        "text": "Như vậy phần demo đã có người phụ trách."
+      }
+    ]
+  },
+  "extraction": {
+    "output_language": "vi",
+    "requested_modules": [
+      "meeting_summary",
+      "action_items"
+    ]
+  }
+}

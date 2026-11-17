@@ -1,0 +1,59 @@
+{
+  "schema_version": 2,
+  "audio_id": "ab190bb8-8235-56cb-b999-0976a6dbc054",
+  "language": "vi",
+  "timeline": "source",
+  "source_audio_start_sec": 0.0,
+  "duration_sec": 24.768,
+  "text": "Ban đầu Minh phụ trách tổng hợp báo cáo release.\nTôi đã nhận phần tổng hợp báo cáo release.\nThay đổi kế hoạch: Lan sẽ tổng hợp báo cáo release thay Minh.\nTôi đồng ý nhận việc và gửi báo cáo vào thứ Ba tuần tới.",
+  "speakers": [
+    {
+      "id": "speaker_1",
+      "name": "speaker_1"
+    },
+    {
+      "id": "speaker_2",
+      "name": "speaker_2"
+    },
+    {
+      "id": "speaker_3",
+      "name": "speaker_3"
+    }
+  ],
+  "segments": [
+    {
+      "id": "SEG-0001",
+      "start": 1.0,
+      "end": 5.364,
+      "speaker": "speaker_1",
+      "text": "Ban đầu Minh phụ trách tổng hợp báo cáo release."
+    },
+    {
+      "id": "SEG-0002",
+      "start": 6.014,
+      "end": 9.832,
+      "speaker": "speaker_2",
+      "text": "Tôi đã nhận phần tổng hợp báo cáo release."
+    },
+    {
+      "id": "SEG-0003",
+      "start": 10.482,
+      "end": 16.027,
+      "speaker": "speaker_1",
+      "text": "Thay đổi kế hoạch: Lan sẽ tổng hợp báo cáo release thay Minh."
+    },
+    {
+      "id": "SEG-0004",
+      "start": 16.677,
+      "end": 21.768,
+      "speaker": "speaker_3",
+      "text": "Tôi đồng ý nhận việc và gửi báo cáo vào thứ Ba tuần tới."
+    }
+  ],
+  "warnings": [
+    "Nhãn người nói do model suy luận, không phải danh tính đã xác thực."
+  ],
+  "models": {
+    "transcription_and_diarization": "gpt-4o-transcribe-diarize"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "schema_version": 2,
+  "audio_id": "9775c219-fea5-5812-8d4e-101ff6aac62b",
+  "language": "vi",
+  "timeline": "source",
+  "source_audio_start_sec": 0.0,
+  "duration_sec": 24.586,
+  "text": "Báo cáo tiến độ tuần trước tôi đã gửi xong hôm qua.\nCó lẽ chúng ta nên thử Redis để giảm thời gian phản hồi.\nChúng ta có cần triển khai Redis ngay không?\nChưa, hiện tại mới là đề xuất; chưa ai nhận công việc.",
+  "speakers": [
+    {
+      "id": "speaker_1",
+      "name": "speaker_1"
+    },
+    {
+      "id": "speaker_2",
+      "name": "speaker_2"
+    }
+  ],
+  "segments": [
+    {
+      "id": "SEG-0001",
+      "start": 1.0,
+      "end": 5.636,
+      "speaker": "speaker_1",
+      "text": "Báo cáo tiến độ tuần trước tôi đã gửi xong hôm qua."
+    },
+    {
+      "id": "SEG-0002",
+      "start": 6.286,
+      "end": 11.377,
+      "speaker": "speaker_2",
+      "text": "Có lẽ chúng ta nên thử Redis để giảm thời gian phản hồi."
+    },
+    {
+      "id": "SEG-0003",
+      "start": 12.027,
+      "end": 16.027,
+      "speaker": "speaker_1",
+      "text": "Chúng ta có cần triển khai Redis ngay không?"
+    },
+    {
+      "id": "SEG-0004",
+      "start": 16.677,
+      "end": 21.586,
+      "speaker": "speaker_2",
+      "text": "Chưa, hiện tại mới là đề xuất; chưa ai nhận công việc."
+    }
+  ],
+  "warnings": [
+    "Nhãn người nói do model suy luận, không phải danh tính đã xác thực."
+  ],
+  "models": {
+    "transcription_and_diarization": "gpt-4o-transcribe-diarize"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "schema_version": 2,
+  "audio_id": "ce349983-cb46-5c51-b554-8516c010c2d0",
+  "language": "vi",
+  "timeline": "source",
+  "source_audio_start_sec": 0.0,
+  "duration_sec": 22.664,
+  "text": "Hôm nay chúng ta thống nhất ưu tiên hoàn thiện API đặt lịch cho bản thử nghiệm.\nTôi sẽ hoàn thiện API đặt lịch trước thứ Sáu này.\nSau khi có API, nhóm sẽ xem xét kết quả; chưa chốt ai kiểm thử.",
+  "speakers": [
+    {
+      "id": "speaker_1",
+      "name": "speaker_1"
+    },
+    {
+      "id": "speaker_2",
+      "name": "speaker_2"
+    }
+  ],
+  "segments": [
+    {
+      "id": "SEG-0001",
+      "start": 1.0,
+      "end": 8.182,
+      "speaker": "speaker_1",
+      "text": "Hôm nay chúng ta thống nhất ưu tiên hoàn thiện API đặt lịch cho bản thử nghiệm."
+    },
+    {
+      "id": "SEG-0002",
+      "start": 8.832,
+      "end": 13.287,
+      "speaker": "speaker_2",
+      "text": "Tôi sẽ hoàn thiện API đặt lịch trước thứ Sáu này."
+    },
+    {
+      "id": "SEG-0003",
+      "start": 13.937,
+      "end": 19.664,
+      "speaker": "speaker_1",
+      "text": "Sau khi có API, nhóm sẽ xem xét kết quả; chưa chốt ai kiểm thử."
+    }
+  ],
+  "warnings": [
+    "Nhãn người nói do model suy luận, không phải danh tính đã xác thực."
+  ],
+  "models": {
+    "transcription_and_diarization": "gpt-4o-transcribe-diarize"
+  }
+}

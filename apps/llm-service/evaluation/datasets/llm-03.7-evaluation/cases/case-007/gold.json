@@ -1,0 +1,66 @@
+{
+  "gold_schema_version": "llm03.7-gold-v1",
+  "case_id": "case-007",
+  "evaluation_scope": [
+    "meeting_summary",
+    "action_items"
+  ],
+  "meeting_summary": {
+    "reference_overview": "Tuấn được giao chuẩn bị tài liệu onboarding; hạn ban đầu trước thứ Sáu đã được đổi thành thứ Hai tuần sau.",
+    "key_topics": [
+      {
+        "topic": "Tài liệu onboarding",
+        "brief_discussion": "Tuấn nhận tài liệu và xác nhận hạn mới thứ Hai tuần sau.",
+        "source_segment_ids": [
+          "SEG-0001",
+          "SEG-0002",
+          "SEG-0003",
+          "SEG-0004"
+        ]
+      }
+    ],
+    "source_segment_ids": [
+      "SEG-0001",
+      "SEG-0002",
+      "SEG-0003",
+      "SEG-0004"
+    ],
+    "forbidden_claims": [
+      "Không công bố hạn cũ trước thứ Sáu như hạn cuối cùng."
+    ]
+  },
+  "action_items": [
+    {
+      "gold_id": "GOLD-ACT-001",
+      "task": "Chuẩn bị và gửi tài liệu onboarding",
+      "owner": "Tuấn",
+      "raw_due_expression": "thứ Hai tuần sau",
+      "due_date": null,
+      "due_date_resolution_status": "unresolved",
+      "priority": null,
+      "context": null,
+      "source_segment_ids": [
+        "SEG-0001",
+        "SEG-0002",
+        "SEG-0003",
+        "SEG-0004"
+      ],
+      "owner_evidence_segment_ids": [
+        "SEG-0001",
+        "SEG-0002",
+        "SEG-0004"
+      ],
+      "deadline_evidence_segment_ids": [
+        "SEG-0003",
+        "SEG-0004"
+      ],
+      "notes": ""
+    }
+  ],
+  "evaluation_notes": [],
+  "gold_policy": {
+    "semantic_paraphrases_allowed": true,
+    "source_ids_are_evidence_not_just_syntactic_checks": true,
+    "candidate_exact_text_match_required": false
+  }
+}

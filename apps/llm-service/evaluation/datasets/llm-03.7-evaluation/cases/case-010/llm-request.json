@@ -1,0 +1,68 @@
+{
+  "contract_version": "1.0",
+  "request_id": "eval-llm037-case-010",
+  "meeting": {
+    "id": "meeting-llm037-case-010",
+    "title": "Điều kiện cấp ngân sách",
+    "anchor_date": "2026-11-25",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "duration_seconds": 27.132,
+    "participants": [
+      {
+        "id": "participant-speaker_1",
+        "display_name": "Mai",
+        "speaker_ids": [
+          "speaker_1"
+        ]
+      },
+      {
+        "id": "participant-speaker_2",
+        "display_name": "Nam",
+        "speaker_ids": [
+          "speaker_2"
+        ]
+      }
+    ]
+  },
+  "transcript": {
+    "revision_id": "transcript-case-010-r1",
+    "language": "vi",
+    "segments": [
+      {
+        "id": "SEG-0001",
+        "start": 1.0,
+        "end": 5.727,
+        "speaker_id": "speaker_1",
+        "text": "Tuần trước tôi đã hoàn tất báo cáo sử dụng hệ thống."
+      },
+      {
+        "id": "SEG-0002",
+        "start": 6.377,
+        "end": 11.559,
+        "speaker_id": "speaker_2",
+        "text": "Nếu được cấp ngân sách, chúng ta có thể mua thêm máy chủ."
+      },
+      {
+        "id": "SEG-0003",
+        "start": 12.209,
+        "end": 17.3,
+        "speaker_id": "speaker_1",
+        "text": "Chưa có quyết định về máy chủ; vẫn đang xem xét chi phí."
+      },
+      {
+        "id": "SEG-0004",
+        "start": 17.95,
+        "end": 24.132,
+        "speaker_id": "speaker_2",
+        "text": "Chúng ta cần hệ thống nhanh hơn, nhưng chưa giao ai làm việc cụ thể."
+      }
+    ]
+  },
+  "extraction": {
+    "output_language": "vi",
+    "requested_modules": [
+      "meeting_summary",
+      "action_items"
+    ]
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "schema_version": 2,
+  "audio_id": "d04d9332-915c-5095-977b-62a1b1e58877",
+  "language": "vi",
+  "timeline": "source",
+  "source_audio_start_sec": 0.0,
+  "duration_sec": 27.132,
+  "text": "Tuần trước tôi đã hoàn tất báo cáo sử dụng hệ thống.\nNếu được cấp ngân sách, chúng ta có thể mua thêm máy chủ.\nChưa có quyết định về máy chủ; vẫn đang xem xét chi phí.\nChúng ta cần hệ thống nhanh hơn, nhưng chưa giao ai làm việc cụ thể.",
+  "speakers": [
+    {
+      "id": "speaker_1",
+      "name": "speaker_1"
+    },
+    {
+      "id": "speaker_2",
+      "name": "speaker_2"
+    }
+  ],
+  "segments": [
+    {
+      "id": "SEG-0001",
+      "start": 1.0,
+      "end": 5.727,
+      "speaker": "speaker_1",
+      "text": "Tuần trước tôi đã hoàn tất báo cáo sử dụng hệ thống."
+    },
+    {
+      "id": "SEG-0002",
+      "start": 6.377,
+      "end": 11.559,
+      "speaker": "speaker_2",
+      "text": "Nếu được cấp ngân sách, chúng ta có thể mua thêm máy chủ."
+    },
+    {
+      "id": "SEG-0003",
+      "start": 12.209,
+      "end": 17.3,
+      "speaker": "speaker_1",
+      "text": "Chưa có quyết định về máy chủ; vẫn đang xem xét chi phí."
+    },
+    {
+      "id": "SEG-0004",
+      "start": 17.95,
+      "end": 24.132,
+      "speaker": "speaker_2",
+      "text": "Chúng ta cần hệ thống nhanh hơn, nhưng chưa giao ai làm việc cụ thể."
+    }
+  ],
+  "warnings": [
+    "Nhãn người nói do model suy luận, không phải danh tính đã xác thực."
+  ],
+  "models": {
+    "transcription_and_diarization": "gpt-4o-transcribe-diarize"
+  }
+}

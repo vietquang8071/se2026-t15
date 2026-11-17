@@ -1,0 +1,107 @@
+{
+  "gold_schema_version": "llm03.7-gold-v1",
+  "case_id": "case-016",
+  "evaluation_scope": [
+    "meeting_summary",
+    "action_items"
+  ],
+  "meeting_summary": {
+    "reference_overview": "Nhóm chuẩn bị bản phát hành thử nghiệm: Dũng thay Bình làm hướng dẫn triển khai, Cúc rà soát lỗi truy cập với ưu tiên cao. Video demo bị hoãn; nguyên nhân lỗi xác thực vẫn chưa rõ.",
+    "key_topics": [
+      {
+        "topic": "Hướng dẫn triển khai",
+        "brief_discussion": "Dũng nhận lại nhiệm vụ từ Bình và đổi hạn thành trước thứ Năm.",
+        "source_segment_ids": [
+          "SEG-0002",
+          "SEG-0005",
+          "SEG-0006"
+        ]
+      },
+      {
+        "topic": "Lỗi truy cập",
+        "brief_discussion": "Cúc nhận rà soát lỗi truy cập, tổng hợp danh sách vào thứ Sáu; đây là ưu tiên cao.",
+        "source_segment_ids": [
+          "SEG-0003",
+          "SEG-0007",
+          "SEG-0008"
+        ]
+      },
+      {
+        "topic": "Video demo",
+        "brief_discussion": "Video demo được hoãn, không có người nhận.",
+        "source_segment_ids": [
+          "SEG-0004"
+        ]
+      }
+    ],
+    "source_segment_ids": [
+      "SEG-0002",
+      "SEG-0005",
+      "SEG-0006",
+      "SEG-0003",
+      "SEG-0007",
+      "SEG-0008",
+      "SEG-0004"
+    ],
+    "forbidden_claims": [
+      "Không giữ Bình là owner cuối cùng.",
+      "Không trích xuất việc làm video demo.",
+      "Không tạo task sửa lỗi xác thực khi chưa có người nhận."
+    ]
+  },
+  "action_items": [
+    {
+      "gold_id": "GOLD-ACT-001",
+      "task": "Viết và gửi hướng dẫn triển khai",
+      "owner": "Dũng",
+      "raw_due_expression": "trước thứ Năm",
+      "due_date": null,
+      "due_date_resolution_status": "unresolved",
+      "priority": null,
+      "context": null,
+      "source_segment_ids": [
+        "SEG-0002",
+        "SEG-0005",
+        "SEG-0006"
+      ],
+      "owner_evidence_segment_ids": [
+        "SEG-0005",
+        "SEG-0006"
+      ],
+      "deadline_evidence_segment_ids": [
+        "SEG-0006"
+      ],
+      "notes": ""
+    },
+    {
+      "gold_id": "GOLD-ACT-002",
+      "task": "Rà soát lỗi truy cập và tổng hợp danh sách",
+      "owner": "Cúc",
+      "raw_due_expression": "vào thứ Sáu",
+      "due_date": null,
+      "due_date_resolution_status": "unresolved",
+      "priority": "High",
+      "context": null,
+      "source_segment_ids": [
+        "SEG-0003",
+        "SEG-0007",
+        "SEG-0008"
+      ],
+      "owner_evidence_segment_ids": [
+        "SEG-0003"
+      ],
+      "deadline_evidence_segment_ids": [
+        "SEG-0003"
+      ],
+      "notes": ""
+    }
+  ],
+  "evaluation_notes": [
+    "Tránh biến open issue về lỗi xác thực thành Action Item mới khi chưa có cam kết xử lý cụ thể."
+  ],
+  "gold_policy": {
+    "semantic_paraphrases_allowed": true,
+    "source_ids_are_evidence_not_just_syntactic_checks": true,
+    "candidate_exact_text_match_required": false
+  }
+}

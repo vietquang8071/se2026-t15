@@ -1,0 +1,49 @@
+{
+  "schema_version": 2,
+  "audio_id": "237b2d42-68bc-58f7-abc2-f33fcbee1e77",
+  "language": "vi",
+  "timeline": "source",
+  "source_audio_start_sec": 0.0,
+  "duration_sec": 21.937,
+  "text": "Chúng ta thống nhất giao Lan soạn đề cương đào tạo trước cuối tuần này.\nTôi đồng ý phương án giao Lan phần đề cương; phần học liệu chưa chốt.\nKhông ai nhận phần học liệu trong buổi này.",
+  "speakers": [
+    {
+      "id": "unknown",
+      "name": "Chưa xác định"
+    },
+    {
+      "id": "speaker_1",
+      "name": "speaker_1"
+    }
+  ],
+  "segments": [
+    {
+      "id": "SEG-0001",
+      "start": 1.0,
+      "end": 7.455,
+      "speaker": "unknown",
+      "text": "Chúng ta thống nhất giao Lan soạn đề cương đào tạo trước cuối tuần này."
+    },
+    {
+      "id": "SEG-0002",
+      "start": 8.105,
+      "end": 14.378,
+      "speaker": "speaker_1",
+      "text": "Tôi đồng ý phương án giao Lan phần đề cương; phần học liệu chưa chốt."
+    },
+    {
+      "id": "SEG-0003",
+      "start": 15.028,
+      "end": 18.937,
+      "speaker": "unknown",
+      "text": "Không ai nhận phần học liệu trong buổi này."
+    }
+  ],
+  "warnings": [
+    "Provider không xác định người nói cho một số đoạn.",
+    "Nhãn người nói do model suy luận, không phải danh tính đã xác thực."
+  ],
+  "models": {
+    "transcription_and_diarization": "gpt-4o-transcribe-diarize"
+  }
+}

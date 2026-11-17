@@ -1,0 +1,68 @@
+{
+  "contract_version": "1.0",
+  "request_id": "eval-llm037-case-015",
+  "meeting": {
+    "id": "meeting-llm037-case-015",
+    "title": "Ưu tiên cao nhưng hạn mơ hồ",
+    "anchor_date": "2026-12-02",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "duration_seconds": 25.405,
+    "participants": [
+      {
+        "id": "participant-speaker_1",
+        "display_name": "Vy",
+        "speaker_ids": [
+          "speaker_1"
+        ]
+      },
+      {
+        "id": "participant-speaker_2",
+        "display_name": "Hải",
+        "speaker_ids": [
+          "speaker_2"
+        ]
+      }
+    ]
+  },
+  "transcript": {
+    "revision_id": "transcript-case-015-r1",
+    "language": "vi",
+    "segments": [
+      {
+        "id": "SEG-0001",
+        "start": 1.0,
+        "end": 5.727,
+        "speaker_id": "speaker_1",
+        "text": "Tôi nhận nhiệm vụ kiểm tra độ trễ endpoint tìm kiếm."
+      },
+      {
+        "id": "SEG-0002",
+        "start": 6.377,
+        "end": 12.741,
+        "speaker_id": "speaker_2",
+        "text": "Việc kiểm tra độ trễ là ưu tiên cao, cần có kết quả khoảng cuối tháng."
+      },
+      {
+        "id": "SEG-0003",
+        "start": 13.391,
+        "end": 18.3,
+        "speaker_id": "speaker_2",
+        "text": "Chưa chốt ngày chính xác, đừng tự ghi một ngày cụ thể."
+      },
+      {
+        "id": "SEG-0004",
+        "start": 18.95,
+        "end": 22.405,
+        "speaker_id": "speaker_1",
+        "text": "Tôi sẽ báo lại kết quả khi hoàn thành."
+      }
+    ]
+  },
+  "extraction": {
+    "output_language": "vi",
+    "requested_modules": [
+      "meeting_summary",
+      "action_items"
+    ]
+  }
+}

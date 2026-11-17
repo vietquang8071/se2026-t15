@@ -1,0 +1,48 @@
+{
+  "schema_version": 2,
+  "audio_id": "3199ebe8-2d6f-5b7b-9841-c4deabad2a79",
+  "language": "vi",
+  "timeline": "source",
+  "source_audio_start_sec": 0.0,
+  "duration_sec": 19.3,
+  "text": "Tôi sẽ cập nhật tài liệu hướng dẫn trước ngày 25 tháng 11 năm 2026.\nTài liệu đó cần cho buổi hướng dẫn sử dụng.\nĐược, tôi sẽ giữ nguyên nội dung đã cam kết.",
+  "speakers": [
+    {
+      "id": "speaker_1",
+      "name": "speaker_1"
+    },
+    {
+      "id": "speaker_2",
+      "name": "speaker_2"
+    }
+  ],
+  "segments": [
+    {
+      "id": "SEG-0001",
+      "start": 1.0,
+      "end": 7.091,
+      "speaker": "speaker_1",
+      "text": "Tôi sẽ cập nhật tài liệu hướng dẫn trước ngày 25 tháng 11 năm 2026."
+    },
+    {
+      "id": "SEG-0002",
+      "start": 7.741,
+      "end": 11.65,
+      "speaker": "speaker_2",
+      "text": "Tài liệu đó cần cho buổi hướng dẫn sử dụng."
+    },
+    {
+      "id": "SEG-0003",
+      "start": 12.3,
+      "end": 16.3,
+      "speaker": "speaker_1",
+      "text": "Được, tôi sẽ giữ nguyên nội dung đã cam kết."
+    }
+  ],
+  "warnings": [
+    "Nhãn người nói do model suy luận, không phải danh tính đã xác thực."
+  ],
+  "models": {
+    "transcription_and_diarization": "gpt-4o-transcribe-diarize"
+  }
+}

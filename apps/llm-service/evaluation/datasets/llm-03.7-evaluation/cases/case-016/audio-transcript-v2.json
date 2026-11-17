@@ -1,0 +1,91 @@
+{
+  "schema_version": 2,
+  "audio_id": "953c77af-7cf6-5197-916e-0d138278fbfc",
+  "language": "vi",
+  "timeline": "source",
+  "source_audio_start_sec": 0.0,
+  "duration_sec": 50.095,
+  "text": "Hôm nay chốt việc chuẩn bị bản phát hành thử nghiệm và xử lý các lỗi truy cập.\nTôi sẽ viết hướng dẫn triển khai trước thứ Tư.\nTôi sẽ rà soát lỗi truy cập và tổng hợp danh sách vào thứ Sáu.\nYêu cầu làm video demo tạm hoãn; chưa ai nhận việc này.\nTôi chuyển phần hướng dẫn triển khai cho Dũng thay tôi.\nTôi đồng ý nhận hướng dẫn triển khai và sẽ gửi trước thứ Năm.\nƯu tiên cao cho việc rà soát lỗi truy cập.\nLỗi xác thực đăng nhập vẫn chưa xác định được nguyên nhân.",
+  "speakers": [
+    {
+      "id": "speaker_1",
+      "name": "speaker_1"
+    },
+    {
+      "id": "speaker_2",
+      "name": "speaker_2"
+    },
+    {
+      "id": "speaker_3",
+      "name": "speaker_3"
+    },
+    {
+      "id": "speaker_4",
+      "name": "speaker_4"
+    }
+  ],
+  "segments": [
+    {
+      "id": "SEG-0001",
+      "start": 1.0,
+      "end": 8.091,
+      "speaker": "speaker_1",
+      "text": "Hôm nay chốt việc chuẩn bị bản phát hành thử nghiệm và xử lý các lỗi truy cập."
+    },
+    {
+      "id": "SEG-0002",
+      "start": 8.741,
+      "end": 12.923,
+      "speaker": "speaker_2",
+      "text": "Tôi sẽ viết hướng dẫn triển khai trước thứ Tư."
+    },
+    {
+      "id": "SEG-0003",
+      "start": 13.573,
+      "end": 19.209,
+      "speaker": "speaker_3",
+      "text": "Tôi sẽ rà soát lỗi truy cập và tổng hợp danh sách vào thứ Sáu."
+    },
+    {
+      "id": "SEG-0004",
+      "start": 19.859,
+      "end": 24.859,
+      "speaker": "speaker_1",
+      "text": "Yêu cầu làm video demo tạm hoãn; chưa ai nhận việc này."
+    },
+    {
+      "id": "SEG-0005",
+      "start": 25.509,
+      "end": 30.509,
+      "speaker": "speaker_2",
+      "text": "Tôi chuyển phần hướng dẫn triển khai cho Dũng thay tôi."
+    },
+    {
+      "id": "SEG-0006",
+      "start": 31.159,
+      "end": 36.704,
+      "speaker": "speaker_4",
+      "text": "Tôi đồng ý nhận hướng dẫn triển khai và sẽ gửi trước thứ Năm."
+    },
+    {
+      "id": "SEG-0007",
+      "start": 37.354,
+      "end": 41.172,
+      "speaker": "speaker_1",
+      "text": "Ưu tiên cao cho việc rà soát lỗi truy cập."
+    },
+    {
+      "id": "SEG-0008",
+      "start": 41.822,
+      "end": 47.095,
+      "speaker": "speaker_3",
+      "text": "Lỗi xác thực đăng nhập vẫn chưa xác định được nguyên nhân."
+    }
+  ],
+  "warnings": [
+    "Nhãn người nói do model suy luận, không phải danh tính đã xác thực."
+  ],
+  "models": {
+    "transcription_and_diarization": "gpt-4o-transcribe-diarize"
+  }
+}

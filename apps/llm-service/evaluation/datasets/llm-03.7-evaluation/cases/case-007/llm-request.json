@@ -1,0 +1,68 @@
+{
+  "contract_version": "1.0",
+  "request_id": "eval-llm037-case-007",
+  "meeting": {
+    "id": "meeting-llm037-case-007",
+    "title": "Điều chỉnh hạn tài liệu onboarding",
+    "anchor_date": "2026-11-20",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "duration_seconds": 22.927,
+    "participants": [
+      {
+        "id": "participant-speaker_1",
+        "display_name": "Hòa",
+        "speaker_ids": [
+          "speaker_1"
+        ]
+      },
+      {
+        "id": "participant-speaker_2",
+        "display_name": "Tuấn",
+        "speaker_ids": [
+          "speaker_2"
+        ]
+      }
+    ]
+  },
+  "transcript": {
+    "revision_id": "transcript-case-007-r1",
+    "language": "vi",
+    "segments": [
+      {
+        "id": "SEG-0001",
+        "start": 1.0,
+        "end": 5.636,
+        "speaker_id": "speaker_1",
+        "text": "Tuấn sẽ chuẩn bị tài liệu onboarding trước thứ Sáu."
+      },
+      {
+        "id": "SEG-0002",
+        "start": 6.286,
+        "end": 9.536,
+        "speaker_id": "speaker_2",
+        "text": "Tôi nhận làm tài liệu onboarding."
+      },
+      {
+        "id": "SEG-0003",
+        "start": 10.186,
+        "end": 15.913,
+        "speaker_id": "speaker_1",
+        "text": "Chúng ta đổi hạn của tài liệu onboarding sang thứ Hai tuần sau."
+      },
+      {
+        "id": "SEG-0004",
+        "start": 16.563,
+        "end": 19.927,
+        "speaker_id": "speaker_2",
+        "text": "Đồng ý, tôi gửi vào thứ Hai tuần sau."
+      }
+    ]
+  },
+  "extraction": {
+    "output_language": "vi",
+    "requested_modules": [
+      "meeting_summary",
+      "action_items"
+    ]
+  }
+}

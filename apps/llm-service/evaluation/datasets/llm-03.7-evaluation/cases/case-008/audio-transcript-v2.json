@@ -1,0 +1,55 @@
+{
+  "schema_version": 2,
+  "audio_id": "e06f30c8-14f3-5be3-a1a6-7b5d7d4a86d4",
+  "language": "vi",
+  "timeline": "source",
+  "source_audio_start_sec": 0.0,
+  "duration_sec": 22.109,
+  "text": "Dũng phụ trách gửi checklist bảo mật cho nhóm.\nTôi sẽ gửi checklist bảo mật vào 2026-12-15.\nĐây là công việc ưu tiên cao; ghi rõ hạn 2026-12-15.\nTôi xác nhận cả hạn và mức ưu tiên.",
+  "speakers": [
+    {
+      "id": "speaker_1",
+      "name": "speaker_1"
+    },
+    {
+      "id": "speaker_2",
+      "name": "speaker_2"
+    }
+  ],
+  "segments": [
+    {
+      "id": "SEG-0001",
+      "start": 1.0,
+      "end": 5.182,
+      "speaker": "speaker_1",
+      "text": "Dũng phụ trách gửi checklist bảo mật cho nhóm."
+    },
+    {
+      "id": "SEG-0002",
+      "start": 5.832,
+      "end": 9.832,
+      "speaker": "speaker_2",
+      "text": "Tôi sẽ gửi checklist bảo mật vào 2026-12-15."
+    },
+    {
+      "id": "SEG-0003",
+      "start": 10.482,
+      "end": 15.209,
+      "speaker": "speaker_1",
+      "text": "Đây là công việc ưu tiên cao; ghi rõ hạn 2026-12-15."
+    },
+    {
+      "id": "SEG-0004",
+      "start": 15.859,
+      "end": 19.109,
+      "speaker": "speaker_2",
+      "text": "Tôi xác nhận cả hạn và mức ưu tiên."
+    }
+  ],
+  "warnings": [
+    "Nhãn người nói do model suy luận, không phải danh tính đã xác thực."
+  ],
+  "models": {
+    "transcription_and_diarization": "gpt-4o-transcribe-diarize"
+  }
+}

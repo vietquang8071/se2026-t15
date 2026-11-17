@@ -1,0 +1,55 @@
+{
+  "schema_version": 2,
+  "audio_id": "3fe5d68b-28d9-57d7-87d7-cfdaa062c427",
+  "language": "vi",
+  "timeline": "source",
+  "source_audio_start_sec": 0.0,
+  "duration_sec": 22.927,
+  "text": "Tuấn sẽ chuẩn bị tài liệu onboarding trước thứ Sáu.\nTôi nhận làm tài liệu onboarding.\nChúng ta đổi hạn của tài liệu onboarding sang thứ Hai tuần sau.\nĐồng ý, tôi gửi vào thứ Hai tuần sau.",
+  "speakers": [
+    {
+      "id": "speaker_1",
+      "name": "speaker_1"
+    },
+    {
+      "id": "speaker_2",
+      "name": "speaker_2"
+    }
+  ],
+  "segments": [
+    {
+      "id": "SEG-0001",
+      "start": 1.0,
+      "end": 5.636,
+      "speaker": "speaker_1",
+      "text": "Tuấn sẽ chuẩn bị tài liệu onboarding trước thứ Sáu."
+    },
+    {
+      "id": "SEG-0002",
+      "start": 6.286,
+      "end": 9.536,
+      "speaker": "speaker_2",
+      "text": "Tôi nhận làm tài liệu onboarding."
+    },
+    {
+      "id": "SEG-0003",
+      "start": 10.186,
+      "end": 15.913,
+      "speaker": "speaker_1",
+      "text": "Chúng ta đổi hạn của tài liệu onboarding sang thứ Hai tuần sau."
+    },
+    {
+      "id": "SEG-0004",
+      "start": 16.563,
+      "end": 19.927,
+      "speaker": "speaker_2",
+      "text": "Đồng ý, tôi gửi vào thứ Hai tuần sau."
+    }
+  ],
+  "warnings": [
+    "Nhãn người nói do model suy luận, không phải danh tính đã xác thực."
+  ],
+  "models": {
+    "transcription_and_diarization": "gpt-4o-transcribe-diarize"
+  }
+}

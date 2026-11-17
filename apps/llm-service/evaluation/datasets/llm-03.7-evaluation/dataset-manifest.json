@@ -1,0 +1,261 @@
+{
+  "dataset_id": "se2026-t15-llm03.7-synthetic-v1",
+  "dataset_version": "1.0.0",
+  "origin": "fully-synthetic handwritten evaluation examples (not real ASR audio recordings)",
+  "usage": "LLM-03.7 offline fixture preparation and separately authorized real-provider evaluation",
+  "cases_total": 16,
+  "development_cases": 10,
+  "holdout_cases": 6,
+  "audio_schema": "AudioTranscriptV2 (apps/audio/src/audio/audio-types.ts)",
+  "llm_input_contract": "ExtractionRequest 1.0 (apps/llm-service/app/schemas/request.py)",
+  "gold_schema": "llm03.7-gold-v1 (evaluation-only, not part of production API)",
+  "models_to_evaluate": [
+    "free: Nemotron or Gemma",
+    "paid: DeepSeek V4.1 Flash 1017"
+  ],
+  "budget_usd_total_llm_project": 2.0,
+  "budget_usd_llm03_7_suggested_not_approved": 0.5,
+  "api_calls_made_to_generate_dataset": 0,
+  "cases": [
+    {
+      "case_id": "case-001",
+      "split": "development",
+      "title": "Khởi động API đặt lịch",
+      "scenario": "Khởi động API đặt lịch",
+      "segment_count": 3,
+      "gold_action_count": 1,
+      "has_verified_speaker_mapping": true,
+      "has_unknown_speaker": false,
+      "files": [
+        "cases/case-001/audio-transcript-v2.json",
+        "cases/case-001/llm-request.json",
+        "cases/case-001/gold.json"
+      ]
+    },
+    {
+      "case_id": "case-002",
+      "split": "development",
+      "title": "Phân công sprint đăng nhập",
+      "scenario": "Phân công sprint đăng nhập",
+      "segment_count": 4,
+      "gold_action_count": 2,
+      "has_verified_speaker_mapping": true,
+      "has_unknown_speaker": false,
+      "files": [
+        "cases/case-002/audio-transcript-v2.json",
+        "cases/case-002/llm-request.json",
+        "cases/case-002/gold.json"
+      ]
+    },
+    {
+      "case_id": "case-003",
+      "split": "development",
+      "title": "Thảo luận ý tưởng cache",
+      "scenario": "Thảo luận ý tưởng cache",
+      "segment_count": 4,
+      "gold_action_count": 0,
+      "has_verified_speaker_mapping": true,
+      "has_unknown_speaker": false,
+      "files": [
+        "cases/case-003/audio-transcript-v2.json",
+        "cases/case-003/llm-request.json",
+        "cases/case-003/gold.json"
+      ]
+    },
+    {
+      "case_id": "case-004",
+      "split": "development",
+      "title": "Tài liệu chưa rõ người nhận",
+      "scenario": "Không có mapping speaker→participant được xác minh; bắt buộc owner=null.",
+      "segment_count": 3,
+      "gold_action_count": 1,
+      "has_verified_speaker_mapping": false,
+      "has_unknown_speaker": false,
+      "files": [
+        "cases/case-004/audio-transcript-v2.json",
+        "cases/case-004/llm-request.json",
+        "cases/case-004/gold.json"
+      ]
+    },
+    {
+      "case_id": "case-005",
+      "split": "development",
+      "title": "Chấp nhận yêu cầu gửi demo",
+      "scenario": "Chấp nhận yêu cầu gửi demo",
+      "segment_count": 3,
+      "gold_action_count": 1,
+      "has_verified_speaker_mapping": true,
+      "has_unknown_speaker": false,
+      "files": [
+        "cases/case-005/audio-transcript-v2.json",
+        "cases/case-005/llm-request.json",
+        "cases/case-005/gold.json"
+      ]
+    },
+    {
+      "case_id": "case-006",
+      "split": "development",
+      "title": "Thay đổi người phụ trách release",
+      "scenario": "Thay đổi người phụ trách release",
+      "segment_count": 4,
+      "gold_action_count": 1,
+      "has_verified_speaker_mapping": true,
+      "has_unknown_speaker": false,
+      "files": [
+        "cases/case-006/audio-transcript-v2.json",
+        "cases/case-006/llm-request.json",
+        "cases/case-006/gold.json"
+      ]
+    },
+    {
+      "case_id": "case-007",
+      "split": "development",
+      "title": "Điều chỉnh hạn tài liệu onboarding",
+      "scenario": "Điều chỉnh hạn tài liệu onboarding",
+      "segment_count": 4,
+      "gold_action_count": 1,
+      "has_verified_speaker_mapping": true,
+      "has_unknown_speaker": false,
+      "files": [
+        "cases/case-007/audio-transcript-v2.json",
+        "cases/case-007/llm-request.json",
+        "cases/case-007/gold.json"
+      ]
+    },
+    {
+      "case_id": "case-008",
+      "split": "development",
+      "title": "Chốt checklist bảo mật theo ISO",
+      "scenario": "Chỉ case này có raw_due_expression ở ISO YYYY-MM-DD và có thể được deterministic processor gán exact_date.",
+      "segment_count": 4,
+      "gold_action_count": 1,
+      "has_verified_speaker_mapping": true,
+      "has_unknown_speaker": false,
+      "files": [
+        "cases/case-008/audio-transcript-v2.json",
+        "cases/case-008/llm-request.json",
+        "cases/case-008/gold.json"
+      ]
+    },
+    {
+      "case_id": "case-009",
+      "split": "development",
+      "title": "Hai công việc phát biểu chồng tiếng",
+      "scenario": "Hai công việc phát biểu chồng tiếng",
+      "segment_count": 4,
+      "gold_action_count": 2,
+      "has_verified_speaker_mapping": true,
+      "has_unknown_speaker": false,
+      "files": [
+        "cases/case-009/audio-transcript-v2.json",
+        "cases/case-009/llm-request.json",
+        "cases/case-009/gold.json"
+      ]
+    },
+    {
+      "case_id": "case-010",
+      "split": "development",
+      "title": "Điều kiện cấp ngân sách",
+      "scenario": "Điều kiện cấp ngân sách",
+      "segment_count": 4,
+      "gold_action_count": 0,
+      "has_verified_speaker_mapping": true,
+      "has_unknown_speaker": false,
+      "files": [
+        "cases/case-010/audio-transcript-v2.json",
+        "cases/case-010/llm-request.json",
+        "cases/case-010/gold.json"
+      ]
+    },
+    {
+      "case_id": "case-011",
+      "split": "holdout",
+      "title": "Chuẩn bị phiên demo ba bộ phận",
+      "scenario": "Chuẩn bị phiên demo ba bộ phận",
+      "segment_count": 5,
+      "gold_action_count": 3,
+      "has_verified_speaker_mapping": true,
+      "has_unknown_speaker": false,
+      "files": [
+        "cases/case-011/audio-transcript-v2.json",
+        "cases/case-011/llm-request.json",
+        "cases/case-011/gold.json"
+      ]
+    },
+    {
+      "case_id": "case-012",
+      "split": "holdout",
+      "title": "Đề xuất chưa được thông qua",
+      "scenario": "Đề xuất chưa được thông qua",
+      "segment_count": 4,
+      "gold_action_count": 0,
+      "has_verified_speaker_mapping": true,
+      "has_unknown_speaker": false,
+      "files": [
+        "cases/case-012/audio-transcript-v2.json",
+        "cases/case-012/llm-request.json",
+        "cases/case-012/gold.json"
+      ]
+    },
+    {
+      "case_id": "case-013",
+      "split": "holdout",
+      "title": "Chuỗi lệnh độc hại trong transcript",
+      "scenario": "Chuỗi lệnh độc hại trong transcript",
+      "segment_count": 4,
+      "gold_action_count": 1,
+      "has_verified_speaker_mapping": true,
+      "has_unknown_speaker": false,
+      "files": [
+        "cases/case-013/audio-transcript-v2.json",
+        "cases/case-013/llm-request.json",
+        "cases/case-013/gold.json"
+      ]
+    },
+    {
+      "case_id": "case-014",
+      "split": "holdout",
+      "title": "Người giao việc chưa xác định",
+      "scenario": "Owner Lan được nêu đích danh trong transcript; không cần suy đoán speaker.",
+      "segment_count": 3,
+      "gold_action_count": 1,
+      "has_verified_speaker_mapping": false,
+      "has_unknown_speaker": true,
+      "files": [
+        "cases/case-014/audio-transcript-v2.json",
+        "cases/case-014/llm-request.json",
+        "cases/case-014/gold.json"
+      ]
+    },
+    {
+      "case_id": "case-015",
+      "split": "holdout",
+      "title": "Ưu tiên cao nhưng hạn mơ hồ",
+      "scenario": "Ưu tiên cao nhưng hạn mơ hồ",
+      "segment_count": 4,
+      "gold_action_count": 1,
+      "has_verified_speaker_mapping": true,
+      "has_unknown_speaker": false,
+      "files": [
+        "cases/case-015/audio-transcript-v2.json",
+        "cases/case-015/llm-request.json",
+        "cases/case-015/gold.json"
+      ]
+    },
+    {
+      "case_id": "case-016",
+      "split": "holdout",
+      "title": "Rà soát kế hoạch phát hành",
+      "scenario": "Tránh biến open issue về lỗi xác thực thành Action Item mới khi chưa có cam kết xử lý cụ thể.",
+      "segment_count": 8,
+      "gold_action_count": 2,
+      "has_verified_speaker_mapping": true,
+      "has_unknown_speaker": false,
+      "files": [
+        "cases/case-016/audio-transcript-v2.json",
+        "cases/case-016/llm-request.json",
+        "cases/case-016/gold.json"
+      ]
+    }
+  ]
+}

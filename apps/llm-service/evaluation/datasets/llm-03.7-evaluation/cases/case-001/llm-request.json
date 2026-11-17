@@ -1,0 +1,61 @@
+{
+  "contract_version": "1.0",
+  "request_id": "eval-llm037-case-001",
+  "meeting": {
+    "id": "meeting-llm037-case-001",
+    "title": "Khởi động API đặt lịch",
+    "anchor_date": "2026-11-16",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "duration_seconds": 22.664,
+    "participants": [
+      {
+        "id": "participant-speaker_1",
+        "display_name": "Lan",
+        "speaker_ids": [
+          "speaker_1"
+        ]
+      },
+      {
+        "id": "participant-speaker_2",
+        "display_name": "Minh",
+        "speaker_ids": [
+          "speaker_2"
+        ]
+      }
+    ]
+  },
+  "transcript": {
+    "revision_id": "transcript-case-001-r1",
+    "language": "vi",
+    "segments": [
+      {
+        "id": "SEG-0001",
+        "start": 1.0,
+        "end": 8.182,
+        "speaker_id": "speaker_1",
+        "text": "Hôm nay chúng ta thống nhất ưu tiên hoàn thiện API đặt lịch cho bản thử nghiệm."
+      },
+      {
+        "id": "SEG-0002",
+        "start": 8.832,
+        "end": 13.287,
+        "speaker_id": "speaker_2",
+        "text": "Tôi sẽ hoàn thiện API đặt lịch trước thứ Sáu này."
+      },
+      {
+        "id": "SEG-0003",
+        "start": 13.937,
+        "end": 19.664,
+        "speaker_id": "speaker_1",
+        "text": "Sau khi có API, nhóm sẽ xem xét kết quả; chưa chốt ai kiểm thử."
+      }
+    ]
+  },
+  "extraction": {
+    "output_language": "vi",
+    "requested_modules": [
+      "meeting_summary",
+      "action_items"
+    ]
+  }
+}

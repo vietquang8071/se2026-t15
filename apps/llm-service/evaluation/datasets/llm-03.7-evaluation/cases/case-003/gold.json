@@ -1,0 +1,46 @@
+{
+  "gold_schema_version": "llm03.7-gold-v1",
+  "case_id": "case-003",
+  "evaluation_scope": [
+    "meeting_summary",
+    "action_items"
+  ],
+  "meeting_summary": {
+    "reference_overview": "Nhóm xác nhận báo cáo tiến độ trước đã được gửi và thảo luận ý tưởng dùng Redis nhưng chưa quyết định triển khai.",
+    "key_topics": [
+      {
+        "topic": "Báo cáo tiến độ",
+        "brief_discussion": "Báo cáo tuần trước đã hoàn thành.",
+        "source_segment_ids": [
+          "SEG-0001"
+        ]
+      },
+      {
+        "topic": "Đề xuất Redis",
+        "brief_discussion": "Redis mới là phương án được đề xuất, chưa có quyết định hay phân công.",
+        "source_segment_ids": [
+          "SEG-0002",
+          "SEG-0003",
+          "SEG-0004"
+        ]
+      }
+    ],
+    "source_segment_ids": [
+      "SEG-0001",
+      "SEG-0002",
+      "SEG-0003",
+      "SEG-0004"
+    ],
+    "forbidden_claims": [
+      "Không chuyển việc đã hoàn thành thành Action Item.",
+      "Không biến đề xuất thử Redis thành cam kết."
+    ]
+  },
+  "action_items": [],
+  "evaluation_notes": [],
+  "gold_policy": {
+    "semantic_paraphrases_allowed": true,
+    "source_ids_are_evidence_not_just_syntactic_checks": true,
+    "candidate_exact_text_match_required": false
+  }
+}

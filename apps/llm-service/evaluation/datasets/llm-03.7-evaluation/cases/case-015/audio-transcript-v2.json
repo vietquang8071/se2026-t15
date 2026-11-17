@@ -1,0 +1,55 @@
+{
+  "schema_version": 2,
+  "audio_id": "5f22ef91-ecb3-5569-8e5d-44837515803a",
+  "language": "vi",
+  "timeline": "source",
+  "source_audio_start_sec": 0.0,
+  "duration_sec": 25.405,
+  "text": "Tôi nhận nhiệm vụ kiểm tra độ trễ endpoint tìm kiếm.\nViệc kiểm tra độ trễ là ưu tiên cao, cần có kết quả khoảng cuối tháng.\nChưa chốt ngày chính xác, đừng tự ghi một ngày cụ thể.\nTôi sẽ báo lại kết quả khi hoàn thành.",
+  "speakers": [
+    {
+      "id": "speaker_1",
+      "name": "speaker_1"
+    },
+    {
+      "id": "speaker_2",
+      "name": "speaker_2"
+    }
+  ],
+  "segments": [
+    {
+      "id": "SEG-0001",
+      "start": 1.0,
+      "end": 5.727,
+      "speaker": "speaker_1",
+      "text": "Tôi nhận nhiệm vụ kiểm tra độ trễ endpoint tìm kiếm."
+    },
+    {
+      "id": "SEG-0002",
+      "start": 6.377,
+      "end": 12.741,
+      "speaker": "speaker_2",
+      "text": "Việc kiểm tra độ trễ là ưu tiên cao, cần có kết quả khoảng cuối tháng."
+    },
+    {
+      "id": "SEG-0003",
+      "start": 13.391,
+      "end": 18.3,
+      "speaker": "speaker_2",
+      "text": "Chưa chốt ngày chính xác, đừng tự ghi một ngày cụ thể."
+    },
+    {
+      "id": "SEG-0004",
+      "start": 18.95,
+      "end": 22.405,
+      "speaker": "speaker_1",
+      "text": "Tôi sẽ báo lại kết quả khi hoàn thành."
+    }
+  ],
+  "warnings": [
+    "Nhãn người nói do model suy luận, không phải danh tính đã xác thực."
+  ],
+  "models": {
+    "transcription_and_diarization": "gpt-4o-transcribe-diarize"
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "contract_version": "1.0",
+  "request_id": "eval-llm037-case-008",
+  "meeting": {
+    "id": "meeting-llm037-case-008",
+    "title": "Chốt checklist bảo mật theo ISO",
+    "anchor_date": "2026-11-23",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "duration_seconds": 22.109,
+    "participants": [
+      {
+        "id": "participant-speaker_1",
+        "display_name": "Trang",
+        "speaker_ids": [
+          "speaker_1"
+        ]
+      },
+      {
+        "id": "participant-speaker_2",
+        "display_name": "Dũng",
+        "speaker_ids": [
+          "speaker_2"
+        ]
+      }
+    ]
+  },
+  "transcript": {
+    "revision_id": "transcript-case-008-r1",
+    "language": "vi",
+    "segments": [
+      {
+        "id": "SEG-0001",
+        "start": 1.0,
+        "end": 5.182,
+        "speaker_id": "speaker_1",
+        "text": "Dũng phụ trách gửi checklist bảo mật cho nhóm."
+      },
+      {
+        "id": "SEG-0002",
+        "start": 5.832,
+        "end": 9.832,
+        "speaker_id": "speaker_2",
+        "text": "Tôi sẽ gửi checklist bảo mật vào 2026-12-15."
+      },
+      {
+        "id": "SEG-0003",
+        "start": 10.482,
+        "end": 15.209,
+        "speaker_id": "speaker_1",
+        "text": "Đây là công việc ưu tiên cao; ghi rõ hạn 2026-12-15."
+      },
+      {
+        "id": "SEG-0004",
+        "start": 15.859,
+        "end": 19.109,
+        "speaker_id": "speaker_2",
+        "text": "Tôi xác nhận cả hạn và mức ưu tiên."
+      }
+    ]
+  },
+  "extraction": {
+    "output_language": "vi",
+    "requested_modules": [
+      "meeting_summary",
+      "action_items"
+    ]
+  }
+}
