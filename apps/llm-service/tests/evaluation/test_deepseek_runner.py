@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +11,7 @@ import pytest
 from evaluation.deepseek_runner import MODEL_ID, run_cli
 from evaluation.loader import DATASET_DIR, load_dataset
 from evaluation.runner import run_cli as run_offline_cli
+from evaluation.scoring import reviewable_claim_ids
 
 
 SERVICE_TOKEN = "manual-runner-service-token-do-not-log"
@@ -68,8 +70,12 @@ def _valid_response(case_id: str = "case-001") -> dict[str, Any]:
     case = load_dataset(DATASET_DIR).case(case_id)
     assert case is not None
     request = case.request
-    source = request.transcript.segments[0]
-    start_ms = round(source.start * 1000)
+    summary_source = request.transcript.segments[0]
+    action_source = next(
+        (segment for segment in request.transcript.segments if segment.id == "SEG-0002"),
+        summary_source,
+    )
+    start_ms = round(action_source.start * 1000)
     total_seconds, milliseconds = divmod(start_ms, 1000)
     minutes, seconds = divmod(total_seconds, 60)
     timestamp = f"00:{minutes:02d}:{seconds:02d}.{milliseconds:03d}"
@@ -86,9 +92,37 @@ def _valid_response(case_id: str = "case-001") -> dict[str, Any]:
                 "date": str(request.meeting.anchor_date),
                 "duration_minutes": round(request.meeting.duration_seconds / 60, 2),
                 "participants": [p.display_name for p in request.meeting.participants],
-                "overview": "Nhóm khởi động API đặt lịch và thống nhất bước triển khai.",
-                "key_topics": [],
-                "source_segment_ids": [source.id],
+                "overview": (
+                    "Nhóm tập trung vào API đặt lịch cho bản thử nghiệm. Minh cam kết "
+                    "hoàn thiện API trước thứ Sáu này; người kiểm thử chưa được chốt."
+                    if case_id == "case-001"
+                    else "Nhóm khởi động API đặt lịch và thống nhất bước triển khai."
+                ),
+                "key_topics": (
+                    [
+                        {
+                            "topic": "API đặt lịch",
+                            "brief_discussion": "Minh nhận hoàn thiện API đặt lịch trước thứ Sáu này.",
+                            "source_segment_ids": ["SEG-0001", "SEG-0002"],
+                            "needs_review": False,
+                            "review_reasons": [],
+                        },
+                        {
+                            "topic": "Kiểm thử",
+                            "brief_discussion": "Nhóm chưa chốt người kiểm thử.",
+                            "source_segment_ids": ["SEG-0003"],
+                            "needs_review": False,
+                            "review_reasons": [],
+                        },
+                    ]
+                    if case_id == "case-001"
+                    else []
+                ),
+                "source_segment_ids": (
+                    ["SEG-0001", "SEG-0002", "SEG-0003"]
+                    if case_id == "case-001"
+                    else [summary_source.id]
+                ),
                 "needs_review": False,
                 "review_reasons": [],
             },
@@ -98,14 +132,25 @@ def _valid_response(case_id: str = "case-001") -> dict[str, Any]:
                     "task": "Hoàn thiện API đặt lịch",
                     "owner": "Minh",
                     "due_date": None,
-                    "raw_due_expression": None,
-                    "due_date_resolution": None,
+                    "raw_due_expression": "trước thứ Sáu này" if case_id == "case-001" else None,
+                    "due_date_resolution": (
+                        {
+                            "status": "unresolved",
+                            "resolved_date": None,
+                            "start_date": None,
+                            "end_date": None,
+                            "needs_review": True,
+                            "source_segment_ids": [action_source.id],
+                        }
+                        if case_id == "case-001"
+                        else None
+                    ),
                     "priority": None,
                     "source_timestamp": timestamp,
                     "context": None,
-                    "source_segment_ids": [source.id],
-                    "needs_review": False,
-                    "review_reasons": [],
+                    "source_segment_ids": [action_source.id],
+                    "needs_review": case_id == "case-001",
+                    "review_reasons": ["temporal_unresolved"] if case_id == "case-001" else [],
                 }
             ],
             "decision_log": None,
@@ -138,6 +183,65 @@ def _success_transport(body: dict[str, Any], calls: list[dict[str, Any]]) -> htt
         return httpx.Response(200, json=body)
 
     return httpx.MockTransport(handle)
+
+
+def _smoke_review(
+    output_dir: Path,
+    *,
+    response: dict[str, Any] | None = None,
+    reviewed_claims: list[dict[str, str]] | None = None,
+    decision: str = "approved",
+    summary_review: dict[str, Any] | None = None,
+    action_matches: list[dict[str, str]] | None = None,
+) -> None:
+    response_path = output_dir / "responses" / "case-001.json"
+    if response is None:
+        response = json.loads(response_path.read_text(encoding="utf-8"))
+    claim_ids = reviewable_claim_ids(response)
+    claims = reviewed_claims or [
+        {"claim_id": claim_id, "verdict": "supported"} for claim_id in claim_ids
+    ]
+    case_review = {
+        "action_matches": action_matches or [],
+        "summary_review": summary_review
+        or {
+            "faithfulness": 5,
+            "required_fact_coverage": 1,
+            "conciseness_actionability": 4,
+            "semantic_source_grounding": 1,
+            "hallucination_count": 0,
+            "hallucinations": [],
+            "reviewer": "reviewer-a",
+        },
+        "semantic_grounding": {"reviewer": "reviewer-a", "claims": claims},
+    }
+    review_path = output_dir / "reviews" / "review-template-smoke.json"
+    review_path.write_text(
+        json.dumps({"cases": {"case-001": case_review}}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    approval = {
+        "schema_version": "llm03.7.2-smoke-approval-v1",
+        "case_id": "case-001",
+        "response_sha256": hashlib.sha256(response_path.read_bytes()).hexdigest(),
+        "review_file": "review-template-smoke.json",
+        "review_sha256": hashlib.sha256(review_path.read_bytes()).hexdigest(),
+        "decision": decision,
+        "reviewer": "reviewer-a",
+        "rationale": "Đã đối chiếu các facts, Action Item và bằng chứng với transcript.",
+    }
+    (output_dir / "reviews" / "smoke-approval.json").write_text(
+        json.dumps(approval, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+
+def _successful_smoke(output_dir: Path, *, response: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    calls: list[dict[str, Any]] = []
+    assert run_cli(
+        _smoke_args(output_dir),
+        transport=_success_transport(response or _valid_response(), calls),
+    ) == 0
+    return calls
 
 
 def test_default_invocation_is_preflight_without_network(
@@ -407,6 +511,7 @@ def test_development_case_limit_is_respected(
         _smoke_args(output),
         transport=_success_transport(_valid_response(), calls),
     ) == 0
+    _smoke_review(output)
     args = _development_args(output, "--max-cases", "1", "--case", "case-002")
     body = _valid_response("case-002")
 
@@ -433,6 +538,7 @@ def test_development_default_is_exactly_ten_sequential_cases(
     assert run_cli(
         _smoke_args(output), transport=httpx.MockTransport(handle)
     ) == 0
+    _smoke_review(output)
     assert run_cli(
         _development_args(output), transport=httpx.MockTransport(handle)
     ) == 0
@@ -570,6 +676,7 @@ def test_development_reuses_matching_smoke_response_without_second_request(
         _smoke_args(output_dir),
         transport=_success_transport(_valid_response(), smoke_calls),
     ) == 0
+    _smoke_review(output_dir)
     original_response = (output_dir / "responses" / "case-001.json").read_bytes()
     original_case_metadata = (output_dir / "metadata" / "case-001.json").read_bytes()
 
@@ -617,3 +724,465 @@ def test_offline_evaluator_remains_fail_closed(
         ]
     ) == 3
     assert "disabled" in capsys.readouterr().err.lower()
+
+
+def _development_metadata(output_dir: Path) -> dict[str, Any]:
+    return json.loads((output_dir / "metadata" / "development.json").read_text())
+
+
+def _run_development_cases(
+    output_dir: Path,
+    case_ids: list[str],
+    transport: httpx.AsyncBaseTransport,
+) -> int:
+    extra = ["--max-cases", str(len(case_ids))]
+    for case_id in case_ids:
+        extra.extend(["--case", case_id])
+    return run_cli(_development_args(output_dir, *extra), transport=transport)
+
+
+def test_action_fixture_cites_commitment_segment_and_source_time() -> None:
+    response = _valid_response()
+    action = response["modules"]["action_items"][0]
+
+    assert action["source_segment_ids"] == ["SEG-0002"]
+    assert action["source_timestamp"] == "00:00:08.832"
+    assert action["raw_due_expression"] == "trước thứ Sáu này"
+    assert action["due_date_resolution"]["status"] == "unresolved"
+
+
+def test_successful_technical_smoke_is_left_pending_semantic_review(
+    configured_env: None, tmp_path: Path
+) -> None:
+    output = tmp_path / "pending-smoke"
+
+    assert _successful_smoke(output)
+
+    record = json.loads((output / "metadata" / "smoke.json").read_text())
+    approval = json.loads((output / "reviews" / "smoke-approval.json").read_text())
+    assert record["technical_smoke_status"] == "technical_smoke_passed"
+    assert record["semantic_review_status"] == "semantic_review_pending"
+    assert approval["decision"] == "pending_review"
+
+
+def test_live_metrics_include_failed_attempt_and_unattempted_cases(
+    configured_env: None, tmp_path: Path
+) -> None:
+    output = tmp_path / "live-metrics"
+    _successful_smoke(output)
+    _smoke_review(output)
+    calls: list[str] = []
+    case_by_request = {
+        case.request.request_id: case.case_id for case in load_dataset(DATASET_DIR).cases
+    }
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        request_body = json.loads(request.content)
+        case_id = case_by_request[request_body["request_id"]]
+        calls.append(case_id)
+        if case_id == "case-003":
+            return httpx.Response(503, json={"error": "provider unavailable"})
+        return httpx.Response(200, json=_valid_response(case_id))
+
+    assert _run_development_cases(
+        output,
+        ["case-002", "case-003", "case-004"],
+        httpx.MockTransport(handle),
+    ) == 1
+
+    record = _development_metadata(output)
+    live = record["live_execution"]
+    assert calls == ["case-002", "case-003"]
+    assert live == {
+        "selected_case_count": 3,
+        "attempted_count": 2,
+        "successful_count": 1,
+        "failed_count": 1,
+        "reused_count": 0,
+        "not_attempted_count": 1,
+        "live_execution_success_rate": 0.5,
+        "live_execution_success_rate_denominator": 2,
+        "failure_categories": {"service_error": 1},
+        "pre_request_failure_categories": {},
+        "http_status_distribution": {"200": 1, "503": 1},
+    }
+    assert record["case_results"][-1]["case_id"] == "case-004"
+    assert record["case_results"][-1]["status"] == "not_attempted"
+    assert record["case_results"][-1]["attempt_count"] == 0
+    assert (output / "responses" / "case-002.json").is_file()
+    assert json.loads((output / "failures" / "case-003.json").read_text())["http_status"] == 503
+    offline = json.loads((output / "reports" / "development" / "report.json").read_text())
+    assert offline["dataset"]["evaluated_count"] == 1
+    assert offline["dataset"]["skipped_count"] == 2
+
+
+def test_live_metrics_count_all_successful_attempts(
+    configured_env: None, tmp_path: Path
+) -> None:
+    output = tmp_path / "all-success"
+    _successful_smoke(output)
+    _smoke_review(output)
+    request_to_case = {
+        case.request.request_id: case.case_id for case in load_dataset(DATASET_DIR).cases
+    }
+    calls: list[str] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        case_id = request_to_case[json.loads(request.content)["request_id"]]
+        calls.append(case_id)
+        return httpx.Response(200, json=_valid_response(case_id))
+
+    assert _run_development_cases(
+        output,
+        ["case-002", "case-003"],
+        httpx.MockTransport(handle),
+    ) == 0
+
+    live = _development_metadata(output)["live_execution"]
+    assert calls == ["case-002", "case-003"]
+    assert live["selected_case_count"] == 2
+    assert live["attempted_count"] == live["successful_count"] == 2
+    assert live["failed_count"] == live["reused_count"] == live["not_attempted_count"] == 0
+    assert live["live_execution_success_rate"] == 1
+    assert live["live_execution_success_rate_denominator"] == 2
+
+
+def test_live_metrics_include_http_429_without_retry(
+    configured_env: None, tmp_path: Path
+) -> None:
+    output = tmp_path / "rate-limited"
+    _successful_smoke(output)
+    _smoke_review(output)
+    calls: list[httpx.Request] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        return httpx.Response(429, json={"error": "rate limited"})
+
+    assert _run_development_cases(
+        output, ["case-002"], httpx.MockTransport(handle)
+    ) == 1
+    live = _development_metadata(output)["live_execution"]
+    assert len(calls) == 1
+    assert live["attempted_count"] == live["failed_count"] == 1
+    assert live["successful_count"] == 0
+    assert live["failure_categories"] == {"service_rate_limit": 1}
+    assert live["http_status_distribution"] == {"429": 1}
+    assert live["live_execution_success_rate"] == 0
+    assert live["live_execution_success_rate_denominator"] == 1
+
+
+def test_timeout_after_success_counts_timeout_as_failed_attempt(
+    configured_env: None, tmp_path: Path
+) -> None:
+    output = tmp_path / "timeout-after-success"
+    _successful_smoke(output)
+    _smoke_review(output)
+    calls: list[str] = []
+    request_to_case = {
+        case.request.request_id: case.case_id for case in load_dataset(DATASET_DIR).cases
+    }
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        case_id = request_to_case[json.loads(request.content)["request_id"]]
+        calls.append(case_id)
+        if case_id == "case-003":
+            raise httpx.ReadTimeout("private timeout text", request=request)
+        return httpx.Response(200, json=_valid_response(case_id))
+
+    assert _run_development_cases(
+        output, ["case-002", "case-003"], httpx.MockTransport(handle)
+    ) == 1
+    live = _development_metadata(output)["live_execution"]
+    assert calls == ["case-002", "case-003"]
+    assert live["attempted_count"] == 2
+    assert live["successful_count"] == live["failed_count"] == 1
+    assert live["failure_categories"] == {"timeout": 1}
+    assert live["http_status_distribution"] == {"200": 1}
+    assert live["live_execution_success_rate"] == 0.5
+
+
+def test_invalid_contract_http_200_counts_as_live_extraction_failure(
+    configured_env: None, tmp_path: Path
+) -> None:
+    output = tmp_path / "invalid-contract"
+    calls: list[dict[str, Any]] = []
+    invalid = _valid_response()
+    invalid["request_id"] = "wrong-request"
+
+    assert run_cli(
+        _smoke_args(output), transport=_success_transport(invalid, calls)
+    ) == 1
+
+    record = json.loads((output / "metadata" / "smoke.json").read_text())
+    live = record["live_execution"]
+    assert live["attempted_count"] == 1
+    assert live["successful_count"] == 0
+    assert live["failed_count"] == 1
+    assert live["live_execution_success_rate"] == 0
+    assert live["http_status_distribution"] == {"200": 1}
+    assert live["failure_categories"] == {"response_contract_invalid": 1}
+
+
+def test_reused_smoke_is_excluded_from_development_success_rate(
+    configured_env: None, tmp_path: Path
+) -> None:
+    output = tmp_path / "reuse-rate"
+    _successful_smoke(output)
+    _smoke_review(output)
+
+    assert _run_development_cases(
+        output,
+        ["case-001", "case-002"],
+        _success_transport(_valid_response("case-002"), []),
+    ) == 0
+    live = _development_metadata(output)["live_execution"]
+    assert live["selected_case_count"] == 2
+    assert live["attempted_count"] == live["successful_count"] == 1
+    assert live["reused_count"] == 1
+    assert live["not_attempted_count"] == live["failed_count"] == 0
+    assert live["live_execution_success_rate"] == 1
+    assert live["live_execution_success_rate_denominator"] == 1
+
+
+def test_reused_only_run_has_null_live_success_rate(
+    configured_env: None, tmp_path: Path
+) -> None:
+    output = tmp_path / "reused-only"
+    _successful_smoke(output)
+    _smoke_review(output)
+
+    assert _run_development_cases(
+        output, ["case-001"], httpx.MockTransport(lambda request: pytest.fail("no request expected"))
+    ) == 0
+    live = _development_metadata(output)["live_execution"]
+    assert live["selected_case_count"] == 1
+    assert live["attempted_count"] == 0
+    assert live["successful_count"] == live["failed_count"] == 0
+    assert live["reused_count"] == 1
+    assert live["not_attempted_count"] == 0
+    assert live["live_execution_success_rate"] is None
+    assert live["live_execution_success_rate_denominator"] == 0
+
+
+def test_development_without_smoke_review_is_blocked_before_http(
+    configured_env: None, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    output = tmp_path / "missing-review"
+    calls = _successful_smoke(output)
+    additional_calls: list[dict[str, Any]] = []
+
+    assert _run_development_cases(
+        output,
+        ["case-002"],
+        _success_transport(_valid_response("case-002"), additional_calls),
+    ) == 3
+    assert len(calls) == 1
+    assert additional_calls == []
+    assert "semantic_review_pending" in capsys.readouterr().err
+
+
+def test_incomplete_smoke_review_remains_pending_and_blocks_development(
+    configured_env: None, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    output = tmp_path / "partial-review"
+    _successful_smoke(output)
+    _smoke_review(output, reviewed_claims=[{"claim_id": "summary.overview", "verdict": "supported"}])
+    calls: list[dict[str, Any]] = []
+
+    assert run_cli(["verify-smoke-review", "--output-dir", str(output)]) == 3
+    assert _run_development_cases(
+        output, ["case-002"], _success_transport(_valid_response("case-002"), calls)
+    ) == 3
+    assert calls == []
+    captured = capsys.readouterr()
+    assert "semantic_review_pending" in captured.out + captured.err
+
+
+def test_unsupported_semantic_claim_fails_smoke_quality_gate(
+    configured_env: None, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    output = tmp_path / "unsupported-claim"
+    _successful_smoke(output)
+    claims = [
+        {"claim_id": claim_id, "verdict": "supported"}
+        for claim_id in reviewable_claim_ids(_valid_response())
+    ]
+    claims[0] = {**claims[0], "verdict": "unsupported"}
+    _smoke_review(output, reviewed_claims=claims)
+
+    assert run_cli(["verify-smoke-review", "--output-dir", str(output)]) == 1
+    result = json.loads((output / "metadata" / "smoke.json").read_text())
+    assert result["technical_smoke_status"] == "technical_smoke_passed"
+    assert result["semantic_review_status"] == "semantic_review_pending"
+
+
+@pytest.mark.parametrize(
+    ("response_change", "expected_failure"),
+    [
+        ({"owner": "Lan"}, "owner"),
+        ({"raw_due_expression": "ngày mai"}, "deadline"),
+    ],
+    ids=["fabricated-owner", "unsupported-deadline"],
+)
+def test_fabricated_owner_or_deadline_fails_smoke_quality_gate(
+    configured_env: None,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    response_change: dict[str, Any],
+    expected_failure: str,
+) -> None:
+    output = tmp_path / expected_failure
+    response = _valid_response()
+    response["modules"]["action_items"][0].update(response_change)
+    _successful_smoke(output, response=response)
+    _smoke_review(output)
+
+    assert run_cli(["verify-smoke-review", "--output-dir", str(output)]) == 1
+    message = capsys.readouterr().out.lower()
+    assert expected_failure in message
+
+
+def test_malformed_smoke_review_is_rejected_without_traceback_or_http(
+    configured_env: None, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    output = tmp_path / "bad-review"
+    _successful_smoke(output)
+    review_path = output / "reviews" / "review-template-smoke.json"
+    review_path.write_text('{"cases":{"case-001":{"summary_review":{"faithfulness":8}}}}')
+    _smoke_review(output, summary_review={"faithfulness": 8})
+    calls: list[dict[str, Any]] = []
+
+    assert _run_development_cases(
+        output, ["case-002"], _success_transport(_valid_response("case-002"), calls)
+    ) == 3
+    assert calls == []
+    error = capsys.readouterr().err.lower()
+    assert "review" in error
+    assert "traceback" not in error
+
+
+def test_malformed_review_is_rejected_even_before_approval(
+    configured_env: None, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    output = tmp_path / "malformed-pending-review"
+    _successful_smoke(output)
+    review_path = output / "reviews" / "review-template-smoke.json"
+    review_path.write_text("{not-json", encoding="utf-8")
+
+    assert run_cli(["verify-smoke-review", "--output-dir", str(output)]) == 3
+    assert "invalid_review" in capsys.readouterr().err
+
+
+def test_malformed_smoke_approval_is_rejected_without_traceback(
+    configured_env: None, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    output = tmp_path / "bad-approval"
+    _successful_smoke(output)
+    _smoke_review(output)
+    approval_path = output / "reviews" / "smoke-approval.json"
+    approval = json.loads(approval_path.read_text(encoding="utf-8"))
+    approval["decision"] = []
+    approval_path.write_text(json.dumps(approval), encoding="utf-8")
+
+    assert run_cli(["verify-smoke-review", "--output-dir", str(output)]) == 3
+    error = capsys.readouterr().err.lower()
+    assert "invalid_review" in error
+    assert "traceback" not in error
+
+
+def test_review_for_another_saved_response_is_rejected(
+    configured_env: None, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    output = tmp_path / "stale-review"
+    _successful_smoke(output)
+    _smoke_review(output)
+    response_path = output / "responses" / "case-001.json"
+    changed = json.loads(response_path.read_text())
+    changed["modules"]["meeting_summary"]["overview"] += " Thay đổi sau review."
+    response_path.write_text(json.dumps(changed, ensure_ascii=False, indent=2))
+
+    assert run_cli(["verify-smoke-review", "--output-dir", str(output)]) == 3
+    assert "fingerprint" in capsys.readouterr().err.lower()
+
+
+def test_valid_review_and_explicit_approval_allow_development(
+    configured_env: None, tmp_path: Path
+) -> None:
+    output = tmp_path / "approved-smoke"
+    _successful_smoke(output)
+    _smoke_review(output)
+
+    assert run_cli(["verify-smoke-review", "--output-dir", str(output)]) == 0
+    development_calls: list[dict[str, Any]] = []
+    assert _run_development_cases(
+        output,
+        ["case-002"],
+        _success_transport(_valid_response("case-002"), development_calls),
+    ) == 0
+    assert len(development_calls) == 1
+    run = _development_metadata(output)
+    assert run["smoke_quality_gate"]["status"] == "semantic_review_passed"
+    assert run["smoke_quality_gate"]["decision"] == "approved"
+
+
+def test_explicit_rejection_does_not_authorize_development(
+    configured_env: None, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    output = tmp_path / "rejected-smoke"
+    _successful_smoke(output)
+    _smoke_review(output, decision="rejected")
+    calls: list[dict[str, Any]] = []
+
+    assert _run_development_cases(
+        output, ["case-002"], _success_transport(_valid_response("case-002"), calls)
+    ) == 3
+    assert calls == []
+    assert "semantic_review_failed" in capsys.readouterr().err
+
+
+def test_development_authorization_remains_required_after_smoke_approval(
+    configured_env: None, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    output = tmp_path / "approval-without-dev-ack"
+    _successful_smoke(output)
+    _smoke_review(output)
+    calls: list[dict[str, Any]] = []
+    args = [
+        "development",
+        "--max-cases",
+        "1",
+        "--spend-limit-usd",
+        "0.25",
+        "--confirm-account-spending-limit",
+        "--output-dir",
+        str(output),
+        "--case",
+        "case-002",
+    ]
+
+    assert run_cli(args, transport=_success_transport(_valid_response("case-002"), calls)) == 3
+    assert calls == []
+    assert "authorize-development" in capsys.readouterr().err
+
+
+def test_manual_match_decision_resolves_paraphrase_for_smoke_gate(
+    configured_env: None, tmp_path: Path
+) -> None:
+    output = tmp_path / "paraphrase-review"
+    response = _valid_response()
+    response["modules"]["action_items"][0]["task"] = "Hoàn tất API đặt lịch"
+    _successful_smoke(output, response=response)
+    _smoke_review(
+        output,
+        action_matches=[
+            {
+                "prediction_id": "ACT-001",
+                "gold_id": "GOLD-ACT-001",
+                "decision": "match",
+                "reviewer": "reviewer-a",
+            }
+        ],
+    )
+
+    assert run_cli(["verify-smoke-review", "--output-dir", str(output)]) == 0
