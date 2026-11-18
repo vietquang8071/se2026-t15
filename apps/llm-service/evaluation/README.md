@@ -188,6 +188,33 @@ uv run --locked --extra test --env-file .env \
 
 There is no automatic retry or concurrency. A failed request stops the run because a failed HTTP call may still have incurred provider cost. The runner requires the operator to confirm an account-level spending cap; this is an operator assertion and is not independently verified or enforced by the runner. The supplied run limit and request count are not hard monetary caps. When selected route pricing or actual billing is unavailable, estimated and billed cost remain `null`, never zero.
 
+### Holdout evaluation
+
+Run holdout only after development is finalized, the dataset/configuration has been checked, and the operator separately authorizes this run. Holdout accepts only `case-011` through `case-016`; `--max-cases` must be between 1 and 6. The `$2` value below records the operator authorization amount; it is **not** a hard spending cap. Confirm available credit and account-level spending restrictions independently before running.
+
+```bash
+cd apps/llm-service
+uv run --locked --extra test --env-file .env \
+  python -m evaluation.deepseek_runner holdout \
+  --authorize-holdout \
+  --max-cases 6 \
+  --spend-limit-usd 2 \
+  --confirm-account-spending-limit \
+  --output-dir ~/Study_Space/SE-Evaluation-Results/llm03.7.2-holdout
+```
+
+The runner writes `responses/case-011.json` through `case-016.json`, `metadata/holdout.json`, per-case metadata, `reviews/review-template-holdout.json`, and `reports/holdout/report.json` plus `report.md`. The report labels `split: holdout` and keeps live execution counters separate from offline response scoring. Review the saved responses against the holdout gold and rubric by completing the generated template, then run the existing offline evaluator:
+
+```bash
+uv run --locked --extra test python -m evaluation.runner run \
+  --responses-dir ~/Study_Space/SE-Evaluation-Results/llm03.7.2-holdout/responses \
+  --split holdout \
+  --reviews ~/Study_Space/SE-Evaluation-Results/llm03.7.2-holdout/reviews/review-template-holdout.json \
+  --output-dir ~/Study_Space/SE-Evaluation-Results/llm03.7.2-holdout/reports/holdout/reviewed
+```
+
+Keep holdout in its own output directory. Development records use `metadata/development.json` and `reports/development/`; holdout records use `metadata/holdout.json` and `reports/holdout/`. Do not combine their metrics without retaining the split labels. Human review remains manual; the runner does not make semantic approval decisions for holdout.
+
 ### Output and offline scoring
 
 The output directory is outside the immutable dataset:
