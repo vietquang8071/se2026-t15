@@ -66,6 +66,21 @@ def _development_args(output_dir: Path, *extra: str) -> list[str]:
     ]
 
 
+def _holdout_args(output_dir: Path, *extra: str) -> list[str]:
+    return [
+        "holdout",
+        "--authorize-holdout",
+        "--max-cases",
+        "6",
+        "--spend-limit-usd",
+        "2",
+        "--confirm-account-spending-limit",
+        "--output-dir",
+        str(output_dir),
+        *extra,
+    ]
+
+
 def _valid_response(case_id: str = "case-001") -> dict[str, Any]:
     case = load_dataset(DATASET_DIR).case(case_id)
     assert case is not None
@@ -741,6 +756,17 @@ def _run_development_cases(
     return run_cli(_development_args(output_dir, *extra), transport=transport)
 
 
+def _run_holdout_cases(
+    output_dir: Path,
+    case_ids: list[str],
+    transport: httpx.AsyncBaseTransport,
+) -> int:
+    extra = ["--max-cases", str(len(case_ids))]
+    for case_id in case_ids:
+        extra.extend(["--case", case_id])
+    return run_cli(_holdout_args(output_dir, *extra), transport=transport)
+
+
 def test_action_fixture_cites_commitment_segment_and_source_time() -> None:
     response = _valid_response()
     action = response["modules"]["action_items"][0]
@@ -1186,3 +1212,173 @@ def test_manual_match_decision_resolves_paraphrase_for_smoke_gate(
     )
 
     assert run_cli(["verify-smoke-review", "--output-dir", str(output)]) == 0
+
+
+def test_holdout_requires_its_own_authorization_before_http(
+    configured_env: None,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    args = _holdout_args(tmp_path)
+    args.remove("--authorize-holdout")
+    calls: list[httpx.Request] = []
+
+    assert run_cli(
+        args,
+        transport=httpx.MockTransport(
+            lambda request: calls.append(request) or httpx.Response(200)
+        ),
+    ) == 3
+    assert calls == []
+    assert "authorize-holdout" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("case_limit", [0, 7])
+def test_holdout_rejects_case_limit_outside_range_before_http(
+    configured_env: None,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    case_limit: int,
+) -> None:
+    calls: list[httpx.Request] = []
+
+    assert run_cli(
+        _holdout_args(tmp_path, "--max-cases", str(case_limit)),
+        transport=httpx.MockTransport(
+            lambda request: calls.append(request) or httpx.Response(200)
+        ),
+    ) == 3
+    assert calls == []
+    assert "between 1 and 6" in capsys.readouterr().err
+
+
+def test_holdout_rejects_development_case_ids_before_http(
+    configured_env: None,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    calls: list[httpx.Request] = []
+
+    assert run_cli(
+        _holdout_args(tmp_path, "--case", "case-001"),
+        transport=httpx.MockTransport(
+            lambda request: calls.append(request) or httpx.Response(200)
+        ),
+    ) == 2
+    assert calls == []
+    assert "case-001" in capsys.readouterr().err
+
+
+def test_holdout_selects_six_cases_and_writes_split_specific_reports(
+    configured_env: None, tmp_path: Path
+) -> None:
+    request_to_case = {
+        case.request.request_id: case.case_id for case in load_dataset(DATASET_DIR).cases
+    }
+    calls: list[str] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        case_id = request_to_case[json.loads(request.content)["request_id"]]
+        calls.append(case_id)
+        return httpx.Response(200, json=_valid_response(case_id))
+
+    output = tmp_path / "holdout-run"
+    assert run_cli(_holdout_args(output), transport=httpx.MockTransport(handle)) == 0
+
+    expected = [f"case-{number:03d}" for number in range(11, 17)]
+    assert calls == expected
+    record = json.loads((output / "metadata" / "holdout.json").read_text())
+    assert record["split"] == "holdout"
+    assert record["selected_case_ids"] == expected
+    assert record["live_execution"]["attempted_count"] == 6
+    assert record["live_execution"]["successful_count"] == 6
+    assert sorted(path.stem for path in (output / "responses").glob("*.json")) == expected
+    assert sorted(
+        path.stem
+        for path in (output / "metadata").glob("case-*.json")
+    ) == expected
+    review = json.loads(
+        (output / "reviews" / "review-template-holdout.json").read_text()
+    )
+    assert list(review["cases"]) == expected
+    report = json.loads((output / "reports" / "holdout" / "report.json").read_text())
+    assert report["dataset"]["split"] == "holdout"
+    assert report["dataset"]["evaluated_count"] == 6
+    assert (output / "reports" / "holdout" / "report.md").is_file()
+
+
+def test_holdout_failure_stops_following_cases_and_keeps_holdout_accounting(
+    configured_env: None, tmp_path: Path
+) -> None:
+    request_to_case = {
+        case.request.request_id: case.case_id for case in load_dataset(DATASET_DIR).cases
+    }
+    calls: list[str] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        case_id = request_to_case[json.loads(request.content)["request_id"]]
+        calls.append(case_id)
+        if case_id == "case-012":
+            return httpx.Response(503, json={"error": "unavailable"})
+        return httpx.Response(200, json=_valid_response(case_id))
+
+    output = tmp_path / "holdout-stop"
+    assert _run_holdout_cases(
+        output,
+        ["case-011", "case-012", "case-013"],
+        httpx.MockTransport(handle),
+    ) == 1
+
+    assert calls == ["case-011", "case-012"]
+    record = json.loads((output / "metadata" / "holdout.json").read_text())
+    assert record["live_execution"] == {
+        "selected_case_count": 3,
+        "attempted_count": 2,
+        "successful_count": 1,
+        "failed_count": 1,
+        "reused_count": 0,
+        "not_attempted_count": 1,
+        "live_execution_success_rate": 0.5,
+        "live_execution_success_rate_denominator": 2,
+        "failure_categories": {"service_error": 1},
+        "pre_request_failure_categories": {},
+        "http_status_distribution": {"200": 1, "503": 1},
+    }
+    assert (output / "responses" / "case-011.json").is_file()
+    assert not (output / "responses" / "case-013.json").exists()
+    report = json.loads((output / "reports" / "holdout" / "report.json").read_text())
+    assert report["dataset"]["split"] == "holdout"
+    assert report["dataset"]["evaluated_count"] == 1
+    assert report["dataset"]["skipped_count"] == 2
+
+
+@pytest.mark.parametrize(
+    "relative_path",
+    [
+        "responses/case-011.json",
+        "metadata/case-011.json",
+        "metadata/holdout.json",
+        "reviews/review-template-holdout.json",
+        "reports/holdout/report.json",
+    ],
+)
+def test_holdout_existing_outputs_are_never_overwritten(
+    configured_env: None,
+    tmp_path: Path,
+    relative_path: str,
+) -> None:
+    output = tmp_path / "existing-holdout"
+    existing = output / relative_path
+    existing.parent.mkdir(parents=True)
+    original = b"preserve holdout result\n"
+    existing.write_bytes(original)
+    calls: list[httpx.Request] = []
+
+    assert run_cli(
+        _holdout_args(output),
+        transport=httpx.MockTransport(
+            lambda request: calls.append(request) or httpx.Response(200)
+        ),
+    ) == 2
+    assert calls == []
+    assert existing.read_bytes() == original

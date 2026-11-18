@@ -35,6 +35,7 @@ MODEL_ID = "deepseek/deepseek-v4.1-flash-1017"
 DEFAULT_OUTPUT_DIR = Path("/tmp/llm03.7.2")
 MIN_OUTPUT_TOKENS = 4096
 DEVELOPMENT_CASE_IDS = tuple(f"case-{number:03d}" for number in range(1, 11))
+HOLDOUT_CASE_IDS = tuple(f"case-{number:03d}" for number in range(11, 17))
 
 
 class RunnerError(ValueError):
@@ -199,13 +200,18 @@ def _authorize(args: argparse.Namespace) -> None:
             raise RunnerError("Smoke mode requires the separate --authorize-smoke acknowledgment.")
         if args.max_cases != 1:
             raise RunnerError("Smoke mode is fixed to case-001 and requires --max-cases 1.")
-    else:
+    elif args.command == "development":
         if not args.authorize_development:
             raise RunnerError(
                 "Development mode requires separate --authorize-development approval."
             )
         if args.max_cases is None or not 1 <= args.max_cases <= 10:
             raise RunnerError("Development mode requires --max-cases between 1 and 10.")
+    else:
+        if not args.authorize_holdout:
+            raise RunnerError("Holdout mode requires the separate --authorize-holdout acknowledgment.")
+        if args.max_cases is None or not 1 <= args.max_cases <= len(HOLDOUT_CASE_IDS):
+            raise RunnerError("Holdout mode requires --max-cases between 1 and 6.")
     if (
         args.spend_limit_usd is None
         or not math.isfinite(args.spend_limit_usd)
@@ -219,22 +225,32 @@ def _authorize(args: argparse.Namespace) -> None:
 
 
 def _select_cases(dataset: DatasetLoadResult, args: argparse.Namespace) -> list[DatasetCase]:
+    allowed_case_ids = (
+        HOLDOUT_CASE_IDS if args.command == "holdout" else DEVELOPMENT_CASE_IDS
+    )
+    expected_split = "holdout" if args.command == "holdout" else "development"
     if args.command == "smoke":
         case_ids = ["case-001"]
     elif args.case_ids:
         if len(args.case_ids) != len(set(args.case_ids)):
-            raise RunnerError("Development case IDs must not be repeated.")
+            raise RunnerError(f"{expected_split.title()} case IDs must not be repeated.")
         case_ids = list(args.case_ids)
     else:
-        case_ids = list(DEVELOPMENT_CASE_IDS[: args.max_cases])
+        case_ids = list(allowed_case_ids[: args.max_cases])
 
     cases: list[DatasetCase] = []
     for case_id in case_ids:
         case = dataset.case(case_id)
         if case is None:
-            raise RunnerError(f"Unknown development case ID: {case_id}.")
-        if case_id not in DEVELOPMENT_CASE_IDS or case.split != "development":
-            raise RunnerError(f"Live evaluation is forbidden for non-development case {case_id}.")
+            raise RunnerError(f"Unknown {expected_split} case ID: {case_id}.")
+        if case_id not in allowed_case_ids or case.split != expected_split:
+            if expected_split == "development":
+                raise RunnerError(
+                    f"Live evaluation is forbidden for non-development case {case_id}."
+                )
+            raise RunnerError(
+                f"Live {expected_split} evaluation is forbidden for case {case_id}."
+            )
         cases.append(case)
 
     if args.command == "smoke" and cases != [dataset.case("case-001")]:
@@ -459,8 +475,14 @@ async def _send_one(
     endpoint: str,
     mode: str,
 ) -> dict[str, Any]:
-    if case.split != "development" or case.case_id not in DEVELOPMENT_CASE_IDS:
-        raise RunnerError(f"Live evaluation is forbidden for non-development case {case.case_id}.")
+    allowed_case_ids = HOLDOUT_CASE_IDS if mode == "holdout" else DEVELOPMENT_CASE_IDS
+    expected_split = "holdout" if mode == "holdout" else "development"
+    if case.split != expected_split or case.case_id not in allowed_case_ids:
+        if expected_split == "development":
+            raise RunnerError(
+                f"Live evaluation is forbidden for non-development case {case.case_id}."
+            )
+        raise RunnerError(f"Live {expected_split} evaluation is forbidden for case {case.case_id}.")
 
     request_path = case.case_dir / "llm-request.json"
     try:
@@ -535,8 +557,14 @@ async def _execute(
         headers=headers,
     ) as client:
         for case in cases:
-            if case.split != "development" or case.case_id not in DEVELOPMENT_CASE_IDS:
-                raise RunnerError(f"Live evaluation is forbidden for non-development case {case.case_id}.")
+            allowed_case_ids = HOLDOUT_CASE_IDS if mode == "holdout" else DEVELOPMENT_CASE_IDS
+            expected_split = "holdout" if mode == "holdout" else "development"
+            if case.split != expected_split or case.case_id not in allowed_case_ids:
+                if expected_split == "development":
+                    raise RunnerError(
+                        f"Live evaluation is forbidden for non-development case {case.case_id}."
+                    )
+                raise RunnerError(f"Live {expected_split} evaluation is forbidden for case {case.case_id}.")
 
             response_path = paths["responses"] / f"{case.case_id}.json"
             if response_path.exists():
@@ -558,8 +586,15 @@ async def _execute(
                 )
                 continue
 
-            if http_attempt_count >= 10:
-                raise RunnerError("Development request count exceeded the hard case-count maximum of 10.")
+            max_case_count = len(HOLDOUT_CASE_IDS) if mode == "holdout" else len(DEVELOPMENT_CASE_IDS)
+            if http_attempt_count >= max_case_count:
+                if mode == "holdout":
+                    raise RunnerError(
+                        "Holdout request count exceeded the case-count maximum of 6."
+                    )
+                raise RunnerError(
+                    "Development request count exceeded the hard case-count maximum of 10."
+                )
             result = await _send_one(
                 client,
                 case=case,
@@ -993,7 +1028,7 @@ def _run_record(
             else "technical_smoke_failed"
         )
         semantic_review_status = "semantic_review_pending"
-    else:
+    elif mode == "development":
         technical_smoke_status = (
             smoke_quality_gate.get("technical_smoke_status", "technical_smoke_passed")
             if smoke_quality_gate
@@ -1004,6 +1039,9 @@ def _run_record(
             if smoke_quality_gate
             else "semantic_review_pending"
         )
+    else:
+        technical_smoke_status = None
+        semantic_review_status = None
     return {
         "schema_version": "llm03.7.2-run-v1",
         "mode": mode,
@@ -1011,7 +1049,7 @@ def _run_record(
         "recorded_at": _now(),
         "dataset_id": dataset.manifest.get("dataset_id"),
         "dataset_version": dataset.manifest.get("dataset_version"),
-        "split": "development",
+        "split": "holdout" if mode == "holdout" else "development",
         "selected_case_ids": [case.case_id for case in cases],
         "case_limit": case_limit,
         "reused_case_ids": reused_case_ids,
@@ -1133,6 +1171,11 @@ def _parser() -> argparse.ArgumentParser:
     )
     _authorization_parser(development, "--authorize-development")
     development.add_argument("--case", dest="case_ids", action="append")
+    holdout = subparsers.add_parser(
+        "holdout", help="holdout split only; separate authorization required"
+    )
+    _authorization_parser(holdout, "--authorize-holdout")
+    holdout.add_argument("--case", dest="case_ids", action="append")
     return parser
 
 
@@ -1249,7 +1292,7 @@ def run_cli(
         report = evaluate_offline(
             dataset,
             responses_dir=paths["responses"],
-            split="development",
+            split="holdout" if args.command == "holdout" else "development",
             case_ids=[case.case_id for case in cases],
         )
         _write_live_report(report, paths["reports"], run_record=record)
