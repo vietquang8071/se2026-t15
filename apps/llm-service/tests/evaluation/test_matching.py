@@ -71,3 +71,26 @@ def test_conflicting_manual_matches_cannot_match_one_gold_twice():
     assert result.status == "needs_manual_review"
     assert len(result.pairs) == 1
     assert result.issues
+
+
+def test_non_object_manual_decision_is_reported_without_crashing():
+    result = match_actions(
+        [action("ACT-1", "Viết báo cáo")],
+        [gold_action("G-1", "Viết báo cáo")],
+        decisions=[None],
+    )
+
+    assert result.status == "needs_manual_review"
+    assert result.issues == ("Each manual match decision must be an object.",)
+    assert result.pairs == (("ACT-1", "G-1"),)
+
+
+def test_malformed_manual_identifier_is_reported_without_unhashable_lookup():
+    result = match_actions(
+        [action("ACT-1", "Viết báo cáo")],
+        [gold_action("G-1", "Viết báo cáo")],
+        decisions=[{"prediction_id": [], "gold_id": "G-1", "decision": "match", "reviewer": "r"}],
+    )
+
+    assert result.status == "needs_manual_review"
+    assert result.issues

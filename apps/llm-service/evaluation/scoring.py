@@ -225,6 +225,14 @@ def validate_summary_review(review: Any) -> dict[str, Any]:
         return {"status": "pending_review", **{field: None for field in SUMMARY_SCORE_FIELDS}, "hallucination_count": None, "reviewer": None, "reviewer_scores": [], "adjudication": None}
     if not isinstance(review, dict):
         raise ValueError("Summary review must be an object.")
+    if any(not isinstance(field, str) for field in review):
+        raise ValueError("Summary review field names must be strings.")
+    allowed_fields = set(SUMMARY_SCORE_FIELDS) | {
+        "hallucination_count", "hallucinations", "reviewer", "reviewer_scores", "adjudication"
+    }
+    unknown_fields = set(review) - allowed_fields
+    if unknown_fields:
+        raise ValueError(f"Summary review has unknown field(s): {', '.join(sorted(unknown_fields))}.")
     cleaned: dict[str, Any] = {}
     for field, (minimum, maximum) in SUMMARY_SCORE_FIELDS.items():
         value = review.get(field)
@@ -235,7 +243,7 @@ def validate_summary_review(review: Any) -> dict[str, Any]:
     if isinstance(count, bool) or not isinstance(count, int) or count < 0:
         raise ValueError("Summary review hallucination_count must be a non-negative integer.")
     reviewer = review.get("reviewer")
-    if not isinstance(reviewer, str) or not reviewer.strip():
+    if not _valid_reviewer(reviewer):
         raise ValueError("Summary review requires a reviewer name or ID.")
     annotations = review.get("hallucinations", [])
     if not isinstance(annotations, list) or any(not isinstance(item, str) or not item.strip() for item in annotations):
@@ -248,38 +256,147 @@ def validate_summary_review(review: Any) -> dict[str, Any]:
     for score in scores:
         if not isinstance(score, dict):
             raise ValueError("Each reviewer score must be an object.")
+        if any(not isinstance(field, str) for field in score):
+            raise ValueError("Reviewer score field names must be strings.")
+        reviewer_score_fields = set(SUMMARY_SCORE_FIELDS) | {"hallucination_count", "hallucinations", "reviewer"}
+        if set(score) - reviewer_score_fields:
+            raise ValueError("Reviewer score has unknown field(s).")
         # Each independent reviewer record uses the same validated score shape.
         validate_summary_review({**score, "reviewer_scores": []})
     adjudication = review.get("adjudication")
-    if adjudication is not None and (not isinstance(adjudication, dict) or not isinstance(adjudication.get("reviewer"), str) or not adjudication["reviewer"].strip()):
+    if adjudication is not None and (not isinstance(adjudication, dict) or not _valid_reviewer(adjudication.get("reviewer"))):
         raise ValueError("adjudication must include a reviewer name or ID.")
+    if isinstance(adjudication, dict):
+        if any(not isinstance(field, str) for field in adjudication):
+            raise ValueError("Adjudication field names must be strings.")
+        if set(adjudication) - {"reviewer", "reason", "scores"}:
+            raise ValueError("adjudication has unknown field(s).")
+        reason = adjudication.get("reason")
+        if reason is not None and (not isinstance(reason, str) or not reason.strip()):
+            raise ValueError("adjudication reason must be non-empty text when supplied.")
     if isinstance(adjudication, dict) and adjudication.get("scores") is not None:
         if not isinstance(adjudication["scores"], dict):
             raise ValueError("adjudication scores must be an object.")
+        if any(not isinstance(field, str) for field in adjudication["scores"]):
+            raise ValueError("Adjudication score field names must be strings.")
         validate_summary_review({**adjudication["scores"], "reviewer": adjudication["reviewer"], "hallucination_count": adjudication["scores"].get("hallucination_count", count), "reviewer_scores": []})
     return {"status": "reviewed", **cleaned, "hallucination_count": count, "hallucinations": annotations, "reviewer": reviewer.strip(), "reviewer_scores": scores, "adjudication": adjudication}
 
 
-def validate_semantic_grounding_review(annotations: Any) -> dict[str, Any]:
+def _valid_reviewer(value: Any) -> bool:
+    return isinstance(value, str) and bool(value.strip()) and not any(ord(char) < 32 for char in value)
+
+
+def reviewable_claim_ids(response: Any) -> tuple[str, ...]:
+    """Return stable semantic-review IDs for claims in a saved public response.
+
+    Indexes are assigned from the public response arrays, after any internal
+    source/evidence filtering performed by the extraction pipeline.
+    """
+    modules = getattr(response, "modules", None)
+    if modules is None and isinstance(response, dict):
+        modules = response.get("modules")
+
+    def value(item: Any, key: str) -> Any:
+        if isinstance(item, dict):
+            return item.get(key)
+        return getattr(item, key, None)
+
+    claims: list[str] = []
+    summary = value(modules, "meeting_summary")
+    if summary is not None:
+        if value(summary, "overview") is not None:
+            claims.append("summary.overview")
+        topics = value(summary, "key_topics") or []
+        for index, topic in enumerate(topics):
+            if value(topic, "topic") is not None and value(topic, "brief_discussion") is not None:
+                claims.append(f"summary.key_topics[{index}]")
+
+    actions = value(modules, "action_items")
+    if actions is not None:
+        if not actions:
+            # The production SourceValidator explicitly verifies this absence claim.
+            claims.append("actions.absence")
+        else:
+            for index, action in enumerate(actions):
+                if value(action, "task") is not None:
+                    claims.append(f"actions[{index}].task")
+                for field in ("owner", "raw_due_expression", "priority", "context"):
+                    if value(action, field) is not None:
+                        claims.append(f"actions[{index}].{field}")
+    return tuple(claims)
+
+
+def validate_semantic_grounding_review(
+    annotations: Any,
+    *,
+    expected_claim_ids: Iterable[str],
+) -> dict[str, Any]:
+    expected = tuple(expected_claim_ids)
+    if any(not isinstance(claim_id, str) or not claim_id.strip() for claim_id in expected):
+        raise ValueError("Expected semantic claim IDs must be non-empty strings.")
+    if len(expected) != len(set(expected)):
+        raise ValueError("Expected semantic claim IDs must be unique.")
+    expected_set = set(expected)
+
+    def result_for(
+        status: str,
+        *,
+        reviewed_ids: set[str] | None = None,
+        supported: int | None = None,
+        unsupported: int | None = None,
+        reviewer: str | None = None,
+        claims: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        reviewed_ids = reviewed_ids or set()
+        reviewed_count = len(reviewed_ids)
+        pending_count = len(expected_set - reviewed_ids)
+        denominator = reviewed_count
+        provisional_accuracy = supported / denominator if supported is not None and denominator else None
+        complete = status == "reviewed" and pending_count == 0
+        return {
+            "status": status,
+            "supported": supported,
+            "unsupported": unsupported,
+            "denominator": denominator,
+            "expected_claim_count": len(expected),
+            "reviewed_claim_count": reviewed_count,
+            "pending_claim_count": pending_count,
+            "review_coverage": reviewed_count / len(expected) if expected else None,
+            "accuracy": provisional_accuracy if complete and expected else None,
+            "provisional_accuracy": provisional_accuracy if not complete else None,
+            "reviewer": reviewer,
+            "claims": claims or [],
+        }
+
     if annotations is None:
-        return {"status": "pending_review", "supported": None, "unsupported": None, "denominator": 0, "reviewer": None}
-    if not isinstance(annotations, dict) or not isinstance(annotations.get("reviewer"), str) or not annotations["reviewer"].strip():
+        return result_for("pending_review")
+    if not isinstance(annotations, dict) or set(annotations) != {"reviewer", "claims"} or not _valid_reviewer(annotations.get("reviewer")):
         raise ValueError("Semantic grounding review requires a reviewer and annotations.")
     claims = annotations.get("claims")
-    if not isinstance(claims, list) or not claims:
-        raise ValueError("Semantic grounding review claims must be a non-empty array.")
+    if not isinstance(claims, list):
+        raise ValueError("Semantic grounding review claims must be an array.")
     supported = unsupported = 0
     claim_ids: set[str] = set()
     for claim in claims:
-        if not isinstance(claim, dict) or claim.get("verdict") not in ("supported", "unsupported") or not isinstance(claim.get("claim_id"), str) or not claim["claim_id"].strip():
+        if not isinstance(claim, dict) or set(claim) != {"claim_id", "verdict"} or claim.get("verdict") not in ("supported", "unsupported") or not isinstance(claim.get("claim_id"), str) or not claim["claim_id"].strip():
             raise ValueError("Each semantic grounding claim needs claim_id and supported/unsupported verdict.")
         if claim["claim_id"] in claim_ids:
             raise ValueError("Semantic grounding claim_id values must be unique.")
+        if claim["claim_id"] not in expected_set:
+            raise ValueError(f"Semantic grounding claim {claim['claim_id']!r} does not exist in this public response.")
         claim_ids.add(claim["claim_id"])
-        (supported if claim["verdict"] == "supported" else unsupported)
         if claim["verdict"] == "supported":
             supported += 1
         else:
             unsupported += 1
-    return {"status": "reviewed", "supported": supported, "unsupported": unsupported, "denominator": len(claims), "accuracy": supported / len(claims), "reviewer": annotations["reviewer"].strip(), "claims": claims}
+    status = "pending_review" if not claim_ids else "reviewed" if claim_ids == expected_set else "partial_review"
+    return result_for(
+        status,
+        reviewed_ids=claim_ids,
+        supported=supported if claim_ids else None,
+        unsupported=unsupported if claim_ids else None,
+        reviewer=annotations["reviewer"].strip(),
+        claims=claims,
+    )
 

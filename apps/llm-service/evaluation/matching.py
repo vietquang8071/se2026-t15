@@ -53,12 +53,20 @@ def match_actions(
     matched_g: set[str] = set()
     rejected: set[tuple[str, str]] = set()
     normalized_decisions: list[dict[str, str]] = []
-    for decision in decisions:
+    try:
+        decision_list = list(decisions)
+    except TypeError:
+        decision_list = []
+        errors.append("Manual match decisions must be an iterable of objects.")
+    for decision in decision_list:
+        if not isinstance(decision, dict):
+            errors.append("Each manual match decision must be an object.")
+            continue
         p_id = decision.get("prediction_id")
         g_id = decision.get("gold_id")
         outcome = decision.get("decision")
         reviewer = decision.get("reviewer")
-        if p_id not in p_by_id or g_id not in g_by_id or outcome not in ("match", "not_match") or not isinstance(reviewer, str) or not reviewer.strip():
+        if not isinstance(p_id, str) or p_id not in p_by_id or not isinstance(g_id, str) or g_id not in g_by_id or outcome not in ("match", "not_match") or not isinstance(reviewer, str) or not reviewer.strip():
             errors.append(f"Invalid manual match decision for prediction {p_id!r} and gold {g_id!r}.")
             continue
         pair = (p_id, g_id)

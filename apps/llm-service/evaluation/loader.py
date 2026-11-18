@@ -47,7 +47,36 @@ class DatasetLoadResult:
 
     @property
     def valid(self) -> bool:
-        return not self.issues and bool(self.manifest)
+        if self.issues or not isinstance(self.manifest, dict):
+            return False
+        entries = self.manifest.get("cases")
+        if not isinstance(entries, list):
+            return False
+        listed_ids = [
+            entry.get("case_id")
+            for entry in entries
+            if isinstance(entry, dict) and isinstance(entry.get("case_id"), str)
+        ]
+        loaded_ids = [case.case_id for case in self.cases]
+        if len(listed_ids) != len(entries) or len(listed_ids) != len(set(listed_ids)):
+            return False
+        if len(loaded_ids) != len(listed_ids) or len(loaded_ids) != len(set(loaded_ids)):
+            return False
+        if set(loaded_ids) != set(listed_ids):
+            return False
+        declared_total = self.manifest.get("cases_total")
+        if isinstance(declared_total, int) and not isinstance(declared_total, bool) and len(loaded_ids) != declared_total:
+            return False
+        return all(
+            sum(case.split == split for case in self.cases)
+            == sum(entry.get("split") == split for entry in entries if isinstance(entry, dict))
+            and (
+                not isinstance(self.manifest.get(f"{split}_cases"), int)
+                or isinstance(self.manifest.get(f"{split}_cases"), bool)
+                or sum(case.split == split for case in self.cases) == self.manifest[f"{split}_cases"]
+            )
+            for split in VALID_SPLITS
+        )
 
     def case(self, case_id: str) -> DatasetCase | None:
         return next((case for case in self.cases if case.case_id == case_id), None)
@@ -121,6 +150,7 @@ def load_dataset(
         entry = entry_by_id.get(case_id)
         if entry is None:
             continue
+        issue_start = len(issues)
         case_dir = cases_root / case_id
         file_values = {
             name: _read_json(case_dir / name, case_id=case_id, label=name, issues=issues)
@@ -131,6 +161,13 @@ def load_dataset(
         gold = file_values["gold.json"]
         audio_issues = validate_audio_transcript(audio, case_id=case_id)
         issues.extend(audio_issues)
+        if not isinstance(gold, dict):
+            issues.append(ValidationIssue(
+                case_id,
+                "gold_invalid",
+                "gold.json must contain a JSON object; this case cannot be loaded.",
+                "gold.json",
+            ))
         try:
             request = ExtractionRequest.model_validate(raw_request)
         except ValidationError as error:
@@ -138,11 +175,15 @@ def load_dataset(
                 path = ".".join(str(part) for part in item["loc"])
                 issues.append(ValidationIssue(case_id, "request_invalid", f"ExtractionRequest validation failed: {item['msg']}", path))
             continue
-        if isinstance(audio, dict):
+        if isinstance(audio, dict) and not audio_issues:
             issues.extend(validate_audio_request_consistency(audio, request, case_id=case_id))
         if isinstance(gold, dict):
             issues.extend(validate_gold(gold, request, case_id=case_id))
         if not isinstance(audio, dict) or not isinstance(gold, dict):
+            continue
+        if any(issue.case_id == case_id for issue in issues[issue_start:]):
+            continue
+        if entry.get("split") not in VALID_SPLITS:
             continue
         loaded.append(DatasetCase(
             case_id=case_id,
@@ -153,5 +194,39 @@ def load_dataset(
             case_dir=case_dir,
             scenario=entry.get("scenario"),
         ))
+    loaded_ids = {case.case_id for case in loaded}
+    for case_id in entry_by_id:
+        if case_id not in loaded_ids and not any(issue.case_id == case_id for issue in issues):
+            issues.append(ValidationIssue(case_id, "case_not_loaded", "Manifest-listed case was not loaded and had no earlier validation issue."))
+    if len(loaded) != len(entry_by_id):
+        issues.append(ValidationIssue(
+            "dataset",
+            "case_count_mismatch",
+            f"Manifest lists {len(entry_by_id)} unique cases but only {len(loaded)} loaded successfully.",
+        ))
+    declared_total = manifest.get("cases_total")
+    if isinstance(declared_total, int) and not isinstance(declared_total, bool) and len(loaded) != declared_total:
+        issues.append(ValidationIssue(
+            "dataset",
+            "case_count_mismatch",
+            f"Manifest declares {declared_total} cases but only {len(loaded)} loaded successfully.",
+        ))
+    for split in sorted(VALID_SPLITS):
+        loaded_count = sum(case.split == split for case in loaded)
+        declared_count = manifest.get(f"{split}_cases")
+        if isinstance(declared_count, int) and not isinstance(declared_count, bool) and loaded_count != declared_count:
+            issues.append(ValidationIssue(
+                "dataset",
+                "loaded_split_count_mismatch",
+                f"Manifest declares {declared_count} {split} cases but {loaded_count} loaded successfully.",
+            ))
+        if check_expected_counts:
+            expected_count = 10 if split == "development" else 6
+            if loaded_count != expected_count:
+                issues.append(ValidationIssue(
+                    "dataset",
+                    "loaded_split_count_mismatch",
+                    f"Expected {expected_count} successfully loaded {split} cases, got {loaded_count}.",
+                ))
     return DatasetLoadResult(dataset_root, manifest, tuple(loaded), tuple(issues))
 

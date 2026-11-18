@@ -150,13 +150,47 @@ def validate_audio_request_consistency(
     def add(path: str, message: str) -> None:
         issues.append(ValidationIssue(case_id, "audio_request_mismatch", message, path))
 
-    audio_segments = audio.get("segments", [])
+    if not isinstance(audio, dict):
+        add("audio", "Audio payload must be an object before consistency validation.")
+        return issues
+    audio_segments = audio.get("segments")
+    if not isinstance(audio_segments, list):
+        add("segments", "Audio segments must be a structurally valid array before consistency validation.")
+        return issues
+    if any(not isinstance(segment, dict) for segment in audio_segments):
+        add("segments", "Every Audio segment must be a structurally valid object before consistency validation.")
+        return issues
+    duration = audio.get("duration_sec")
+    if not isinstance(duration, (int, float)) or isinstance(duration, bool) or not math.isfinite(duration) or duration <= 0:
+        add("duration_sec", "Audio duration_sec must be a finite positive number before consistency validation.")
+        return issues
+    offset = audio.get("source_audio_start_sec")
+    if not isinstance(offset, (int, float)) or isinstance(offset, bool) or not math.isfinite(offset) or offset < 0:
+        add("source_audio_start_sec", "Audio source offset must be a finite non-negative number before consistency validation.")
+        return issues
+    required_segment_fields = {"id", "start", "end", "speaker", "text"}
+    for index, segment in enumerate(audio_segments):
+        start, end = segment.get("start"), segment.get("end")
+        valid_start = isinstance(start, (int, float)) and not isinstance(start, bool) and math.isfinite(start)
+        valid_end = isinstance(end, (int, float)) and not isinstance(end, bool) and math.isfinite(end)
+        if (
+            set(segment) != required_segment_fields
+            or not isinstance(segment.get("id"), str)
+            or not segment["id"].strip()
+            or not valid_start
+            or not valid_end
+            or start < 0
+            or end < start
+            or not isinstance(segment.get("speaker"), str)
+            or not segment["speaker"].strip()
+            or not isinstance(segment.get("text"), str)
+        ):
+            add(f"segments[{index}]", "Audio segment must pass structural validation before consistency checks.")
+            return issues
     llm_segments = request.transcript.segments
     if len(audio_segments) != len(llm_segments):
         add("transcript.segments", f"Audio has {len(audio_segments)} segments but LLM request has {len(llm_segments)}.")
     for index, (a, q) in enumerate(zip(audio_segments, llm_segments)):
-        if not isinstance(a, dict):
-            continue
         for audio_field, request_field in (("id", "id"), ("text", "text"), ("start", "start"), ("end", "end")):
             if a.get(audio_field) != getattr(q, request_field):
                 add(f"transcript.segments[{index}].{request_field}", f"Audio {audio_field} is not preserved in the LLM request.")
@@ -164,15 +198,13 @@ def validate_audio_request_consistency(
         expected_speaker = None if speaker == "unknown" else speaker
         if q.speaker_id != expected_speaker:
             add(f"transcript.segments[{index}].speaker_id", f"Audio speaker {speaker!r} must map to LLM speaker_id {expected_speaker!r}.")
-    if audio.get("duration_sec") != request.meeting.duration_seconds:
+    if duration != request.meeting.duration_seconds:
         add("meeting.duration_seconds", "LLM duration_seconds must equal Audio Transcript v2 duration_sec on the source timeline.")
     if audio.get("timeline") == "source" and audio.get("source_audio_start_sec") != 0:
         # A source timeline may start after zero when representing a source window; request timestamps still remain absolute.
-        offset = audio.get("source_audio_start_sec")
-        if isinstance(offset, (int, float)):
-            for index, (a, q) in enumerate(zip(audio_segments, llm_segments)):
-                if isinstance(a, dict) and (a.get("start", 0) < offset or q.start != a.get("start")):
-                    add(f"transcript.segments[{index}].start", "Source timeline timestamps must be passed through unchanged; do not add an offset twice.")
+        for index, (a, q) in enumerate(zip(audio_segments, llm_segments)):
+            if a["start"] < offset or q.start != a["start"]:
+                add(f"transcript.segments[{index}].start", "Source timeline timestamps must be passed through unchanged; do not add an offset twice.")
     return issues
 
 

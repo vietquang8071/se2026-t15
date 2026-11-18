@@ -52,6 +52,8 @@ uv run --locked --extra test python -m evaluation.runner run \
 
 Every run writes `report.json` and `report.md` into its output directory. Keep output outside `evaluation/datasets/llm-03.7-evaluation/`. Exit status `0` means the dataset was valid and no provided response failed validation; status `1` indicates one or more response failures; status `2` indicates an invalid dataset; status `3` indicates rejected live authorization or review input.
 
+Exit-code precedence is deterministic: live mode is rejected with `3` before dataset loading; otherwise dataset failure returns `2`; invalid review input returns `3` before a report is written; response validation failures return `1` after a report is written; successful offline evaluation returns `0`. A review attached to an unknown case, a case without a valid saved response, or a response claim that does not exist is invalid input. A valid but incomplete review is accepted and remains pending/partial.
+
 ## Human review annotations
 
 Automatic Action Item matches use only deterministic exact task normalization. A paraphrase or competing unmatched prediction/gold pair remains `needs_manual_review`; it does not affect finalized precision/recall/F1 until a reviewer decides the pair. Use explicit decisions in an optional JSON review file:
@@ -92,6 +94,10 @@ Automatic Action Item matches use only deterministic exact task normalization. A
 ```
 
 For a confirmed non-match, use `"decision": "not_match"`; it allows that prediction and gold action to be counted separately as FP and FN. Match decisions are enforced one-to-one. Summary scores are accepted only in the rubric ranges; reviewer and adjudication records are preserved. A review file is data, never a prompt to a model.
+
+Semantic grounding IDs are generated from the **saved public response**, after production filtering: `summary.overview`, `summary.key_topics[0]`, `actions[0].task`, and non-null fields such as `actions[0].owner`, `actions[0].raw_due_expression`, `actions[0].priority`, and `actions[0].context`. Action indexes follow the public `modules.action_items` order and do not reuse internal candidate indexes. Null optional fields do not create claims. An empty requested `action_items` array has the explicit `actions.absence` claim so a reviewer can verify that no qualifying commitment was omitted. The resolved `due_date` is scored as a deterministic temporal attribute; source claim review follows the production verifier's raw-expression claim identity.
+
+Semantic review status is `pending_review` when no claim has been reviewed, `partial_review` when at least one required claim remains pending, and `reviewed` only when every expected claim in that response has a valid verdict. Reports retain expected/reviewed/pending counts and coverage. Partial reviews may expose `provisional_accuracy`; final `accuracy` remains null until all expected claims are reviewed. Across cases, the aggregate accuracy also remains null while any evaluated claim is pending. A valid partial review does not fail the CLI.
 
 ## Metrics and interpretation
 

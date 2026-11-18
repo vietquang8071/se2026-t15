@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -104,6 +105,16 @@ def write_json(tmp_path):
         return path
 
     return write
+
+
+@pytest.fixture
+def copy_dataset(tmp_path):
+    def copy() -> Path:
+        destination = tmp_path / "dataset"
+        shutil.copytree(DATASET_DIR, destination)
+        return destination
+
+    return copy
 
 
 @pytest.fixture

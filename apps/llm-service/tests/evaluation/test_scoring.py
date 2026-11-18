@@ -1,5 +1,13 @@
-from evaluation.scoring import evaluate_actions, validate_semantic_grounding_review, validate_summary_review
+import pytest
+
+from evaluation.scoring import (
+    evaluate_actions,
+    reviewable_claim_ids,
+    validate_semantic_grounding_review,
+    validate_summary_review,
+)
 from evaluation.matching import match_actions
+from evaluation.validation import validate_response
 
 
 def test_zero_action_case_is_correct_absence_without_artificial_tp():
@@ -116,7 +124,10 @@ def test_human_semantic_grounding_and_hallucination_annotations_are_preserved():
     review = validate_summary_review({"faithfulness": 2, "required_fact_coverage": 0.5, "conciseness_actionability": 3, "semantic_source_grounding": 0.25, "hallucination_count": 1, "hallucinations": ["Bịa mốc giao hàng"], "reviewer": "r"})
     assert review["status"] == "reviewed"
     assert review["hallucinations"] == ["Bịa mốc giao hàng"]
-    semantic = validate_semantic_grounding_review({"reviewer": "r", "claims": [{"claim_id": "action.task", "verdict": "supported"}, {"claim_id": "summary.overview", "verdict": "unsupported"}]})
+    semantic = validate_semantic_grounding_review(
+        {"reviewer": "r", "claims": [{"claim_id": "summary.overview", "verdict": "supported"}, {"claim_id": "actions.absence", "verdict": "unsupported"}]},
+        expected_claim_ids=("summary.overview", "actions.absence"),
+    )
     assert semantic["supported"] == semantic["unsupported"] == 1
     assert semantic["accuracy"] == 0.5
 
@@ -129,3 +140,78 @@ def test_summary_adjudication_record_requires_reviewer_and_valid_scores():
         assert "adjudication" in str(error)
     else:
         raise AssertionError("adjudication without a reviewer was accepted")
+
+
+def test_public_claim_ids_use_response_order_and_skip_null_optional_fields(first_case, response_payload_factory, action_payload_factory):
+    payload = response_payload_factory(
+        first_case,
+        [action_payload_factory("SEG-0002", owner=None, raw_due_expression=None, priority=None)],
+    )
+    payload["modules"]["meeting_summary"]["key_topics"] = [{
+        "topic": "API đặt lịch",
+        "brief_discussion": "Nhóm sẽ hoàn thiện API.",
+        "source_segment_ids": ["SEG-0002"],
+        "needs_review": False,
+        "review_reasons": [],
+    }]
+    checked = validate_response(first_case.request, payload)
+
+    assert checked.response is not None
+    assert reviewable_claim_ids(checked.response) == (
+        "summary.overview",
+        "summary.key_topics[0]",
+        "actions[0].task",
+    )
+
+
+def test_zero_action_public_response_has_explicit_absence_claim(first_case, response_payload_factory):
+    checked = validate_response(first_case.request, response_payload_factory(first_case, []))
+
+    assert checked.response is not None
+    assert "actions.absence" in reviewable_claim_ids(checked.response)
+
+
+def test_semantic_review_partial_status_has_no_final_accuracy():
+    result = validate_semantic_grounding_review(
+        {"reviewer": "reviewer-a", "claims": [{"claim_id": "summary.overview", "verdict": "supported"}]},
+        expected_claim_ids=("summary.overview", "actions[0].task"),
+    )
+
+    assert result["status"] == "partial_review"
+    assert result["expected_claim_count"] == 2
+    assert result["reviewed_claim_count"] == 1
+    assert result["pending_claim_count"] == 1
+    assert result["review_coverage"] == 0.5
+    assert result["accuracy"] is None
+    assert result["provisional_accuracy"] == 1.0
+
+
+def test_complete_semantic_review_reports_final_accuracy_only_after_every_claim():
+    result = validate_semantic_grounding_review(
+        {"reviewer": "reviewer-a", "claims": [
+            {"claim_id": "summary.overview", "verdict": "supported"},
+            {"claim_id": "actions[0].task", "verdict": "unsupported"},
+        ]},
+        expected_claim_ids=("summary.overview", "actions[0].task"),
+    )
+
+    assert result["status"] == "reviewed"
+    assert result["review_coverage"] == 1
+    assert result["pending_claim_count"] == 0
+    assert result["accuracy"] == 0.5
+    assert result["provisional_accuracy"] is None
+
+
+@pytest.mark.parametrize(
+    "annotations",
+    [
+        {"reviewer": "reviewer-a", "claims": [{"claim_id": "summary.nonexistent", "verdict": "supported"}]},
+        {"reviewer": "reviewer-a", "claims": [{"claim_id": "summary.overview", "verdict": "supported"}, {"claim_id": "summary.overview", "verdict": "unsupported"}]},
+        {"reviewer": "reviewer-a", "claims": [{"claim_id": "summary.overview", "verdict": "maybe"}]},
+        {"reviewer": "  ", "claims": [{"claim_id": "summary.overview", "verdict": "supported"}]},
+    ],
+    ids=["unknown-claim", "duplicate-claim", "invalid-verdict", "invalid-reviewer"],
+)
+def test_semantic_review_rejects_unknown_duplicate_or_malformed_annotations(annotations):
+    with pytest.raises(ValueError):
+        validate_semantic_grounding_review(annotations, expected_claim_ids=("summary.overview",))
