@@ -1,0 +1,68 @@
+{
+  "contract_version": "1.0",
+  "request_id": "eval-llm037-case-003",
+  "meeting": {
+    "id": "meeting-llm037-case-003",
+    "title": "Thảo luận ý tưởng cache",
+    "anchor_date": "2026-11-18",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "duration_seconds": 24.586,
+    "participants": [
+      {
+        "id": "participant-speaker_1",
+        "display_name": "Lan",
+        "speaker_ids": [
+          "speaker_1"
+        ]
+      },
+      {
+        "id": "participant-speaker_2",
+        "display_name": "Minh",
+        "speaker_ids": [
+          "speaker_2"
+        ]
+      }
+    ]
+  },
+  "transcript": {
+    "revision_id": "transcript-case-003-r1",
+    "language": "vi",
+    "segments": [
+      {
+        "id": "SEG-0001",
+        "start": 1.0,
+        "end": 5.636,
+        "speaker_id": "speaker_1",
+        "text": "Báo cáo tiến độ tuần trước tôi đã gửi xong hôm qua."
+      },
+      {
+        "id": "SEG-0002",
+        "start": 6.286,
+        "end": 11.377,
+        "speaker_id": "speaker_2",
+        "text": "Có lẽ chúng ta nên thử Redis để giảm thời gian phản hồi."
+      },
+      {
+        "id": "SEG-0003",
+        "start": 12.027,
+        "end": 16.027,
+        "speaker_id": "speaker_1",
+        "text": "Chúng ta có cần triển khai Redis ngay không?"
+      },
+      {
+        "id": "SEG-0004",
+        "start": 16.677,
+        "end": 21.586,
+        "speaker_id": "speaker_2",
+        "text": "Chưa, hiện tại mới là đề xuất; chưa ai nhận công việc."
+      }
+    ]
+  },
+  "extraction": {
+    "output_language": "vi",
+    "requested_modules": [
+      "meeting_summary",
+      "action_items"
+    ]
+  }
+}

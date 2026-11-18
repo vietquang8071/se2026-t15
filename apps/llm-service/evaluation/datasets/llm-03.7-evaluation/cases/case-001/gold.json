@@ -1,0 +1,64 @@
+{
+  "gold_schema_version": "llm03.7-gold-v1",
+  "case_id": "case-001",
+  "evaluation_scope": [
+    "meeting_summary",
+    "action_items"
+  ],
+  "meeting_summary": {
+    "reference_overview": "Nhóm tập trung vào API đặt lịch cho bản thử nghiệm. Minh cam kết hoàn thiện API trước thứ Sáu này; người kiểm thử chưa được chốt.",
+    "key_topics": [
+      {
+        "topic": "API đặt lịch",
+        "brief_discussion": "API đặt lịch là đầu việc trọng tâm; Minh nhận hoàn thiện trước thứ Sáu này.",
+        "source_segment_ids": [
+          "SEG-0001",
+          "SEG-0002"
+        ]
+      },
+      {
+        "topic": "Kiểm thử",
+        "brief_discussion": "Nhóm chưa phân công người kiểm thử.",
+        "source_segment_ids": [
+          "SEG-0003"
+        ]
+      }
+    ],
+    "source_segment_ids": [
+      "SEG-0001",
+      "SEG-0002",
+      "SEG-0003"
+    ],
+    "forbidden_claims": [
+      "Không tự thêm Action Item kiểm thử vì chưa có người nhận."
+    ]
+  },
+  "action_items": [
+    {
+      "gold_id": "GOLD-ACT-001",
+      "task": "Hoàn thiện API đặt lịch",
+      "owner": "Minh",
+      "raw_due_expression": "trước thứ Sáu này",
+      "due_date": null,
+      "due_date_resolution_status": "unresolved",
+      "priority": null,
+      "context": null,
+      "source_segment_ids": [
+        "SEG-0002"
+      ],
+      "owner_evidence_segment_ids": [
+        "SEG-0002"
+      ],
+      "deadline_evidence_segment_ids": [
+        "SEG-0002"
+      ],
+      "notes": ""
+    }
+  ],
+  "evaluation_notes": [],
+  "gold_policy": {
+    "semantic_paraphrases_allowed": true,
+    "source_ids_are_evidence_not_just_syntactic_checks": true,
+    "candidate_exact_text_match_required": false
+  }
+}

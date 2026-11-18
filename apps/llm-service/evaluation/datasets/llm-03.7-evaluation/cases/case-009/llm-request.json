@@ -1,0 +1,75 @@
+{
+  "contract_version": "1.0",
+  "request_id": "eval-llm037-case-009",
+  "meeting": {
+    "id": "meeting-llm037-case-009",
+    "title": "Hai công việc phát biểu chồng tiếng",
+    "anchor_date": "2026-11-24",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "duration_seconds": 20.732,
+    "participants": [
+      {
+        "id": "participant-speaker_1",
+        "display_name": "Mai",
+        "speaker_ids": [
+          "speaker_1"
+        ]
+      },
+      {
+        "id": "participant-speaker_2",
+        "display_name": "Khánh",
+        "speaker_ids": [
+          "speaker_2"
+        ]
+      },
+      {
+        "id": "participant-speaker_3",
+        "display_name": "Trí",
+        "speaker_ids": [
+          "speaker_3"
+        ]
+      }
+    ]
+  },
+  "transcript": {
+    "revision_id": "transcript-case-009-r1",
+    "language": "vi",
+    "segments": [
+      {
+        "id": "SEG-0001",
+        "start": 1.0,
+        "end": 7.0,
+        "speaker_id": "speaker_1",
+        "text": "Bản build đã ổn, còn hai việc phải hoàn thành trước khi phát hành."
+      },
+      {
+        "id": "SEG-0002",
+        "start": 7.65,
+        "end": 10.923,
+        "speaker_id": "speaker_2",
+        "text": "Tôi sẽ chạy regression test tối nay."
+      },
+      {
+        "id": "SEG-0003",
+        "start": 8.9,
+        "end": 12.809,
+        "speaker_id": "speaker_3",
+        "text": "Tôi sẽ viết release notes trước 18 giờ mai."
+      },
+      {
+        "id": "SEG-0004",
+        "start": 13.459,
+        "end": 17.732,
+        "speaker_id": "speaker_1",
+        "text": "Đây là hai đầu việc riêng, không gộp thành một."
+      }
+    ]
+  },
+  "extraction": {
+    "output_language": "vi",
+    "requested_modules": [
+      "meeting_summary",
+      "action_items"
+    ]
+  }
+}

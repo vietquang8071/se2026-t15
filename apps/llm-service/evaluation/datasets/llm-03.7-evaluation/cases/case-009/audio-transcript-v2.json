@@ -1,0 +1,59 @@
+{
+  "schema_version": 2,
+  "audio_id": "363f94ae-1496-5c9a-8e42-c3c2ffc219c4",
+  "language": "vi",
+  "timeline": "source",
+  "source_audio_start_sec": 0.0,
+  "duration_sec": 20.732,
+  "text": "Bản build đã ổn, còn hai việc phải hoàn thành trước khi phát hành.\nTôi sẽ chạy regression test tối nay.\nTôi sẽ viết release notes trước 18 giờ mai.\nĐây là hai đầu việc riêng, không gộp thành một.",
+  "speakers": [
+    {
+      "id": "speaker_1",
+      "name": "speaker_1"
+    },
+    {
+      "id": "speaker_2",
+      "name": "speaker_2"
+    },
+    {
+      "id": "speaker_3",
+      "name": "speaker_3"
+    }
+  ],
+  "segments": [
+    {
+      "id": "SEG-0001",
+      "start": 1.0,
+      "end": 7.0,
+      "speaker": "speaker_1",
+      "text": "Bản build đã ổn, còn hai việc phải hoàn thành trước khi phát hành."
+    },
+    {
+      "id": "SEG-0002",
+      "start": 7.65,
+      "end": 10.923,
+      "speaker": "speaker_2",
+      "text": "Tôi sẽ chạy regression test tối nay."
+    },
+    {
+      "id": "SEG-0003",
+      "start": 8.9,
+      "end": 12.809,
+      "speaker": "speaker_3",
+      "text": "Tôi sẽ viết release notes trước 18 giờ mai."
+    },
+    {
+      "id": "SEG-0004",
+      "start": 13.459,
+      "end": 17.732,
+      "speaker": "speaker_1",
+      "text": "Đây là hai đầu việc riêng, không gộp thành một."
+    }
+  ],
+  "warnings": [
+    "Nhãn người nói do model suy luận, không phải danh tính đã xác thực."
+  ],
+  "models": {
+    "transcription_and_diarization": "gpt-4o-transcribe-diarize"
+  }
+}

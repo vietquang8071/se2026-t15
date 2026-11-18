@@ -1,0 +1,65 @@
+{
+  "gold_schema_version": "llm03.7-gold-v1",
+  "case_id": "case-008",
+  "evaluation_scope": [
+    "meeting_summary",
+    "action_items"
+  ],
+  "meeting_summary": {
+    "reference_overview": "Dũng được giao gửi checklist bảo mật trước hạn định dạng ISO 2026-12-15, với mức ưu tiên cao.",
+    "key_topics": [
+      {
+        "topic": "Checklist bảo mật",
+        "brief_discussion": "Dũng cam kết gửi checklist bảo mật, hạn 2026-12-15, mức ưu tiên cao.",
+        "source_segment_ids": [
+          "SEG-0001",
+          "SEG-0002",
+          "SEG-0003",
+          "SEG-0004"
+        ]
+      }
+    ],
+    "source_segment_ids": [
+      "SEG-0001",
+      "SEG-0002",
+      "SEG-0003",
+      "SEG-0004"
+    ],
+    "forbidden_claims": []
+  },
+  "action_items": [
+    {
+      "gold_id": "GOLD-ACT-001",
+      "task": "Gửi checklist bảo mật",
+      "owner": "Dũng",
+      "raw_due_expression": "2026-12-15",
+      "due_date": "2026-12-15",
+      "due_date_resolution_status": "exact_date",
+      "priority": "High",
+      "context": null,
+      "source_segment_ids": [
+        "SEG-0001",
+        "SEG-0002",
+        "SEG-0003",
+        "SEG-0004"
+      ],
+      "owner_evidence_segment_ids": [
+        "SEG-0001",
+        "SEG-0002"
+      ],
+      "deadline_evidence_segment_ids": [
+        "SEG-0002",
+        "SEG-0003"
+      ],
+      "notes": ""
+    }
+  ],
+  "evaluation_notes": [
+    "Chỉ case này có raw_due_expression ở ISO YYYY-MM-DD và có thể được deterministic processor gán exact_date."
+  ],
+  "gold_policy": {
+    "semantic_paraphrases_allowed": true,
+    "source_ids_are_evidence_not_just_syntactic_checks": true,
+    "candidate_exact_text_match_required": false
+  }
+}

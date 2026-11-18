@@ -1,0 +1,68 @@
+{
+  "contract_version": "1.0",
+  "request_id": "eval-llm037-case-012",
+  "meeting": {
+    "id": "meeting-llm037-case-012",
+    "title": "Đề xuất chưa được thông qua",
+    "anchor_date": "2026-11-27",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "duration_seconds": 27.496,
+    "participants": [
+      {
+        "id": "participant-speaker_1",
+        "display_name": "Linh",
+        "speaker_ids": [
+          "speaker_1"
+        ]
+      },
+      {
+        "id": "participant-speaker_2",
+        "display_name": "Hà",
+        "speaker_ids": [
+          "speaker_2"
+        ]
+      }
+    ]
+  },
+  "transcript": {
+    "revision_id": "transcript-case-012-r1",
+    "language": "vi",
+    "segments": [
+      {
+        "id": "SEG-0001",
+        "start": 1.0,
+        "end": 6.091,
+        "speaker_id": "speaker_1",
+        "text": "Có lẽ chúng ta nên di chuyển toàn bộ database lên cloud."
+      },
+      {
+        "id": "SEG-0002",
+        "start": 6.741,
+        "end": 12.105,
+        "speaker_id": "speaker_2",
+        "text": "Tôi chưa đồng ý phương án cloud; cần đánh giá rủi ro trước."
+      },
+      {
+        "id": "SEG-0003",
+        "start": 12.755,
+        "end": 18.573,
+        "speaker_id": "speaker_1",
+        "text": "Nếu có kết quả đánh giá sau này, khi đó mới bàn người thực hiện."
+      },
+      {
+        "id": "SEG-0004",
+        "start": 19.223,
+        "end": 24.496,
+        "speaker_id": "speaker_2",
+        "text": "Chốt là chưa có quyết định triển khai hay người nhận việc."
+      }
+    ]
+  },
+  "extraction": {
+    "output_language": "vi",
+    "requested_modules": [
+      "meeting_summary",
+      "action_items"
+    ]
+  }
+}

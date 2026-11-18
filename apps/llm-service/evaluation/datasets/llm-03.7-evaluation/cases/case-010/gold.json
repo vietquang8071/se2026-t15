@@ -1,0 +1,45 @@
+{
+  "gold_schema_version": "llm03.7-gold-v1",
+  "case_id": "case-010",
+  "evaluation_scope": [
+    "meeting_summary",
+    "action_items"
+  ],
+  "meeting_summary": {
+    "reference_overview": "Nhóm rà soát báo cáo đã hoàn thành và thảo luận khả năng mua thêm máy chủ nếu có ngân sách; chưa chốt quyết định hoặc phân công.",
+    "key_topics": [
+      {
+        "topic": "Báo cáo đã hoàn tất",
+        "brief_discussion": "Báo cáo sử dụng hệ thống đã được hoàn thành tuần trước.",
+        "source_segment_ids": [
+          "SEG-0001"
+        ]
+      },
+      {
+        "topic": "Máy chủ mới",
+        "brief_discussion": "Việc mua máy chủ vẫn là phương án có điều kiện, chưa được duyệt.",
+        "source_segment_ids": [
+          "SEG-0002",
+          "SEG-0003",
+          "SEG-0004"
+        ]
+      }
+    ],
+    "source_segment_ids": [
+      "SEG-0001",
+      "SEG-0002",
+      "SEG-0003",
+      "SEG-0004"
+    ],
+    "forbidden_claims": [
+      "Không trích xuất mua máy chủ thành công việc đã được giao."
+    ]
+  },
+  "action_items": [],
+  "evaluation_notes": [],
+  "gold_policy": {
+    "semantic_paraphrases_allowed": true,
+    "source_ids_are_evidence_not_just_syntactic_checks": true,
+    "candidate_exact_text_match_required": false
+  }
+}

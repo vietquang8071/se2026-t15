@@ -1,0 +1,61 @@
+{
+  "gold_schema_version": "llm03.7-gold-v1",
+  "case_id": "case-005",
+  "evaluation_scope": [
+    "meeting_summary",
+    "action_items"
+  ],
+  "meeting_summary": {
+    "reference_overview": "Minh nhận lời gửi bản demo cho khách hàng trước chiều thứ Năm theo đề nghị của Huy.",
+    "key_topics": [
+      {
+        "topic": "Bản demo khách hàng",
+        "brief_discussion": "Huy đề nghị và Minh chấp nhận gửi bản demo trước chiều thứ Năm.",
+        "source_segment_ids": [
+          "SEG-0001",
+          "SEG-0002",
+          "SEG-0003"
+        ]
+      }
+    ],
+    "source_segment_ids": [
+      "SEG-0001",
+      "SEG-0002",
+      "SEG-0003"
+    ],
+    "forbidden_claims": [
+      "Không ghi Huy là người được giao gửi demo."
+    ]
+  },
+  "action_items": [
+    {
+      "gold_id": "GOLD-ACT-001",
+      "task": "Gửi bản demo cho khách hàng",
+      "owner": "Minh",
+      "raw_due_expression": "trước chiều thứ Năm",
+      "due_date": null,
+      "due_date_resolution_status": "unresolved",
+      "priority": null,
+      "context": null,
+      "source_segment_ids": [
+        "SEG-0001",
+        "SEG-0002"
+      ],
+      "owner_evidence_segment_ids": [
+        "SEG-0001",
+        "SEG-0002"
+      ],
+      "deadline_evidence_segment_ids": [
+        "SEG-0001",
+        "SEG-0002"
+      ],
+      "notes": ""
+    }
+  ],
+  "evaluation_notes": [],
+  "gold_policy": {
+    "semantic_paraphrases_allowed": true,
+    "source_ids_are_evidence_not_just_syntactic_checks": true,
+    "candidate_exact_text_match_required": false
+  }
+}

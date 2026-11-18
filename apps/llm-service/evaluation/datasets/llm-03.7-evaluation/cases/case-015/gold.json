@@ -1,0 +1,63 @@
+{
+  "gold_schema_version": "llm03.7-gold-v1",
+  "case_id": "case-015",
+  "evaluation_scope": [
+    "meeting_summary",
+    "action_items"
+  ],
+  "meeting_summary": {
+    "reference_overview": "Vy cam kết kiểm tra độ trễ endpoint tìm kiếm; nhóm xác định mức ưu tiên cao nhưng chỉ nêu hạn khoảng cuối tháng và chưa chốt ngày.",
+    "key_topics": [
+      {
+        "topic": "Hiệu năng tìm kiếm",
+        "brief_discussion": "Vy nhận đo độ trễ và báo kết quả; thời hạn chỉ là khoảng cuối tháng.",
+        "source_segment_ids": [
+          "SEG-0001",
+          "SEG-0002",
+          "SEG-0003",
+          "SEG-0004"
+        ]
+      }
+    ],
+    "source_segment_ids": [
+      "SEG-0001",
+      "SEG-0002",
+      "SEG-0003",
+      "SEG-0004"
+    ],
+    "forbidden_claims": [
+      "Không tự suy ra ngày cuối cùng của tháng thành due_date chắc chắn."
+    ]
+  },
+  "action_items": [
+    {
+      "gold_id": "GOLD-ACT-001",
+      "task": "Kiểm tra độ trễ endpoint tìm kiếm",
+      "owner": "Vy",
+      "raw_due_expression": "khoảng cuối tháng",
+      "due_date": null,
+      "due_date_resolution_status": "unresolved",
+      "priority": "High",
+      "context": null,
+      "source_segment_ids": [
+        "SEG-0001",
+        "SEG-0002",
+        "SEG-0003"
+      ],
+      "owner_evidence_segment_ids": [
+        "SEG-0001"
+      ],
+      "deadline_evidence_segment_ids": [
+        "SEG-0002",
+        "SEG-0003"
+      ],
+      "notes": ""
+    }
+  ],
+  "evaluation_notes": [],
+  "gold_policy": {
+    "semantic_paraphrases_allowed": true,
+    "source_ids_are_evidence_not_just_syntactic_checks": true,
+    "candidate_exact_text_match_required": false
+  }
+}

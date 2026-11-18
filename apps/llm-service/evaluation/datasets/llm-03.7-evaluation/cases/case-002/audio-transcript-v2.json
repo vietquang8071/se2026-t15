@@ -1,0 +1,59 @@
+{
+  "schema_version": 2,
+  "audio_id": "db414204-786f-5351-b340-c1261e1c6418",
+  "language": "vi",
+  "timeline": "source",
+  "source_audio_start_sec": 0.0,
+  "duration_sec": 34.404,
+  "text": "Sprint này cần hoàn thành giao diện đăng nhập và bộ kiểm thử API đăng nhập.\nTôi nhận thiết kế giao diện đăng nhập, hạn ngày 20 tháng 11 năm 2026.\nTôi sẽ viết test tích hợp cho API đăng nhập, hạn ngày 23 tháng 11 năm 2026.\nĐộ ưu tiên cao dành cho bộ test tích hợp; giao diện đăng nhập không được đánh dấu ưu tiên cao.",
+  "speakers": [
+    {
+      "id": "speaker_1",
+      "name": "speaker_1"
+    },
+    {
+      "id": "speaker_2",
+      "name": "speaker_2"
+    },
+    {
+      "id": "speaker_3",
+      "name": "speaker_3"
+    }
+  ],
+  "segments": [
+    {
+      "id": "SEG-0001",
+      "start": 1.0,
+      "end": 7.818,
+      "speaker": "speaker_1",
+      "text": "Sprint này cần hoàn thành giao diện đăng nhập và bộ kiểm thử API đăng nhập."
+    },
+    {
+      "id": "SEG-0002",
+      "start": 8.468,
+      "end": 14.741,
+      "speaker": "speaker_2",
+      "text": "Tôi nhận thiết kế giao diện đăng nhập, hạn ngày 20 tháng 11 năm 2026."
+    },
+    {
+      "id": "SEG-0003",
+      "start": 15.391,
+      "end": 22.209,
+      "speaker": "speaker_3",
+      "text": "Tôi sẽ viết test tích hợp cho API đăng nhập, hạn ngày 23 tháng 11 năm 2026."
+    },
+    {
+      "id": "SEG-0004",
+      "start": 22.859,
+      "end": 31.404,
+      "speaker": "speaker_1",
+      "text": "Độ ưu tiên cao dành cho bộ test tích hợp; giao diện đăng nhập không được đánh dấu ưu tiên cao."
+    }
+  ],
+  "warnings": [
+    "Nhãn người nói do model suy luận, không phải danh tính đã xác thực."
+  ],
+  "models": {
+    "transcription_and_diarization": "gpt-4o-transcribe-diarize"
+  }
+}

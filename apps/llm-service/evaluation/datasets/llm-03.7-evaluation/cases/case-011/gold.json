@@ -1,0 +1,108 @@
+{
+  "gold_schema_version": "llm03.7-gold-v1",
+  "case_id": "case-011",
+  "evaluation_scope": [
+    "meeting_summary",
+    "action_items"
+  ],
+  "meeting_summary": {
+    "reference_overview": "Nhóm phân công Bình viết kịch bản demo, Cúc chuẩn bị dữ liệu thử và Dũng tổng hợp lỗi. Không yêu cầu sản xuất video.",
+    "key_topics": [
+      {
+        "topic": "Chuẩn bị demo",
+        "brief_discussion": "Ba đầu việc được phân công với các hạn khác nhau.",
+        "source_segment_ids": [
+          "SEG-0001",
+          "SEG-0002",
+          "SEG-0003",
+          "SEG-0004"
+        ]
+      },
+      {
+        "topic": "Phạm vi demo",
+        "brief_discussion": "Video demo không thuộc kế hoạch.",
+        "source_segment_ids": [
+          "SEG-0005"
+        ]
+      }
+    ],
+    "source_segment_ids": [
+      "SEG-0001",
+      "SEG-0002",
+      "SEG-0003",
+      "SEG-0004",
+      "SEG-0005"
+    ],
+    "forbidden_claims": [
+      "Không tạo action sản xuất video demo."
+    ]
+  },
+  "action_items": [
+    {
+      "gold_id": "GOLD-ACT-001",
+      "task": "Viết kịch bản demo",
+      "owner": "Bình",
+      "raw_due_expression": "trước thứ Ba tới",
+      "due_date": null,
+      "due_date_resolution_status": "unresolved",
+      "priority": null,
+      "context": null,
+      "source_segment_ids": [
+        "SEG-0002"
+      ],
+      "owner_evidence_segment_ids": [
+        "SEG-0002"
+      ],
+      "deadline_evidence_segment_ids": [
+        "SEG-0002"
+      ],
+      "notes": ""
+    },
+    {
+      "gold_id": "GOLD-ACT-002",
+      "task": "Chuẩn bị bộ dữ liệu thử",
+      "owner": "Cúc",
+      "raw_due_expression": "cuối tuần này",
+      "due_date": null,
+      "due_date_resolution_status": "unresolved",
+      "priority": null,
+      "context": null,
+      "source_segment_ids": [
+        "SEG-0003"
+      ],
+      "owner_evidence_segment_ids": [
+        "SEG-0003"
+      ],
+      "deadline_evidence_segment_ids": [
+        "SEG-0003"
+      ],
+      "notes": ""
+    },
+    {
+      "gold_id": "GOLD-ACT-003",
+      "task": "Tổng hợp các lỗi đã biết",
+      "owner": "Dũng",
+      "raw_due_expression": "vào thứ Tư tuần sau",
+      "due_date": null,
+      "due_date_resolution_status": "unresolved",
+      "priority": null,
+      "context": null,
+      "source_segment_ids": [
+        "SEG-0004"
+      ],
+      "owner_evidence_segment_ids": [
+        "SEG-0004"
+      ],
+      "deadline_evidence_segment_ids": [
+        "SEG-0004"
+      ],
+      "notes": ""
+    }
+  ],
+  "evaluation_notes": [],
+  "gold_policy": {
+    "semantic_paraphrases_allowed": true,
+    "source_ids_are_evidence_not_just_syntactic_checks": true,
+    "candidate_exact_text_match_required": false
+  }
+}

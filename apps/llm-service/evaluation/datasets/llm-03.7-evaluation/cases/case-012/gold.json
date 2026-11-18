@@ -1,0 +1,40 @@
+{
+  "gold_schema_version": "llm03.7-gold-v1",
+  "case_id": "case-012",
+  "evaluation_scope": [
+    "meeting_summary",
+    "action_items"
+  ],
+  "meeting_summary": {
+    "reference_overview": "Nhóm thảo luận khả năng chuyển database lên cloud nhưng chưa chấp thuận; việc đánh giá và phân công vẫn ở mức điều kiện.",
+    "key_topics": [
+      {
+        "topic": "Đề xuất chuyển database",
+        "brief_discussion": "Phương án cloud chưa được duyệt và chưa có phân công.",
+        "source_segment_ids": [
+          "SEG-0001",
+          "SEG-0002",
+          "SEG-0003",
+          "SEG-0004"
+        ]
+      }
+    ],
+    "source_segment_ids": [
+      "SEG-0001",
+      "SEG-0002",
+      "SEG-0003",
+      "SEG-0004"
+    ],
+    "forbidden_claims": [
+      "Không tạo task triển khai cloud.",
+      "Không tự thêm task đánh giá rủi ro khi chưa được nhận."
+    ]
+  },
+  "action_items": [],
+  "evaluation_notes": [],
+  "gold_policy": {
+    "semantic_paraphrases_allowed": true,
+    "source_ids_are_evidence_not_just_syntactic_checks": true,
+    "candidate_exact_text_match_required": false
+  }
+}

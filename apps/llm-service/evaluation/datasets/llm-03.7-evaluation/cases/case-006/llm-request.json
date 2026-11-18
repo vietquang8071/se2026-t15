@@ -1,0 +1,75 @@
+{
+  "contract_version": "1.0",
+  "request_id": "eval-llm037-case-006",
+  "meeting": {
+    "id": "meeting-llm037-case-006",
+    "title": "Thay đổi người phụ trách release",
+    "anchor_date": "2026-11-20",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "duration_seconds": 24.768,
+    "participants": [
+      {
+        "id": "participant-speaker_1",
+        "display_name": "Huy",
+        "speaker_ids": [
+          "speaker_1"
+        ]
+      },
+      {
+        "id": "participant-speaker_2",
+        "display_name": "Minh",
+        "speaker_ids": [
+          "speaker_2"
+        ]
+      },
+      {
+        "id": "participant-speaker_3",
+        "display_name": "Lan",
+        "speaker_ids": [
+          "speaker_3"
+        ]
+      }
+    ]
+  },
+  "transcript": {
+    "revision_id": "transcript-case-006-r1",
+    "language": "vi",
+    "segments": [
+      {
+        "id": "SEG-0001",
+        "start": 1.0,
+        "end": 5.364,
+        "speaker_id": "speaker_1",
+        "text": "Ban đầu Minh phụ trách tổng hợp báo cáo release."
+      },
+      {
+        "id": "SEG-0002",
+        "start": 6.014,
+        "end": 9.832,
+        "speaker_id": "speaker_2",
+        "text": "Tôi đã nhận phần tổng hợp báo cáo release."
+      },
+      {
+        "id": "SEG-0003",
+        "start": 10.482,
+        "end": 16.027,
+        "speaker_id": "speaker_1",
+        "text": "Thay đổi kế hoạch: Lan sẽ tổng hợp báo cáo release thay Minh."
+      },
+      {
+        "id": "SEG-0004",
+        "start": 16.677,
+        "end": 21.768,
+        "speaker_id": "speaker_3",
+        "text": "Tôi đồng ý nhận việc và gửi báo cáo vào thứ Ba tuần tới."
+      }
+    ]
+  },
+  "extraction": {
+    "output_language": "vi",
+    "requested_modules": [
+      "meeting_summary",
+      "action_items"
+    ]
+  }
+}

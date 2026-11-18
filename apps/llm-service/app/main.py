@@ -13,9 +13,11 @@ from app.core.config import Settings
 from app.core.errors import (
     AuthenticationRequiredError,
     ExtractionRequestTimeoutError,
+    ExtractionServiceError,
     ExtractionUnavailableError,
     authentication_required_handler,
     extraction_timeout_handler,
+    extraction_service_error_handler,
     extraction_unavailable_handler,
     request_validation_handler,
     response_validation_handler,
@@ -24,13 +26,16 @@ from app.core.middleware import (
     ExtractionRequestBoundaryMiddleware,
     SafeUnhandledErrorMiddleware,
 )
-from app.services.extraction import ExtractionService, UnconfiguredExtractionService
+from app.services.extraction import ExtractionService
+from app.services.factory import create_verified_extraction_service
+from app.services.notification import CompletionNotifier, NoOpCompletionNotifier
 
 
 def create_app(
     *,
     settings: Settings | None = None,
     extraction_service: ExtractionService | None = None,
+    completion_notifier: CompletionNotifier | None = None,
 ) -> FastAPI:
     """Create an isolated ASGI application with injectable runtime dependencies."""
 
@@ -54,7 +59,12 @@ def create_app(
     application.state.extraction_service = (
         extraction_service
         if extraction_service is not None
-        else UnconfiguredExtractionService()
+        else create_verified_extraction_service(runtime_settings)
+    )
+    application.state.completion_notifier = (
+        completion_notifier
+        if completion_notifier is not None
+        else NoOpCompletionNotifier()
     )
     application.add_middleware(
         ExtractionRequestBoundaryMiddleware,
@@ -65,6 +75,7 @@ def create_app(
     application.add_exception_handler(AuthenticationRequiredError, authentication_required_handler)
     application.add_exception_handler(ExtractionUnavailableError, extraction_unavailable_handler)
     application.add_exception_handler(ExtractionRequestTimeoutError, extraction_timeout_handler)
+    application.add_exception_handler(ExtractionServiceError, extraction_service_error_handler)
     application.add_exception_handler(ResponseValidationError, response_validation_handler)
     application.include_router(router)
     return application

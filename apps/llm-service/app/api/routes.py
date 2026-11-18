@@ -3,20 +3,32 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from pydantic import BaseModel, ConfigDict
 
-from app.api.dependencies import get_extraction_service, get_settings, require_service_token
+from app.api.dependencies import (
+    get_completion_notifier,
+    get_extraction_service,
+    get_settings,
+    require_service_token,
+)
 from app.core.config import Settings
 from app.core.errors import ExtractionRequestTimeoutError
 from app.schemas.errors import ErrorEnvelope
 from app.schemas.request import ExtractionRequest
 from app.schemas.response import ExtractionResponse
 from app.services.extraction import ExtractionService
+from app.services.notification import (
+    CompletionEvent,
+    CompletionNotifier,
+    dispatch_completion_safely,
+)
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class HealthResponse(BaseModel):
@@ -57,8 +69,10 @@ async def health() -> HealthResponse:
 )
 async def create_extraction(
     request: ExtractionRequest,
+    background_tasks: BackgroundTasks,
     http_request: Request,
     service: ExtractionService = Depends(get_extraction_service),
+    notifier: CompletionNotifier = Depends(get_completion_notifier),
     settings: Settings = Depends(get_settings),
 ) -> ExtractionResponse:
     """Validate and delegate an extraction request to the application service."""
@@ -66,6 +80,23 @@ async def create_extraction(
     http_request.state.request_id = request.request_id
     try:
         async with asyncio.timeout(settings.llm_service_request_timeout_seconds):
-            return await service.extract(request)
+            response = await service.extract(request)
     except TimeoutError as error:
         raise ExtractionRequestTimeoutError from error
+
+    event: CompletionEvent = {
+        "event_type": "extraction.completed",
+        "request_id": request.request_id,
+        "meeting_id": request.meeting.id,
+        "status": "completed",
+    }
+    try:
+        background_tasks.add_task(
+            dispatch_completion_safely,
+            notifier,
+            event,
+            settings.llm_service_notification_timeout_seconds,
+        )
+    except Exception:
+        logger.warning("Completion notification scheduling failed.")
+    return response

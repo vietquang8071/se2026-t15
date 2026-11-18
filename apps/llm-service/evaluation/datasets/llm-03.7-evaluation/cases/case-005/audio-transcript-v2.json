@@ -1,0 +1,48 @@
+{
+  "schema_version": 2,
+  "audio_id": "89f6c37b-d39c-5cb8-8189-e178519352d0",
+  "language": "vi",
+  "timeline": "source",
+  "source_audio_start_sec": 0.0,
+  "duration_sec": 18.663,
+  "text": "Minh, em gửi bản demo cho khách hàng trước chiều thứ Năm nhé?\nĐược, tôi sẽ gửi bản demo trước chiều thứ Năm.\nNhư vậy phần demo đã có người phụ trách.",
+  "speakers": [
+    {
+      "id": "speaker_1",
+      "name": "speaker_1"
+    },
+    {
+      "id": "speaker_2",
+      "name": "speaker_2"
+    }
+  ],
+  "segments": [
+    {
+      "id": "SEG-0001",
+      "start": 1.0,
+      "end": 6.545,
+      "speaker": "speaker_1",
+      "text": "Minh, em gửi bản demo cho khách hàng trước chiều thứ Năm nhé?"
+    },
+    {
+      "id": "SEG-0002",
+      "start": 7.195,
+      "end": 11.377,
+      "speaker": "speaker_2",
+      "text": "Được, tôi sẽ gửi bản demo trước chiều thứ Năm."
+    },
+    {
+      "id": "SEG-0003",
+      "start": 12.027,
+      "end": 15.663,
+      "speaker": "speaker_1",
+      "text": "Như vậy phần demo đã có người phụ trách."
+    }
+  ],
+  "warnings": [
+    "Nhãn người nói do model suy luận, không phải danh tính đã xác thực."
+  ],
+  "models": {
+    "transcription_and_diarization": "gpt-4o-transcribe-diarize"
+  }
+}

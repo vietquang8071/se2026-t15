@@ -1,0 +1,63 @@
+{
+  "gold_schema_version": "llm03.7-gold-v1",
+  "case_id": "case-004",
+  "evaluation_scope": [
+    "meeting_summary",
+    "action_items"
+  ],
+  "meeting_summary": {
+    "reference_overview": "Một người nói chưa được xác nhận danh tính cam kết cập nhật tài liệu hướng dẫn trước ngày 25 tháng 11 năm 2026 để phục vụ buổi hướng dẫn sử dụng.",
+    "key_topics": [
+      {
+        "topic": "Tài liệu hướng dẫn",
+        "brief_discussion": "Một người nói cam kết cập nhật tài liệu; danh tính chưa được xác minh.",
+        "source_segment_ids": [
+          "SEG-0001",
+          "SEG-0002",
+          "SEG-0003"
+        ]
+      }
+    ],
+    "source_segment_ids": [
+      "SEG-0001",
+      "SEG-0002",
+      "SEG-0003"
+    ],
+    "forbidden_claims": [
+      "Không đoán tên owner từ speaker_1 hoặc ngữ cảnh."
+    ]
+  },
+  "action_items": [
+    {
+      "gold_id": "GOLD-ACT-001",
+      "task": "Cập nhật tài liệu hướng dẫn",
+      "owner": null,
+      "raw_due_expression": "trước ngày 25 tháng 11 năm 2026",
+      "due_date": null,
+      "due_date_resolution_status": "unresolved",
+      "priority": null,
+      "context": null,
+      "source_segment_ids": [
+        "SEG-0001",
+        "SEG-0002",
+        "SEG-0003"
+      ],
+      "owner_evidence_segment_ids": [
+        "SEG-0001",
+        "SEG-0003"
+      ],
+      "deadline_evidence_segment_ids": [
+        "SEG-0001"
+      ],
+      "notes": ""
+    }
+  ],
+  "evaluation_notes": [
+    "Không có mapping speaker→participant được xác minh; bắt buộc owner=null."
+  ],
+  "gold_policy": {
+    "semantic_paraphrases_allowed": true,
+    "source_ids_are_evidence_not_just_syntactic_checks": true,
+    "candidate_exact_text_match_required": false
+  }
+}

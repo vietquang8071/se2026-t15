@@ -1,0 +1,52 @@
+{
+  "contract_version": "1.0",
+  "request_id": "eval-llm037-case-004",
+  "meeting": {
+    "id": "meeting-llm037-case-004",
+    "title": "Tài liệu chưa rõ người nhận",
+    "anchor_date": "2026-11-19",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "duration_seconds": 19.3,
+    "participants": [
+      {
+        "id": "participant-extra-phương",
+        "display_name": "Phương",
+        "speaker_ids": []
+      }
+    ]
+  },
+  "transcript": {
+    "revision_id": "transcript-case-004-r1",
+    "language": "vi",
+    "segments": [
+      {
+        "id": "SEG-0001",
+        "start": 1.0,
+        "end": 7.091,
+        "speaker_id": "speaker_1",
+        "text": "Tôi sẽ cập nhật tài liệu hướng dẫn trước ngày 25 tháng 11 năm 2026."
+      },
+      {
+        "id": "SEG-0002",
+        "start": 7.741,
+        "end": 11.65,
+        "speaker_id": "speaker_2",
+        "text": "Tài liệu đó cần cho buổi hướng dẫn sử dụng."
+      },
+      {
+        "id": "SEG-0003",
+        "start": 12.3,
+        "end": 16.3,
+        "speaker_id": "speaker_1",
+        "text": "Được, tôi sẽ giữ nguyên nội dung đã cam kết."
+      }
+    ]
+  },
+  "extraction": {
+    "output_language": "vi",
+    "requested_modules": [
+      "meeting_summary",
+      "action_items"
+    ]
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "contract_version": "1.0",
+  "request_id": "eval-llm037-case-014",
+  "meeting": {
+    "id": "meeting-llm037-case-014",
+    "title": "Người giao việc chưa xác định",
+    "anchor_date": "2026-12-01",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "duration_seconds": 21.937,
+    "participants": []
+  },
+  "transcript": {
+    "revision_id": "transcript-case-014-r1",
+    "language": "vi",
+    "segments": [
+      {
+        "id": "SEG-0001",
+        "start": 1.0,
+        "end": 7.455,
+        "speaker_id": null,
+        "text": "Chúng ta thống nhất giao Lan soạn đề cương đào tạo trước cuối tuần này."
+      },
+      {
+        "id": "SEG-0002",
+        "start": 8.105,
+        "end": 14.378,
+        "speaker_id": "speaker_1",
+        "text": "Tôi đồng ý phương án giao Lan phần đề cương; phần học liệu chưa chốt."
+      },
+      {
+        "id": "SEG-0003",
+        "start": 15.028,
+        "end": 18.937,
+        "speaker_id": null,
+        "text": "Không ai nhận phần học liệu trong buổi này."
+      }
+    ]
+  },
+  "extraction": {
+    "output_language": "vi",
+    "requested_modules": [
+      "meeting_summary",
+      "action_items"
+    ]
+  }
+}

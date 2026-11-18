@@ -1,0 +1,70 @@
+{
+  "gold_schema_version": "llm03.7-gold-v1",
+  "case_id": "case-014",
+  "evaluation_scope": [
+    "meeting_summary",
+    "action_items"
+  ],
+  "meeting_summary": {
+    "reference_overview": "Người nói không được nhận diện đã xác nhận giao Lan soạn đề cương đào tạo trước cuối tuần; phần học liệu chưa có người nhận.",
+    "key_topics": [
+      {
+        "topic": "Đề cương đào tạo",
+        "brief_discussion": "Lan được nêu đích danh là người phụ trách đề cương.",
+        "source_segment_ids": [
+          "SEG-0001",
+          "SEG-0002"
+        ]
+      },
+      {
+        "topic": "Học liệu",
+        "brief_discussion": "Chưa có người nhận việc học liệu.",
+        "source_segment_ids": [
+          "SEG-0002",
+          "SEG-0003"
+        ]
+      }
+    ],
+    "source_segment_ids": [
+      "SEG-0001",
+      "SEG-0002",
+      "SEG-0003"
+    ],
+    "forbidden_claims": [
+      "Không mặc định chủ thể unknown là Lan.",
+      "Không tạo task học liệu."
+    ]
+  },
+  "action_items": [
+    {
+      "gold_id": "GOLD-ACT-001",
+      "task": "Soạn đề cương đào tạo",
+      "owner": "Lan",
+      "raw_due_expression": "trước cuối tuần này",
+      "due_date": null,
+      "due_date_resolution_status": "unresolved",
+      "priority": null,
+      "context": null,
+      "source_segment_ids": [
+        "SEG-0001",
+        "SEG-0002"
+      ],
+      "owner_evidence_segment_ids": [
+        "SEG-0001",
+        "SEG-0002"
+      ],
+      "deadline_evidence_segment_ids": [
+        "SEG-0001"
+      ],
+      "notes": ""
+    }
+  ],
+  "evaluation_notes": [
+    "Owner Lan được nêu đích danh trong transcript; không cần suy đoán speaker."
+  ],
+  "gold_policy": {
+    "semantic_paraphrases_allowed": true,
+    "source_ids_are_evidence_not_just_syntactic_checks": true,
+    "candidate_exact_text_match_required": false
+  }
+}

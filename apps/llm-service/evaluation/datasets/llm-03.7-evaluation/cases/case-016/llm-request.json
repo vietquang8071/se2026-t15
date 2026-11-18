@@ -1,0 +1,110 @@
+{
+  "contract_version": "1.0",
+  "request_id": "eval-llm037-case-016",
+  "meeting": {
+    "id": "meeting-llm037-case-016",
+    "title": "Rà soát kế hoạch phát hành",
+    "anchor_date": "2026-12-03",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "duration_seconds": 50.095,
+    "participants": [
+      {
+        "id": "participant-speaker_1",
+        "display_name": "An",
+        "speaker_ids": [
+          "speaker_1"
+        ]
+      },
+      {
+        "id": "participant-speaker_2",
+        "display_name": "Bình",
+        "speaker_ids": [
+          "speaker_2"
+        ]
+      },
+      {
+        "id": "participant-speaker_3",
+        "display_name": "Cúc",
+        "speaker_ids": [
+          "speaker_3"
+        ]
+      },
+      {
+        "id": "participant-speaker_4",
+        "display_name": "Dũng",
+        "speaker_ids": [
+          "speaker_4"
+        ]
+      }
+    ]
+  },
+  "transcript": {
+    "revision_id": "transcript-case-016-r1",
+    "language": "vi",
+    "segments": [
+      {
+        "id": "SEG-0001",
+        "start": 1.0,
+        "end": 8.091,
+        "speaker_id": "speaker_1",
+        "text": "Hôm nay chốt việc chuẩn bị bản phát hành thử nghiệm và xử lý các lỗi truy cập."
+      },
+      {
+        "id": "SEG-0002",
+        "start": 8.741,
+        "end": 12.923,
+        "speaker_id": "speaker_2",
+        "text": "Tôi sẽ viết hướng dẫn triển khai trước thứ Tư."
+      },
+      {
+        "id": "SEG-0003",
+        "start": 13.573,
+        "end": 19.209,
+        "speaker_id": "speaker_3",
+        "text": "Tôi sẽ rà soát lỗi truy cập và tổng hợp danh sách vào thứ Sáu."
+      },
+      {
+        "id": "SEG-0004",
+        "start": 19.859,
+        "end": 24.859,
+        "speaker_id": "speaker_1",
+        "text": "Yêu cầu làm video demo tạm hoãn; chưa ai nhận việc này."
+      },
+      {
+        "id": "SEG-0005",
+        "start": 25.509,
+        "end": 30.509,
+        "speaker_id": "speaker_2",
+        "text": "Tôi chuyển phần hướng dẫn triển khai cho Dũng thay tôi."
+      },
+      {
+        "id": "SEG-0006",
+        "start": 31.159,
+        "end": 36.704,
+        "speaker_id": "speaker_4",
+        "text": "Tôi đồng ý nhận hướng dẫn triển khai và sẽ gửi trước thứ Năm."
+      },
+      {
+        "id": "SEG-0007",
+        "start": 37.354,
+        "end": 41.172,
+        "speaker_id": "speaker_1",
+        "text": "Ưu tiên cao cho việc rà soát lỗi truy cập."
+      },
+      {
+        "id": "SEG-0008",
+        "start": 41.822,
+        "end": 47.095,
+        "speaker_id": "speaker_3",
+        "text": "Lỗi xác thực đăng nhập vẫn chưa xác định được nguyên nhân."
+      }
+    ]
+  },
+  "extraction": {
+    "output_language": "vi",
+    "requested_modules": [
+      "meeting_summary",
+      "action_items"
+    ]
+  }
+}

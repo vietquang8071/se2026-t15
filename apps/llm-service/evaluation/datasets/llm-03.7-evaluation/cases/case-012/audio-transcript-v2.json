@@ -1,0 +1,55 @@
+{
+  "schema_version": 2,
+  "audio_id": "30e306ce-af1d-541e-a9f9-3bfa038f48c1",
+  "language": "vi",
+  "timeline": "source",
+  "source_audio_start_sec": 0.0,
+  "duration_sec": 27.496,
+  "text": "Có lẽ chúng ta nên di chuyển toàn bộ database lên cloud.\nTôi chưa đồng ý phương án cloud; cần đánh giá rủi ro trước.\nNếu có kết quả đánh giá sau này, khi đó mới bàn người thực hiện.\nChốt là chưa có quyết định triển khai hay người nhận việc.",
+  "speakers": [
+    {
+      "id": "speaker_1",
+      "name": "speaker_1"
+    },
+    {
+      "id": "speaker_2",
+      "name": "speaker_2"
+    }
+  ],
+  "segments": [
+    {
+      "id": "SEG-0001",
+      "start": 1.0,
+      "end": 6.091,
+      "speaker": "speaker_1",
+      "text": "Có lẽ chúng ta nên di chuyển toàn bộ database lên cloud."
+    },
+    {
+      "id": "SEG-0002",
+      "start": 6.741,
+      "end": 12.105,
+      "speaker": "speaker_2",
+      "text": "Tôi chưa đồng ý phương án cloud; cần đánh giá rủi ro trước."
+    },
+    {
+      "id": "SEG-0003",
+      "start": 12.755,
+      "end": 18.573,
+      "speaker": "speaker_1",
+      "text": "Nếu có kết quả đánh giá sau này, khi đó mới bàn người thực hiện."
+    },
+    {
+      "id": "SEG-0004",
+      "start": 19.223,
+      "end": 24.496,
+      "speaker": "speaker_2",
+      "text": "Chốt là chưa có quyết định triển khai hay người nhận việc."
+    }
+  ],
+  "warnings": [
+    "Nhãn người nói do model suy luận, không phải danh tính đã xác thực."
+  ],
+  "models": {
+    "transcription_and_diarization": "gpt-4o-transcribe-diarize"
+  }
+}

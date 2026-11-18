@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 from pydantic import SecretStr, ValidationError
-from fastapi.testclient import TestClient
+from asgi_client import ASGITestClient as TestClient
 
 from app.core.config import Settings
 from app.main import create_app
@@ -61,8 +61,17 @@ def make_settings(*, max_request_bytes: int = 16_384) -> Settings:
     )
 
 
-def create_test_app(*, max_request_bytes: int = 16_384):
-    return create_app(settings=make_settings(max_request_bytes=max_request_bytes))
+def create_test_app(
+    *,
+    max_request_bytes: int = 16_384,
+    extraction_service: Any | None = None,
+    completion_notifier: Any | None = None,
+):
+    return create_app(
+        settings=make_settings(max_request_bytes=max_request_bytes),
+        extraction_service=extraction_service,
+        completion_notifier=completion_notifier,
+    )
 
 
 @pytest.fixture
@@ -81,6 +90,101 @@ def assert_error(response, *, status: int, code: str) -> ErrorEnvelope:
     assert envelope.statusCode == status
     assert envelope.code == code
     return envelope
+
+
+def compact_json_bytes(value: object) -> bytes:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+
+
+class RecordingCompletionNotifier:
+    def __init__(self) -> None:
+        self.dispatch_attempts: list[dict[str, str]] = []
+
+    async def dispatch(self, event: dict[str, str]) -> None:
+        self.dispatch_attempts.append(dict(event))
+
+
+class NeverCalledExtractionService:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def extract(self, request: ExtractionRequest) -> ExtractionResponse:
+        self.calls += 1
+        raise AssertionError("extraction must not be reached for this request")
+
+class CountingExtractionService:
+    def __init__(self, response: ExtractionResponse) -> None:
+        self.response = response
+        self.requests: list[str] = []
+
+    async def extract(
+        self, request: ExtractionRequest
+    ) -> ExtractionResponse:
+        self.requests.append(request.request_id)
+        return self.response
+
+def run_raw_asgi_request(
+    app: Any,
+    body: bytes,
+    *,
+    content_length: int | None,
+    chunks: list[bytes] | None = None,
+) -> tuple[int, bytes]:
+    headers = [
+        (b"authorization", f"Bearer {TEST_TOKEN}".encode()),
+        (b"content-type", b"application/json"),
+    ]
+    if content_length is not None:
+        headers.append((b"content-length", str(content_length).encode()))
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0", "spec_version": "2.3"},
+        "http_version": "1.1",
+        "method": "POST",
+        "scheme": "http",
+        "path": "/v1/extractions",
+        "raw_path": b"/v1/extractions",
+        "query_string": b"",
+        "headers": headers,
+        "client": ("testclient", 50000),
+        "server": ("testserver", 80),
+        "root_path": "",
+    }
+    request_chunks = chunks if chunks is not None else [body]
+    received = 0
+    sent: list[dict[str, Any]] = []
+
+    async def receive() -> dict[str, Any]:
+        nonlocal received
+        if received == len(request_chunks):
+            return {"type": "http.disconnect"}
+        chunk = request_chunks[received]
+        received += 1
+        return {
+            "type": "http.request",
+            "body": chunk,
+            "more_body": received < len(request_chunks),
+        }
+
+    async def send(message: dict[str, Any]) -> None:
+        sent.append(message)
+
+    async def invoke() -> None:
+        async with app.router.lifespan_context(app):
+            await app(scope, receive, send)
+
+    asyncio.run(invoke())
+    status = next(
+        message["status"]
+        for message in sent
+        if message["type"] == "http.response.start"
+    )
+    response_body = b"".join(
+        message.get("body", b"")
+        for message in sent
+        if message["type"] == "http.response.body"
+    )
+    return status, response_body
 
 
 def test_health_is_public_and_does_not_expose_settings() -> None:
@@ -105,7 +209,12 @@ def test_health_is_public_and_does_not_expose_settings() -> None:
 def test_extraction_rejects_missing_or_invalid_bearer_token(
     authorization: str | None, full_request: dict[str, Any]
 ) -> None:
-    app = create_test_app()
+    notifier = RecordingCompletionNotifier()
+    extraction_service = NeverCalledExtractionService()
+    app = create_test_app(
+        extraction_service=extraction_service,
+        completion_notifier=notifier,
+    )
     headers = {} if authorization is None else {"Authorization": authorization}
 
     with TestClient(app) as client:
@@ -118,17 +227,26 @@ def test_extraction_rejects_missing_or_invalid_bearer_token(
     )
     assert envelope.retryable is False
     assert TEST_TOKEN not in response.text
+    assert extraction_service.calls == 0
+    assert notifier.dispatch_attempts == []
 
 
-def test_extraction_skeleton_returns_not_configured_error(
+def test_default_verified_service_fails_closed_without_provider_configuration(
     full_request: dict[str, Any],
 ) -> None:
     app = create_test_app()
+    supported_request = {
+        **full_request,
+        "extraction": {
+            **full_request["extraction"],
+            "requested_modules": ["action_items"],
+        },
+    }
 
     with TestClient(app) as client:
         response = client.post(
             "/v1/extractions",
-            json=full_request,
+            json=supported_request,
             headers={"Authorization": f"Bearer {TEST_TOKEN}"},
         )
 
@@ -150,7 +268,12 @@ def test_extraction_validates_request_before_calling_service(
         "meeting": {**full_request["meeting"], "timezone": "Mars/Olympus"},
         "private_note": "validation-payload-must-not-leak",
     }
-    app = create_test_app()
+    notifier = RecordingCompletionNotifier()
+    extraction_service = NeverCalledExtractionService()
+    app = create_test_app(
+        extraction_service=extraction_service,
+        completion_notifier=notifier,
+    )
 
     with TestClient(app) as client:
         response = client.post(
@@ -163,6 +286,8 @@ def test_extraction_validates_request_before_calling_service(
     assert envelope.request_id == full_request["request_id"]
     assert response.headers["content-type"].startswith("application/json")
     assert "validation-payload-must-not-leak" not in response.text
+    assert extraction_service.calls == 0
+    assert notifier.dispatch_attempts == []
 
 
 def test_unsupported_contract_version_maps_to_dedicated_error(
@@ -313,6 +438,100 @@ def test_streaming_body_limit_rejects_oversized_body_without_trusting_header(
     assert envelope.request_id is None
 
 
+def test_n12_declared_content_length_accepts_exact_utf8_limit(
+    full_request: dict[str, Any], full_response: dict[str, Any]
+) -> None:
+    request_model = ExtractionRequest.model_validate(full_request)
+    response_model = ExtractionResponse.model_validate(full_response)
+    body = compact_json_bytes(full_request)
+    limit = len(body)
+    assert "Tôi".encode("utf-8") in body
+
+    extraction_service = CountingExtractionService(response_model)
+    app = create_test_app(
+        max_request_bytes=limit,
+        extraction_service=extraction_service,
+    )
+    status, response_body = run_raw_asgi_request(
+        app,
+        body,
+        content_length=limit,
+    )
+
+    assert status == 200
+    assert ExtractionResponse.model_validate_json(response_body) == response_model
+    assert extraction_service.requests == [request_model.request_id]
+
+
+def test_n13_streamed_body_accepts_exact_utf8_limit(
+    full_request: dict[str, Any], full_response: dict[str, Any]
+) -> None:
+    request_model = ExtractionRequest.model_validate(full_request)
+    response_model = ExtractionResponse.model_validate(full_response)
+    body = compact_json_bytes(full_request)
+    limit = len(body)
+    assert "Tôi".encode("utf-8") in body
+    split_at = limit // 2
+    assert 0 < split_at < limit
+
+    extraction_service = CountingExtractionService(response_model)
+    app = create_test_app(
+        max_request_bytes=limit,
+        extraction_service=extraction_service,
+    )
+    status, response_body = run_raw_asgi_request(
+        app,
+        body,
+        content_length=None,
+        chunks=[body[:split_at], body[split_at:]],
+    )
+
+    assert status == 200
+    assert ExtractionResponse.model_validate_json(response_body) == response_model
+    assert extraction_service.requests == [request_model.request_id]
+
+
+@pytest.mark.parametrize("delivery", ["declared", "streamed"], ids=["content-length", "streamed-body"])
+def test_n14_valid_json_one_byte_over_limit_is_rejected_without_dispatch(
+    full_request: dict[str, Any], delivery: str
+) -> None:
+    valid_body = compact_json_bytes(full_request)
+    limit = len(valid_body)
+    oversized_body = valid_body + b" "
+    assert len(oversized_body) == limit + 1
+    ExtractionRequest.model_validate_json(oversized_body)
+
+    notifier = RecordingCompletionNotifier()
+    extraction_service = NeverCalledExtractionService()
+    app = create_test_app(
+        max_request_bytes=limit,
+        extraction_service=extraction_service,
+        completion_notifier=notifier,
+    )
+    if delivery == "declared":
+        status, response_body = run_raw_asgi_request(
+            app,
+            oversized_body,
+            content_length=len(oversized_body),
+        )
+    else:
+        split_at = len(oversized_body) // 2
+        status, response_body = run_raw_asgi_request(
+            app,
+            oversized_body,
+            content_length=None,
+            chunks=[oversized_body[:split_at], oversized_body[split_at:]],
+        )
+
+    envelope = ErrorEnvelope.model_validate_json(response_body)
+    assert status == 413
+    assert envelope.statusCode == 413
+    assert envelope.code == "PAYLOAD_TOO_LARGE"
+    assert envelope.request_id is None
+    assert extraction_service.calls == 0
+    assert notifier.dispatch_attempts == []
+
+
 def test_dependency_override_returns_typed_extraction_response(
     full_request: dict[str, Any], full_response: dict[str, Any]
 ) -> None:
@@ -320,12 +539,31 @@ def test_dependency_override_returns_typed_extraction_response(
     response_model = ExtractionResponse.model_validate(full_response)
 
     class FakeExtractionService:
+        def __init__(self) -> None:
+            self.calls = 0
+
         async def extract(self, request: ExtractionRequest) -> ExtractionResponse:
+            self.calls += 1
             assert request.request_id == request_model.request_id
             return response_model
 
+    class RecordingNotifier:
+        def __init__(self) -> None:
+            self.dispatch_attempts: list[dict[str, str]] = []
+
+        async def dispatch(self, event: dict[str, str]) -> None:
+            self.dispatch_attempts.append(dict(event))
+
     app = create_test_app()
-    app.dependency_overrides[get_extraction_service] = lambda: FakeExtractionService()
+    fake_service = FakeExtractionService()
+    recording_notifier = RecordingNotifier()
+    # Phase 05's injectable dependency will read this app-scoped test seam.
+    app.state.completion_notifier = recording_notifier
+
+    async def provide_fake_service() -> FakeExtractionService:
+        return fake_service
+
+    app.dependency_overrides[get_extraction_service] = provide_fake_service
 
     with TestClient(app) as client:
         response = client.post(
@@ -336,6 +574,15 @@ def test_dependency_override_returns_typed_extraction_response(
 
     assert response.status_code == 200
     assert ExtractionResponse.model_validate(response.json()) == response_model
+    assert fake_service.calls == 1
+    assert recording_notifier.dispatch_attempts == [
+        {
+            "event_type": "extraction.completed",
+            "request_id": request_model.request_id,
+            "meeting_id": request_model.meeting.id,
+            "status": "completed",
+        }
+    ]
 
 
 def test_unexpected_service_error_is_safe_and_standardized(
@@ -346,7 +593,10 @@ def test_unexpected_service_error_is_safe_and_standardized(
             raise RuntimeError(f"private failure with secret {TEST_TOKEN}")
 
     app = create_test_app()
-    app.dependency_overrides[get_extraction_service] = lambda: BrokenExtractionService()
+    async def provide_broken_service() -> BrokenExtractionService:
+        return BrokenExtractionService()
+
+    app.dependency_overrides[get_extraction_service] = provide_broken_service
 
     with TestClient(app) as client:
         response = client.post(
@@ -376,7 +626,10 @@ def test_request_timeout_maps_to_retryable_contract_error(
         llm_service_request_timeout_seconds=0.001,
     )
     app = create_app(settings=settings)
-    app.dependency_overrides[get_extraction_service] = lambda: SlowExtractionService()
+    async def provide_slow_service() -> SlowExtractionService:
+        return SlowExtractionService()
+
+    app.dependency_overrides[get_extraction_service] = provide_slow_service
 
     with TestClient(app) as client:
         response = client.post(
