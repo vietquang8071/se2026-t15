@@ -5,8 +5,12 @@
 **Task ID:** LLM-03  
 **Priority:** P0  
 **Complexity:** M  
-**Status:** Proposed — Pending Implementation  
+**Status: Implementation and Evaluation Completed — Pending Final Acceptance & Merge**
+
+**Diễn giải:** Đã hoàn tất triển khai và đánh giá; còn chờ nghiệm thu cuối và merge.
 **Roadmap Mapping:** P00-03, P03-04, P03-06, P07-02
+
+**Tình trạng hiện tại:** LLM-03.1 đến LLM-03.7 đã được triển khai và đánh giá. Adapter OpenRouter, prompt có phiên bản, quy trình trích xuất, kiểm tra Contract v1 và kiểm thử offline đã hoàn tất. DeepSeek Smoke, Development và Holdout đã chạy xong; các vấn đề chất lượng đã biết được ghi nhận. Chủ dự án báo cáo tổng chi phí đánh giá là USD 0.03; metadata của runner không xác minh độc lập khoản thanh toán. Definition of Done tổng thể vẫn cần review PR cuối và tích hợp vào `develop` theo [`CONTRIBUTING.md`](../../../../CONTRIBUTING.md); hoàn tất triển khai và đánh giá không đồng nghĩa đã merge hoặc chính thức đóng mốc.
 
 ---
 
@@ -214,7 +218,7 @@ Automated tests mặc định phải chạy offline và không phát sinh chi ph
 
 ### 4.1. Initial Provider
 
-**Proposed Gateway:** OpenRouter
+**Gateway được triển khai:** OpenRouter
 
 Lý do:
 
@@ -227,6 +231,8 @@ Lý do:
 OpenRouter là gateway, không đồng nghĩa với việc một model cụ thể đã được lựa chọn chính thức.
 
 ### 4.2. Model Selection Strategy
+
+Bảng dưới đây lưu lại kế hoạch lựa chọn ban đầu. Đợt đánh giá LLM-03.7.2 hoàn tất đã dùng model DeepSeek được ghi trong báo cáo cuối; không chạy benchmark model miễn phí sơ bộ trong đợt đó.
 
 Sử dụng ba chế độ kiểm thử:
 
@@ -722,35 +728,38 @@ apps/llm-service/
 
 ---
 
-## 8. Acceptance Criteria — LLM-03 Overall
+## 8. Tiêu chí nghiệm thu — Toàn bộ LLM-03
 
-LLM-03 chỉ được xem là hoàn thành khi:
+Tiêu chí triển khai và đánh giá LLM-03:
 
-- [ ] Có một LLM provider adapter thật hoạt động.
-- [ ] Có fake provider để chạy offline tests.
-- [ ] Provider/model được cấu hình qua environment.
-- [ ] Không hardcode hoặc log API credentials.
-- [ ] Có versioned extraction prompts.
-- [ ] Hỗ trợ `meeting_summary` và `action_items`.
-- [ ] Có real extraction response đúng Contract v1.
-- [ ] Không fabricate metadata, owner, date hoặc priority.
-- [ ] Source IDs hợp lệ và source timestamps được dẫn xuất từ transcript.
-- [ ] Review flags phản ánh uncertainty.
-- [ ] Structured output errors được phát hiện.
-- [ ] Provider errors được ánh xạ đúng ErrorEnvelope.
-- [ ] Unsupported modules không được trả success giả.
-- [ ] Không trả success khi evidence checks bắt buộc chưa đạt.
-- [ ] Offline integration tests pass.
-- [ ] LLM-01/02 regression tests pass.
-- [ ] Real-provider smoke test hoàn thành.
-- [ ] Token usage và chi phí thử nghiệm được ghi nhận.
-- [ ] Không yêu cầu database, audio service hoặc backend đang chạy.
+- [x] Có một LLM provider adapter thật hoạt động.
+- [x] Có fake provider để chạy offline tests.
+- [x] Provider/model được cấu hình qua environment.
+- [x] Không hardcode hoặc log API credentials.
+- [x] Có versioned extraction prompts.
+- [x] Hỗ trợ `meeting_summary` và `action_items`.
+- [x] Có real extraction response đúng Contract v1.
+- [x] Không có fabricated owner, resolved deadline, priority hoặc Summary claim trong các metric đã review; điều này không có nghĩa toàn bộ extraction không có lỗi.
+- [x] Source IDs hợp lệ và source timestamps được dẫn xuất từ transcript.
+- [x] Review flags phản ánh uncertainty.
+- [x] Structured output errors được phát hiện.
+- [x] Provider errors được ánh xạ đúng ErrorEnvelope.
+- [x] Unsupported modules không được trả success giả.
+- [x] Không trả success khi evidence checks bắt buộc chưa đạt.
+- [x] Offline integration tests và LLM-01/02 regression suite pass theo kết quả local mới nhất.
+- [x] Real-provider smoke test hoàn thành; development 10/10 và holdout 6/6 đã được đánh giá, human review hoàn tất.
+- [x] Token usage được ghi nhận; tổng chi phí USD 0.03 do chủ dự án báo cáo, chưa có billing receipt độc lập.
+- [x] Không yêu cầu database, audio service hoặc backend đang chạy cho extraction/evaluation tests.
+
+**Bằng chứng và giới hạn:** Kết quả kiểm tra cục bộ được báo cáo gồm 62 test cho DeepSeek runner, 156 test evaluation, 746 test toàn bộ LLM Service và dataset hợp lệ gồm 16 case; chưa có xác nhận độc lập từ GitHub CI. Benchmark ghi nhận lỗi deadline ISO ở `case-008`, một Action Item dự đoán thừa ở `case-015`, và khác biệt khi giữ nguyên cụm deadline gốc. Vì vậy không kết luận rằng mọi dữ kiện đều chính xác hoặc hệ thống đã sẵn sàng cho production. Xem [báo cáo LLM-03.7.2](llm-03.7.2-deepseek-smoke-and-development-evaluation-report.md) để xem chỉ số theo từng split và phân tích lỗi.
 
 ---
 
 ## 9. Known Risks & Technical Debt
 
-### 9.1. Existing LLM-01 Validation Debt
+### 9.1. Existing LLM-01 Validation Debt — Historical Record
+
+Các vấn đề dưới đây được ghi nhận trước khi triển khai LLM-03. Bảng được giữ lại như lịch sử dự án, không phải đợt kiểm tra mới toàn bộ invariant production. Một số vấn đề đã được kiểm tra trong schemas và tests hiện tại; production readiness vẫn là phần đánh giá riêng, không suy ra chỉ từ benchmark. Xem báo cáo đánh giá cuối để biết các lỗi chất lượng đã quan sát được.
 
 Các vấn đề đã được ghi nhận:
 
@@ -761,9 +770,7 @@ Các vấn đề đã được ghi nhận:
 | F3 | Source timestamp chưa được cross-validated với transcript | Contract-compliant extraction |
 | F4 | Numeric overflow có thể gây exception | Production-facing request handling |
 
-Các vấn đề trên cần được khắc phục hoặc kiểm soát bằng invariant checks tương đương trước khi nghiệm thu luồng extraction thật.
-
-Không được coi số lượng passing tests là bằng chứng thay thế cho việc kiểm tra các invariant này.
+Không dùng bảng lịch sử này để kết luận tất cả vấn đề còn mở hoặc tất cả đã được khắc phục. Việc nghiệm thu PR cuối và đánh giá mức độ sẵn sàng production vẫn cần xem xét các invariant liên quan, bằng chứng triển khai và lỗi đã quan sát trong đánh giá; không thể chỉ dựa vào số lượng test.
 
 ### 9.2. Provider Output Quality
 
@@ -838,20 +845,22 @@ Ngưỡng chất lượng chính thức sẽ được xác định trong LLM-09 
 
 ---
 
-## 11. Definition of Done
+## 11. Tiêu chí hoàn tất (Definition of Done)
 
-LLM-03 đạt Definition of Done khi:
+Definition of Done của LLM-03 được theo dõi theo hai phần riêng: hoàn tất triển khai/đánh giá và tích hợp vào repository:
 
-1. Provider thật hoạt động với cấu hình đã duyệt.
-2. FastAPI gọi được ExtractionService thật qua dependency injection.
-3. Meeting Summary và Action Items được sinh từ transcript.
-4. Không có fabricated facts trong các acceptance test cases.
-5. Response tuân thủ Contract v1, bao gồm evidence requirements.
-6. Các lỗi provider/validation được xử lý có cấu trúc.
-7. Test suite offline pass.
-8. Real-provider test được thực hiện và ghi nhận.
-9. Không có credentials trong code hoặc logs.
-10. Implementation được review và merge vào `develop` theo `CONTRIBUTING.md`.
+- [x] Provider thật hoạt động với cấu hình đã duyệt.
+- [x] FastAPI gọi được ExtractionService thật qua dependency injection.
+- [x] Meeting Summary và Action Items được sinh từ transcript.
+- [x] Không ghi nhận fabricated owner/deadline/priority hoặc Summary hallucination trong các metric reviewed; các lỗi chất lượng đã biết vẫn được nêu riêng và không bị xem như zero factual errors.
+- [x] Response thực tuân thủ Contract v1, bao gồm evidence requirements.
+- [x] Các lỗi provider/validation được xử lý có cấu trúc.
+- [x] Các bộ automated/offline tests hoàn tất; kết quả local mới nhất: 746 tests pass trên toàn bộ LLM Service.
+- [x] Real-provider Smoke, Development và Holdout tests hoàn tất và được ghi nhận.
+- [x] Không ghi nhận credentials trong source hoặc report; test runner có kiểm tra redaction.
+- [ ] PR được reviewer khác duyệt và implementation được merge vào `develop` theo `CONTRIBUTING.md`.
+
+Triển khai, offline validation, real-provider benchmark và ghi nhận lỗi đã hoàn tất. PR review và merge cuối vẫn đang chờ: `CONTRIBUTING.md` yêu cầu PR vào `develop`, ít nhất một thành viên khác phê duyệt, và các CI checks bắt buộc nếu repository đã cấu hình CI. Branch đang hoạt động là `feature/llm-03-provider-integration`; báo cáo này không khẳng định PR đã được review hoặc merge.
 
 ---
 
@@ -869,9 +878,9 @@ Thứ tự triển khai đề xuất:
 | 6 | LLM-03.6 | Offline tests |
 | 7 | LLM-03.7 | Real-provider evaluation |
 
-**Recommended First Step:** LLM-03.1 — Provider Selection & Configuration.
+**Bước đầu tiên trong kế hoạch ban đầu:** LLM-03.1 — Provider Selection & Configuration. Mốc này đã được triển khai và đánh giá; việc còn lại để đóng LLM-03 tổng thể là review PR cuối và merge vào `develop`.
 
-Trước khi bắt đầu LLM-03.2, cần xác nhận model hỗ trợ structured output, chi phí thử nghiệm và chính sách dữ liệu.
+Trong kế hoạch ban đầu, trước khi bắt đầu LLM-03.2 cần xác nhận hỗ trợ structured output, chi phí thử nghiệm và chính sách dữ liệu. Các mốc LLM-03.1–LLM-03.7 hiện đã được triển khai và đánh giá; trạng thái nghiệm thu cuối được ghi ở Mục 8 và Mục 11.
 
 ---
 
@@ -892,10 +901,10 @@ LLM-03 cung cấp nền tảng provider và extraction để các task tiếp th
 
 ## 14. References
 
-- [LLM Service Architecture](./llm-service-architecture.md)
-- [LLM Service Contract](./llm-service-contract.md)
-- [Implementation Roadmap](../implementation-roadmap.md)
-- [Feature Overview](../feature-overview.md)
-- [Contributing Guidelines](../../CONTRIBUTING.md)
+- [Kiến trúc LLM Service](../../llm-service-architecture.md)
+- [Contract của LLM Service](../../llm-service-contract.md)
+- [Lộ trình triển khai](../../../implementation-roadmap.md)
+- [Tổng quan tính năng](../../../feature-overview.md)
+- [Hướng dẫn đóng góp](../../../../CONTRIBUTING.md)
 
-**Document status:** Proposed. Nội dung này là kế hoạch triển khai, không xác nhận các chức năng LLM-03 đã được implement.
+**Tình trạng tài liệu:** Đã hoàn tất triển khai và đánh giá — chờ nghiệm thu cuối và merge. Phần mô tả các milestone giữ nguyên kế hoạch ban đầu; trạng thái nghiệm thu hiện tại được ghi tại Mục 8 và Mục 11.

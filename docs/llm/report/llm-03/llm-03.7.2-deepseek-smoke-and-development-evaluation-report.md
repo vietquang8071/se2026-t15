@@ -10,7 +10,7 @@
 
 **Ngày cập nhật báo cáo:** 2026-11-19
 
-**Trạng thái milestone:** **Evaluation completed — known issues documented.**
+**Trạng thái milestone:** **Đã hoàn tất đánh giá — các vấn đề chất lượng đã biết được ghi nhận.** (Evaluation completed — known issues documented.)
 
 **Kết luận:** Smoke DeepSeek, development 10/10 case và holdout 6/6 case đã được chạy qua pipeline LLM Service hiện có, sau đó được đánh giá offline và human review. Có các vấn đề đã biết về phân giải ngày ISO ở `case-008`, một Action Item dự đoán thừa ở `case-015`, và độ chính xác khi giữ nguyên cụm deadline. Đây là kết quả trên tập synthetic ngắn; không tự nó xác nhận production readiness hay độ chính xác trên cuộc họp thực tế.
 
@@ -96,9 +96,9 @@ Runner ghi metadata cho HTTP status, latency, model/provider, prompt versions, t
 
 ## 6. Kiểm soát chi tiêu và an toàn
 
-Runner không đặt sẵn mức chi tiêu. Mỗi chế độ live yêu cầu amount dương được operator truyền trực tiếp; `$0.25` là đề xuất ở giai đoạn lập kế hoạch, không phải hard cap. Cờ `--confirm-account-spending-limit` là xác nhận của operator rằng đã cấu hình account/API-key limit. Runner không thể truy vấn hoặc xác thực độc lập giới hạn đó, và không kiểm soát billing phía provider. Trường `hard_cap_enforced_by_runner` luôn là `false`; giá trị limit và số lượng case không được quảng bá thành hard spending cap.
+Runner không đặt sẵn mức chi tiêu. Mỗi chế độ live yêu cầu người vận hành truyền một mức chi tiêu dương; `$0.25` là đề xuất trong giai đoạn lập kế hoạch, không phải giới hạn cứng. Cờ `--confirm-account-spending-limit` xác nhận rằng người vận hành đã cấu hình giới hạn ở cấp tài khoản/API key. Runner không thể truy vấn hoặc xác thực độc lập giới hạn đó, cũng không kiểm soát billing phía provider. Trường `hard_cap_enforced_by_runner` luôn là `false`; không được xem mức chi hoặc số lượng case là giới hạn cứng. Chủ dự án báo cáo tổng chi phí thực tế cho Smoke, Development và Holdout là **USD 0.03**; runner không tự đo được khoản này.
 
-Các lần live execution được ghi nhận ở mục 15 đã chạy theo quy trình operator authorization riêng. Metadata hiện có không cung cấp actual billed cost hoặc upstream route để đối chiếu. `$0.25` từng là đề xuất chưa được duyệt ở giai đoạn triển khai runner; không xem con số đó, hoặc bất kỳ giá trị `--spend-limit-usd` nào, là hard cap do runner bảo đảm.
+Các lần chạy live ở mục 15 đã có xác nhận riêng của người vận hành. Tổng chi phí **USD 0.03** do chủ dự án xác nhận; metadata đã lưu không có số tiền billing thực tế hoặc route upstream để đối chiếu độc lập. `$0.25` từng là mức phân bổ đề xuất ở giai đoạn xây dựng runner, còn `$2` trong lệnh holdout là mức chi được ủy quyền; không số nào trong hai giá trị đó là khoản chi thực tế hay giới hạn cứng do runner bảo đảm.
 
 ## 7. Kiểm thử và xác thực offline
 
@@ -128,7 +128,7 @@ Kết quả validation mới nhất được báo cáo từ môi trường phát
 
 Dry-run development có 10 case, `evaluated_count=0`, `skipped_count=10`; contract, extraction success, Action Item, owner, deadline, priority, grounding và Summary metrics có denominator bằng 0 và value `null`. Đây là kết quả không có response để chấm, không phải điểm chất lượng bằng 0. Test mới bao gồm no-network default, auth riêng biệt, thiếu credential không lộ secret, model cấu hình sai, dataset sai, chặn holdout, body request nguyên vẹn, Contract v1 response thành công/thất bại, các mã HTTP 401/403/429/5xx, timeout, không retry, timeout hữu hạn, giới hạn case, reuse smoke, ngăn overwrite, cost unknown không thành hard cap và bảo toàn evaluator offline. Các HTTP response trong test đều đến từ mock.
 
-Không chạy lint riêng. Không có pytest nào gọi live endpoint hoặc model; smoke/development/holdout inference thật là các lần benchmark riêng, được ghi ở mục 15. Report artifacts không xác minh actual billed cost.
+Không chạy lint riêng. Không có pytest nào gọi endpoint live hoặc model; inference Smoke/Development/Holdout thật là các lượt benchmark riêng, được ghi ở mục 15. Artifacts của runner không tự xác minh số tiền đã thanh toán; tổng USD 0.03 là khoản do chủ dự án báo cáo.
 
 ## 8. Kết quả benchmark cuối
 
@@ -140,7 +140,7 @@ Smoke, development và holdout đã được thực hiện; số liệu cuối t
 - Human review đã hoàn tất cho hai split, nhưng metric vẫn phụ thuộc độ tin cậy của gold labels, rubric và phán đoán reviewer. Semantic review không thay thế đánh giá production hay review độc lập nhiều reviewer.
 - Raw deadline accuracy bị ảnh hưởng bởi khác biệt khi giữ nguyên cụm văn bản; `case-008` còn lỗi phân giải ISO date rõ ràng. Full relative-date resolution thuộc LLM-04, ngoài phạm vi sửa hành vi của milestone này.
 - Actual upstream OpenRouter provider route không được public response/report cung cấp. Runner không độc lập xác thực giới hạn chi tiêu ở cấp account/API key.
-- `--spend-limit-usd` ghi lại mức chi tiêu operator cho phép; đó không phải hard cap do runner thực thi. Actual billed cost chưa được xác minh, nên không ước lượng cost từ giá chung hoặc token usage.
+- `--spend-limit-usd` ghi lại mức chi người vận hành cho phép; runner không thực thi đây như giới hạn cứng. Chủ dự án báo cáo tổng chi phí là USD 0.03, nhưng runner không tính tiền billing và artifacts được cung cấp không có hóa đơn/giao dịch để xác minh độc lập. Không chia tổng này theo split/case hoặc suy ra đơn giá từ số token.
 - Một extraction có thể tạo nhiều provider generations, bao gồm evidence verification. Token usage có trong metadata, nhưng không đủ để xác nhận tổng số billable generations hoặc số tiền thực tế đã charge.
 - Runtime đã xử lý request thật với cấu hình được dùng trong benchmark, nhưng điều đó không chứng minh mọi provider route hoặc model option đều tương thích.
 
@@ -158,21 +158,21 @@ Các mục sau là hướng cải thiện/chứng minh bổ sung, không phải 
 
 | Tiêu chí | Trạng thái |
 |---|---|
-| Dataset validation | Đạt: 16 / 10 development / 6 holdout |
-| Smoke technical extraction | Hoàn tất; HTTP 200 và Contract v1 hợp lệ |
-| Smoke human semantic quality gate | Hoàn tất; review đầy đủ và decision `approved` |
-| Development live evaluation | Hoàn tất: 10/10 response được đánh giá; 9 request mới và 1 smoke response reuse |
-| Development human review | Hoàn tất; không còn pending review |
-| Holdout live evaluation | Hoàn tất: 6/6 case trong split holdout riêng |
-| Holdout human review | Hoàn tất; không còn pending review |
-| Offline evaluation reports | Hoàn tất; JSON/Markdown reports đã review theo split |
-| Development vs Holdout comparison | Hoàn tất; không gộp Action F1 thành metric chính thức |
-| Evaluation tests và dataset validation | Đạt theo kết quả local mới nhất tại mục 7 |
-| Real-world readiness / accuracy | Chưa được xác lập bởi bộ dữ liệu synthetic ngắn |
-| Billing verification | Actual billed cost và upstream route chưa được xác minh |
-| LLM-03.7.2 benchmark | **Evaluation completed — known issues documented** |
+| Kiểm tra dataset | Đạt: 16 case / 10 development / 6 holdout |
+| Smoke extraction kỹ thuật | Hoàn tất; HTTP 200 và Contract v1 hợp lệ |
+| Cổng đánh giá ngữ nghĩa thủ công cho Smoke | Hoàn tất; review đầy đủ và quyết định `approved` |
+| Đánh giá live Development | Hoàn tất: đánh giá 10/10 response; 9 request mới và 1 response Smoke dùng lại |
+| Human review Development | Hoàn tất; không còn lượt review chờ |
+| Đánh giá live Holdout | Hoàn tất: 6/6 case trong split Holdout riêng |
+| Human review Holdout | Hoàn tất; không còn lượt review chờ |
+| Báo cáo đánh giá offline | Hoàn tất; báo cáo JSON/Markdown đã review theo từng split |
+| So sánh Development và Holdout | Hoàn tất; không gộp Action F1 thành một chỉ số benchmark chính thức |
+| Test evaluation và kiểm tra dataset | Đạt theo kết quả cục bộ mới nhất tại mục 7 |
+| Mức sẵn sàng/độ chính xác trên dữ liệu thực | Chưa được xác lập bởi bộ dữ liệu synthetic ngắn |
+| Chi phí đánh giá | USD 0.03 theo báo cáo của chủ dự án; runner và chứng từ billing độc lập chưa xác minh |
+| Benchmark LLM-03.7.2 | **Đã hoàn tất đánh giá — các vấn đề chất lượng đã biết được ghi nhận** |
 
-**Kết luận:** LLM-03.7.2 evaluation completed, with known quality issues documented. Production readiness and real-world accuracy remain separate questions.
+**Kết luận:** Đánh giá LLM-03.7.2 đã hoàn tất, các vấn đề chất lượng đã biết được ghi nhận. Mức sẵn sàng production và độ chính xác trên dữ liệu thực cần được xem xét riêng.
 
 ## 12. Lệnh runner để tái lập trong lần chạy được ủy quyền
 
@@ -315,7 +315,7 @@ P1-01 và P1-02 đã được sửa và offline validation đạt. Các kết lu
 
 Kết luận pending của giai đoạn remediation đã **được supersede** bởi kết quả smoke, development và holdout đã review tại mục 15. Nội dung P1 được giữ lại để bảo toàn nguyên nhân, cách sửa và bằng chứng regression testing.
 
-## 15. Final Evaluation Results & Milestone Closure
+## 15. Kết quả đánh giá cuối và chốt milestone
 
 ### Nguồn kết quả
 
@@ -327,133 +327,146 @@ Các số liệu dưới đây được đối chiếu với report JSON đã re
 
 Ba mode ghi nhận model ID `deepseek/deepseek-v4.1-flash-1017`, provider `openrouter`, prompt versions `extract-v1.0` và `evidence-v1.3`. Public metadata không chỉ ra upstream OpenRouter endpoint đã xử lý request.
 
-### Smoke test và semantic gate
+### Smoke test và cổng đánh giá ngữ nghĩa
 
 | Chỉ số | Kết quả |
 |---|---:|
 | Case | `case-001` |
-| HTTP / technical smoke | 200 / `technical_smoke_passed` |
-| Live execution | 1 attempted, 1 successful, 0 failed; rate 1/1 |
-| Semantic review | `semantic_review_passed`; 7/7 claim reviewed; decision `approved` |
-| Latency | 17.9132 giây |
-| Input / output tokens | 7,037 / 2,830 |
+| HTTP / smoke kỹ thuật | 200 / `technical_smoke_passed` |
+| Thực thi live | 1 lần thử, 1 thành công, 0 thất bại; tỷ lệ 1/1 |
+| Review ngữ nghĩa | `semantic_review_passed`; đã review 7/7 claim; quyết định `approved` |
+| Độ trễ | 17.9132 giây |
+| Token đầu vào / đầu ra | 7,037 / 2,830 |
 
-Smoke response được lưu và review trước development. Development tái sử dụng response cùng cấu hình đó, không gửi request mới cho `case-001`.
+Response Smoke được lưu và review trước khi chạy Development. Development tái sử dụng response cùng cấu hình đó, không gửi request mới cho `case-001`.
 
-### Development results
+### Kết quả Development
 
-| Metric | Development |
+| Chỉ số | Development |
 |---|---:|
-| Evaluated cases | 10/10 |
-| Expected / predicted Action Items | 10 / 10 |
-| Contract compliance | 100% (10/10) |
-| Extraction success rate (saved responses) | 100% (10/10) |
-| Action TP / FP / FN | 10 / 0 / 0 |
-| Action Precision / Recall / F1 | 100% / 100% / 100% |
-| Correct empty-action cases | 2 |
-| Owner accuracy | 100% (10 matched actions) |
-| Raw deadline accuracy | 80% (8/10) |
-| Resolved-date accuracy | 0/1 (0%) |
-| Deadline temporal-status accuracy | 90% (9/10) |
-| Priority accuracy | 100% (10 matched actions) |
-| Structural source grounding | 100% (10/10 cases) |
-| Summary faithfulness | 5.0/5 (mean, 10 reviews) |
-| Summary required-fact coverage | 97.5% (mean, 10 reviews) |
-| Summary conciseness/actionability | 4.2/5 (mean, 10 reviews) |
-| Summary semantic source grounding | 100% (mean, 10 reviews) |
-| Semantic claims supported | 68/68; coverage 100% |
-| Recorded Summary hallucinations | 0 |
-| Pending human reviews | 0 |
-| Mean latency | 15.7163 seconds (10 responses) |
-| Input / output tokens | 70,430 / 23,799 |
+| Số case được đánh giá | 10/10 |
+| Action Item kỳ vọng / dự đoán | 10 / 10 |
+| Tuân thủ Contract v1 | 100% (10/10) |
+| Tỷ lệ trích xuất thành công (response đã lưu) | 100% (10/10) |
+| Action Item TP / FP / FN | 10 / 0 / 0 |
+| Precision / Recall / F1 của Action Item | 100% / 100% / 100% |
+| Case không có Action Item được xử lý đúng | 2 |
+| Độ chính xác owner | 100% (10 action đã khớp) |
+| Độ chính xác deadline gốc | 80% (8/10) |
+| Độ chính xác ngày đã phân giải | 0/1 (0%) |
+| Độ chính xác trạng thái thời gian của deadline | 90% (9/10) |
+| Độ chính xác priority | 100% (10 action đã khớp) |
+| Grounding nguồn theo cấu trúc | 100% (10/10 case) |
+| Faithfulness của Summary | 5.0/5 (trung bình, 10 lượt review) |
+| Mức bao phủ dữ kiện bắt buộc trong Summary | 97.5% (trung bình, 10 lượt review) |
+| Tính cô đọng/khả năng hành động của Summary | 4.2/5 (trung bình, 10 lượt review) |
+| Grounding nguồn ngữ nghĩa của Summary | 100% (trung bình, 10 lượt review) |
+| Claim ngữ nghĩa được xác nhận hỗ trợ | 68/68; độ bao phủ 100% |
+| Số hallucination Summary được ghi nhận | 0 |
+| Lượt review con người còn chờ | 0 |
+| Độ trễ trung bình | 15.7163 giây (10 response) |
+| Token đầu vào / đầu ra | 70,430 / 23,799 |
 
-### Holdout results
+### Kết quả Holdout
 
 Holdout là cấu hình đã đóng băng được đánh giá trên sáu synthetic case chưa dùng trong development. Kết quả giữ split riêng và không được dùng để tuning.
 
-| Metric | Holdout |
+| Chỉ số | Holdout |
 |---|---:|
-| Evaluated cases | 6/6 |
-| Expected / predicted Action Items | 8 / 9 |
-| Contract compliance | 100% (6/6) |
-| Extraction success rate (saved responses) | 100% (6/6) |
-| Action TP / FP / FN | 8 / 1 / 0 |
-| Action Precision / Recall / F1 | 88.89% / 100% / 94.12% |
-| Correct empty-action cases | 1 |
-| Owner accuracy | 100% (8 matched actions) |
-| Raw deadline accuracy | 87.5% (7/8) |
-| Resolved-date accuracy | N/A (denominator 0) |
-| Deadline temporal-status accuracy | 100% (8/8) |
-| Priority accuracy | 100% (8 matched actions) |
-| Structural source grounding | 100% (6/6 cases) |
-| Summary faithfulness | 5.0/5 (mean, 6 reviews) |
-| Summary required-fact coverage | 100% (mean, 6 reviews) |
-| Summary conciseness/actionability | 4.33/5 (mean, 6 reviews) |
-| Summary semantic source grounding | 100% (mean, 6 reviews) |
-| Semantic claims supported | 50/50; coverage 100% |
-| Recorded Summary hallucinations | 0 |
-| Pending human reviews | 0 |
-| Mean latency | 19.1320 seconds (6 responses) |
-| Input / output tokens | 44,372 / 22,081 |
+| Số case được đánh giá | 6/6 |
+| Action Item kỳ vọng / dự đoán | 8 / 9 |
+| Tuân thủ Contract v1 | 100% (6/6) |
+| Tỷ lệ trích xuất thành công (response đã lưu) | 100% (6/6) |
+| Action Item TP / FP / FN | 8 / 1 / 0 |
+| Precision / Recall / F1 của Action Item | 88.89% / 100% / 94.12% |
+| Case không có Action Item được xử lý đúng | 1 |
+| Độ chính xác owner | 100% (8 action đã khớp) |
+| Độ chính xác deadline gốc | 87.5% (7/8) |
+| Độ chính xác ngày đã phân giải | N/A (mẫu số 0) |
+| Độ chính xác trạng thái thời gian của deadline | 100% (8/8) |
+| Độ chính xác priority | 100% (8 action đã khớp) |
+| Grounding nguồn theo cấu trúc | 100% (6/6 case) |
+| Faithfulness của Summary | 5.0/5 (trung bình, 6 lượt review) |
+| Mức bao phủ dữ kiện bắt buộc trong Summary | 100% (trung bình, 6 lượt review) |
+| Tính cô đọng/khả năng hành động của Summary | 4.33/5 (trung bình, 6 lượt review) |
+| Grounding nguồn ngữ nghĩa của Summary | 100% (trung bình, 6 lượt review) |
+| Claim ngữ nghĩa được xác nhận hỗ trợ | 50/50; độ bao phủ 100% |
+| Số hallucination Summary được ghi nhận | 0 |
+| Lượt review con người còn chờ | 0 |
+| Độ trễ trung bình | 19.1320 giây (6 response) |
+| Token đầu vào / đầu ra | 44,372 / 22,081 |
 
 ### So sánh Development và Holdout
 
-| Metric | Development (n=10) | Holdout (n=6) |
+| Chỉ số | Development (n=10) | Holdout (n=6) |
 |---|---:|---:|
-| Contract compliance | 100% (10/10) | 100% (6/6) |
-| Extraction success (saved responses) | 100% (10/10) | 100% (6/6) |
-| Action Precision | 100% | 88.89% |
-| Action Recall | 100% | 100% |
-| Action F1 | 100% | 94.12% |
-| Owner accuracy | 100% (10) | 100% (8) |
-| Raw deadline accuracy | 80% (8/10) | 87.5% (7/8) |
-| Resolved-date accuracy | 0/1 | N/A (0 denominator) |
-| Deadline status accuracy | 90% (9/10) | 100% (8/8) |
-| Priority accuracy | 100% (10) | 100% (8) |
-| Summary faithfulness | 5.0/5 | 5.0/5 |
-| Summary fact coverage | 97.5% | 100% |
-| Summary actionability | 4.2/5 | 4.33/5 |
-| Summary source grounding (human review) | 100% | 100% |
-| Semantic claims supported | 68/68 | 50/50 |
-| Mean latency | 15.7163 s | 19.1320 s |
-| Input / output tokens | 70,430 / 23,799 | 44,372 / 22,081 |
+| Tuân thủ Contract v1 | 100% (10/10) | 100% (6/6) |
+| Trích xuất thành công (response đã lưu) | 100% (10/10) | 100% (6/6) |
+| Precision của Action Item | 100% | 88.89% |
+| Recall của Action Item | 100% | 100% |
+| F1 của Action Item | 100% | 94.12% |
+| Độ chính xác owner | 100% (10) | 100% (8) |
+| Độ chính xác deadline gốc | 80% (8/10) | 87.5% (7/8) |
+| Độ chính xác ngày đã phân giải | 0/1 | N/A (mẫu số 0) |
+| Độ chính xác trạng thái deadline | 90% (9/10) | 100% (8/8) |
+| Độ chính xác priority | 100% (10) | 100% (8) |
+| Faithfulness của Summary | 5.0/5 | 5.0/5 |
+| Mức bao phủ dữ kiện trong Summary | 97.5% | 100% |
+| Tính khả thi của Summary | 4.2/5 | 4.33/5 |
+| Grounding nguồn của Summary (human review) | 100% | 100% |
+| Claim ngữ nghĩa được xác nhận hỗ trợ | 68/68 | 50/50 |
+| Độ trễ trung bình | 15.7163 giây | 19.1320 giây |
+| Token đầu vào / đầu ra | 70,430 / 23,799 | 44,372 / 22,081 |
 
 Holdout Action F1 thấp hơn do một false-positive Action Item ở `case-015`: model tách việc báo cáo kết quả latency thành action riêng, trong khi gold xem đó là phần của cam kết kiểm tra độ trễ. Hai split nhỏ, khác số lượng và phân bố case; chênh lệch không chứng minh khác biệt có ý nghĩa thống kê. Không gộp hai Action F1 thành một benchmark score chính thức.
 
-### Live execution và operational metrics
+### Số liệu thực thi live và vận hành
 
-Các số dưới đây lấy từ `metadata/smoke.json`, `metadata/development.json` và `metadata/holdout.json`. Đây là số request live, khác với extraction success rate response-based trong offline report.
+Các số dưới đây lấy từ `metadata/smoke.json`, `metadata/development.json` và `metadata/holdout.json`. Đây là số request thực tế, khác với tỷ lệ trích xuất thành công tính từ các response đã lưu trong báo cáo offline.
 
-| Mode | Selected | Attempted | Successful | Failed | Reused | Not attempted | Live success rate (denominator) | HTTP status |
+| Chế độ | Case đã chọn | Request đã thử | Thành công | Thất bại | Dùng lại | Chưa thử | Tỷ lệ thành công live (mẫu số) | Mã HTTP |
 |---|---:|---:|---:|---:|---:|---:|---:|---|
 | Smoke | 1 | 1 | 1 | 0 | 0 | 0 | 100% (1) | 200: 1 |
 | Development | 10 | 9 | 9 | 0 | 1 | 0 | 100% (9) | 200: 9 |
 | Holdout | 6 | 6 | 6 | 0 | 0 | 0 | 100% (6) | 200: 6 |
 
-Không có HTTP failure hoặc failure category trong run metadata. Development có 10 response được chấm, nhưng chỉ 9 HTTP attempts mới vì `case-001` được reuse từ smoke; vì vậy live success rate là 9/9, không phải 10/10 attempts. Holdout có 6/6 live attempts. Latency và token usage được tổng hợp ở các bảng split phía trên.
+Metadata của các lượt chạy không ghi nhận request HTTP thất bại hay nhóm lỗi nào. Development có 10 response được chấm, nhưng chỉ có 9 lượt thử HTTP mới vì `case-001` được dùng lại từ Smoke; do đó tỷ lệ thành công live là 9/9, không phải 10/10 lượt thử. Holdout có 6/6 lượt thử HTTP. Độ trễ và mức sử dụng token được tổng hợp ở các bảng theo split phía trên.
 
-Estimated cost và actual billed cost đều chưa có trong saved reports. Không suy diễn chi phí từ generic model pricing hoặc token counts. Public response metadata không chỉ ra upstream provider route; account-level restrictions là operator-confirmed, không được runner xác thực độc lập. Mỗi extraction có thể gồm nhiều provider generations, nên request count không đồng nghĩa với generation count hoặc billing event count.
+Các trường chi phí ước tính và chi phí thanh toán thực tế do runner ghi nhận đều là `null` trong metadata đã lưu. Chủ dự án xác nhận **tổng chi phí thực tế là USD 0.03** cho cả ba chế độ; đây là thông tin chi phí hiện có, không phải số đo thanh toán tự động. Kết quả được cung cấp không có hóa đơn hoặc giao dịch để xác minh độc lập. Không phân bổ USD 0.03 theo split/case và không suy ra đơn giá từ số token. Metadata response công khai không cho biết tuyến provider upstream; giới hạn chi tiêu cấp tài khoản do người vận hành xác nhận và runner không tự xác minh. Mỗi lần trích xuất có thể tạo nhiều lượt sinh từ provider, nên số request HTTP không đồng nghĩa với số lượt sinh hoặc số giao dịch thanh toán.
 
-### Failure analysis đã xác nhận
+| Hạng mục chi phí | Giá trị |
+|---|---|
+| Gateway nhà cung cấp | OpenRouter |
+| Model | `deepseek/deepseek-v4.1-flash-1017` |
+| Số lần thử HTTP ở Smoke | 1 |
+| Số lần thử HTTP mới ở Development | 9 |
+| Response Smoke được dùng lại ở Development | 1 (không phải request mới) |
+| Số lần thử HTTP ở Holdout | 6 |
+| Tổng số lần thử HTTP live duy nhất | 16 |
+| Tổng chi phí đánh giá | **USD 0.03** |
+| Nguồn xác nhận chi phí | Chủ dự án xác nhận |
+| Chứng từ billing được xác minh độc lập | Không có trong các báo cáo được cung cấp |
 
-**ISSUE-01 — ISO deadline resolution, `case-008`.** Prediction có `raw_due_expression = "vào 2026-12-15"`, `due_date = null` và trạng thái `unresolved`. Gold có `raw_due_expression = "2026-12-15"`, `due_date = "2026-12-15"` và `due_date_resolution_status = "exact_date"`. ISO date không được resolve đúng; cụm raw còn thêm từ “vào” so với gold. Không sửa `TemporalReviewProcessor` trong lần cập nhật báo cáo này.
+### Phân tích lỗi đã xác nhận
 
-**ISSUE-02 — Extra Action Item, `case-015`.** Prediction có action chính “Kiểm tra độ trễ endpoint tìm kiếm” và thêm “Báo lại kết quả khi hoàn thành”. Gold xem việc báo kết quả là một phần của commitment kiểm tra độ trễ, không phải Action Item độc lập. Đây là một holdout false positive, không phải Summary hallucination đã ghi nhận.
+**LỖI-01 — Phân giải deadline ISO, `case-008`.** Prediction có `raw_due_expression = "vào 2026-12-15"`, `due_date = null` và trạng thái `unresolved`. Gold có `raw_due_expression = "2026-12-15"`, `due_date = "2026-12-15"` và `due_date_resolution_status = "exact_date"`. Ngày ISO không được phân giải đúng; cụm deadline gốc còn thêm từ “vào” so với gold. Không sửa `TemporalReviewProcessor` trong lần cập nhật báo cáo này.
 
-**ISSUE-03 — Raw deadline preservation.** Ở `case-006`, prediction giữ cụm `"thứ Ba tuần tới"`, còn gold là `"vào thứ Ba tuần tới"`; transcript có câu “Tôi đồng ý nhận việc và gửi báo cáo vào thứ Ba tuần tới.” Ở `case-011`, prediction ghi `"thứ Tư tuần sau"`, còn gold là `"vào thứ Tư tuần sau"`; transcript nói “Tôi sẽ tổng hợp các lỗi đã biết vào thứ Tư tuần sau.” Ý nghĩa thời gian có thể đúng, nhưng thiếu từ dẫn đầu làm giảm verbatim raw-expression accuracy theo rubric.
+**LỖI-02 — Action Item thừa, `case-015`.** Prediction có action chính “Kiểm tra độ trễ endpoint tìm kiếm” và thêm “Báo lại kết quả khi hoàn thành”. Gold xem việc báo kết quả là một phần của cam kết kiểm tra độ trễ, không phải Action Item độc lập. Đây là một false positive ở Holdout, không phải hallucination Summary được ghi nhận.
+
+**LỖI-03 — Bảo toàn cụm deadline gốc.** Ở `case-006`, prediction giữ cụm `"thứ Ba tuần tới"`, còn gold là `"vào thứ Ba tuần tới"`; transcript có câu “Tôi đồng ý nhận việc và gửi báo cáo vào thứ Ba tuần tới.” Ở `case-011`, prediction ghi `"thứ Tư tuần sau"`, còn gold là `"vào thứ Tư tuần sau"`; transcript nói “Tôi sẽ tổng hợp các lỗi đã biết vào thứ Tư tuần sau.” Ý nghĩa thời gian có thể đúng, nhưng thiếu từ dẫn đầu làm giảm độ chính xác so khớp nguyên văn cụm deadline theo rubric.
 
 ### Chốt acceptance và kết luận
 
 | Tiêu chí | Trạng thái cuối |
 |---|---|
-| Dataset validation: 16 case, 10 development / 6 holdout | Hoàn tất |
-| Smoke technical validation và Contract v1 | Hoàn tất |
-| Smoke human semantic quality gate | Hoàn tất; explicit approval và review đầy đủ |
-| Development live evaluation và human review | Hoàn tất: 10/10, pending review 0 |
-| Holdout live evaluation và human review | Hoàn tất: 6/6, pending review 0 |
-| Offline JSON/Markdown reports và split comparison | Hoàn tất |
-| ISO deadline resolution, Action Item segmentation, raw deadline preservation | Cải tiến còn lại; ghi nhận trong failure analysis |
-| Đánh giá cuộc họp dài/real-world | Chưa thực hiện; ngoài dataset synthetic hiện tại |
-| Independent billing verification | Chưa có actual billed cost hoặc route upstream được xác minh |
+| Kiểm tra dataset: 16 case, 10 development / 6 holdout | Hoàn tất |
+| Smoke kỹ thuật và kiểm tra Contract v1 | Hoàn tất |
+| Cổng đánh giá ngữ nghĩa thủ công cho Smoke | Hoàn tất; có phê duyệt tường minh và review đầy đủ |
+| Đánh giá live và human review Development | Hoàn tất: 10/10, không còn review chờ |
+| Đánh giá live và human review Holdout | Hoàn tất: 6/6, không còn review chờ |
+| Báo cáo JSON/Markdown offline và so sánh hai split | Hoàn tất |
+| Phân giải deadline ISO, tách Action Item, giữ nguyên deadline gốc | Cải tiến còn lại; đã ghi nhận trong phân tích lỗi |
+| Đánh giá cuộc họp dài/trên dữ liệu thực | Chưa thực hiện; ngoài dataset synthetic hiện tại |
+| Xác minh billing độc lập | Chưa có chứng từ chi thực tế hoặc route upstream được xác minh |
 
-**LLM-03.7.2 evaluation completed, with known quality issues documented. Production readiness and real-world accuracy remain separate questions.**
+**Đánh giá LLM-03.7.2 đã hoàn tất, các vấn đề chất lượng đã biết được ghi nhận. Mức sẵn sàng production và độ chính xác trên dữ liệu thực cần được xem xét riêng.**
