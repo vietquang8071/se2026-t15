@@ -155,9 +155,26 @@ uv run --locked --extra test --env-file .env \
 
 The runner sends only the selected `llm-request.json`, unchanged in business content; it never sends `gold.json` or review annotations. It uses the service bearer token, finite request timeout, one sequential request, no retries, and no redirects or environment proxies. Response and failure files are written exclusively so existing files are not overwritten. An invalid Contract v1 response is written as a sanitized failure record, not as a successful response.
 
+A technically successful smoke is recorded as `technical_smoke_passed` and `semantic_review_pending`. It is not semantic approval. The run creates `reviews/review-template-smoke.json` and `reviews/smoke-approval.json`; the initial approval decision is `pending_review`. Review the public saved response against the case-001 gold references and [evaluation rubric](datasets/llm-03.7-evaluation/evaluation-rubric.md). Fill the existing review format with a Summary review (faithfulness, required-fact coverage, actionability, source grounding and hallucinations), a verdict for every applicable public claim ID, and explicit `action_matches` decisions for paraphrases or ambiguous predictions. A null optional field creates no claim; an empty action list uses the existing `actions.absence` claim. Record reviewer identity in Summary, semantic and manual match annotations.
+
+Review states remain distinct: an absent/incomplete valid review is `semantic_review_pending`; a complete passing review is `semantic_review_passed`; a complete review that rejects or fails required quality criteria is `semantic_review_failed`; malformed or stale annotations are rejected as `invalid_review`. The underlying evaluator also preserves `partial_review` coverage. None of these states change `technical_smoke_passed` into semantic approval automatically.
+
+The offline gate reuses `evaluation.runner` and existing scoring/review validators. It requires complete reviews, all applicable semantic claims supported, complete one-to-one Action Item matching with no FP/FN, correct supported owner, rubric-consistent deadline/status, correct priority, zero hallucinations, full required-fact coverage and source grounding, and explicit `approved` sign-off with reviewer and rationale. LLM-03 requires a non-ISO relative deadline to remain unresolved; the gate checks this instead of requiring LLM-04 date resolution. The rubric does not define a numeric pass threshold for faithfulness/actionability scores, so it records them and uses objective rubric criteria plus the human sign-off without inventing a cutoff. A failed or rejected review cannot authorize development.
+
+After completing the review JSON, calculate its exact hash and update `smoke-approval.json` with `review_sha256`, `decision: "approved"`, a non-empty reviewer and rationale. Keep the response hash copied from the generated approval template. The review digest binds approval to the exact review file; the response digest binds it to the exact saved smoke response. Verify offline before development:
+
+```bash
+cd apps/llm-service
+sha256sum /tmp/llm03.7.2/reviews/review-template-smoke.json
+uv run --locked --extra test python -m evaluation.deepseek_runner verify-smoke-review \
+  --output-dir /tmp/llm03.7.2
+```
+
+The verifier returns `0` only for a valid passing review, `1` for a valid review that fails the quality gate, `2` for invalid dataset/output location, and `3` for pending or invalid review input. The local approval is an operator-supplied assertion, not cryptographic proof of independent review. Later runs do not overwrite the saved response or approval.
+
 ### Development authorization
 
-Run the development split only after a successful same-configuration smoke record exists in `/tmp/llm03.7.2` and the owner separately authorizes the development run. This command uses a different required flag and a separately supplied spending authorization. It is limited to `case-001` through `case-010`; any holdout or unknown ID is rejected. A matching saved smoke response for `case-001` is reused. A config mismatch stops the run without overwriting or paying for `case-001` again.
+Development evaluation requires a technically successful same-configuration `case-001` smoke, a completed and passing human semantic review of that exact response, and a separate `--authorize-development` acknowledgment. Smoke authorization alone never enables development. Missing, partial, malformed, stale, rejected, or quality-failing review blocks development before an HTTP request. The operator must separately authorize development spending. It is limited to `case-001` through `case-010`; any holdout or unknown ID is rejected. A matching saved smoke response for `case-001` is reused and is not counted as a new provider attempt. A config mismatch stops the run without overwriting or paying for `case-001` again.
 
 ```bash
 uv run --locked --extra test --env-file .env \
@@ -196,7 +213,20 @@ uv run --locked --extra test python -m evaluation.runner run \
   --output-dir /tmp/llm03.7.2/reports/offline-development
 ```
 
-The generated review template contains empty case annotations only. Reviewers must inspect task equivalence, source support, owner, deadline, priority, Summary faithfulness/coverage/actionability, and hallucinations themselves. Valid source IDs establish structural grounding only; no semantic scores or verdicts are generated automatically. Until people fill in the review file, these metrics remain `pending_review`.
+The generated development review template contains empty case annotations only. Reviewers must inspect task equivalence, source support, owner, deadline, priority, Summary faithfulness/coverage/actionability, and hallucinations themselves. Valid source IDs establish structural grounding only; no semantic scores or verdicts are generated automatically. Until people fill in the review file, these metrics remain `pending_review`.
+
+The ordinary offline report retains response-based semantics: it scores only saved successful response JSON; a live failure without a response remains `not_evaluated` there. The separate `live_execution` section in the manual runner's JSON and Markdown report uses actual run outcomes and is the authoritative live request metric:
+
+- `selected_case_count`: all cases selected for this run.
+- `attempted_count`: cases for which one HTTP extraction call was initiated.
+- `successful_count`: attempted cases receiving HTTP 200 and passing Contract v1 validation.
+- `failed_count`: attempted cases failing on HTTP status, timeout/connection error, invalid JSON, invalid Contract v1 or model mismatch.
+- `reused_count`: validated same-configuration saved responses reused with no new HTTP request.
+- `not_attempted_count`: selected cases neither attempted nor reused, including cases left after an early stop.
+- `live_execution_success_rate`: `successful_count / attempted_count`; it is `null` when there were no new attempts. Reused cases never inflate this rate.
+- `live_execution_success_rate_denominator`: the attempted count used by the rate.
+
+Failure categories and HTTP status distribution cover attempted requests; pre-request validation failures are reported separately. These live counters do not change offline evaluator `not_evaluated` behavior.
 
 ### Troubleshooting
 

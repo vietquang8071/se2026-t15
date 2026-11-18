@@ -10,13 +10,13 @@
 
 **Ngày xác minh:** 2026-11-18
 
-**Kết luận:** Runner và kiểm thử offline đã được triển khai, xác thực dataset và toàn bộ regression suite đạt. Smoke test DeepSeek và benchmark development chưa chạy; cần phê duyệt trả phí riêng.
+**Kết luận:** Runner và hạ tầng đánh giá offline đã được triển khai. Hai lỗi P1 về success rate live và semantic quality gate đã được sửa, với kết quả xác minh mới nhất ở mục 14. Smoke test DeepSeek và benchmark development chưa chạy; cần phê duyệt trả phí riêng.
 
 ## 1. Tóm tắt điều hành
 
 LLM-03.7.2 bổ sung một runner thủ công, độc lập với `evaluation.runner`, để sau này gửi request qua endpoint FastAPI hiện có tới LLM Service. Runner mặc định chỉ chạy preflight không mạng. Khi được phê duyệt riêng, chế độ smoke chỉ có thể xử lý `case-001`; chế độ development chỉ nhận `case-001` đến `case-010`, yêu cầu cờ phê duyệt riêng, giới hạn số case, mức chi tiêu được cấp và xác nhận giới hạn chi tiêu ở cấp tài khoản/API key. Các response hợp lệ được lưu ngoài dataset rồi chấm bằng evaluator offline hiện có.
 
-Đã chạy và xác nhận:
+Các kết quả ghi nhận ở lần xác minh ban đầu, trước phần remediation P1:
 
 - Dataset hợp lệ: 16 case, gồm 10 development và 6 holdout.
 - 123 test trong `tests/evaluation` pass.
@@ -219,3 +219,71 @@ uv run --locked --extra test python -m evaluation.runner run \
 - [LLM Contract v1](../../llm-service-contract.md)
 - [Tổng quan LLM-03](llm-03-overview.md)
 - [Báo cáo LLM-03.7 offline](llm-03.7-offline-evaluation-report.md)
+
+## 14. Remediation P1-01 và P1-02
+
+Phần này ghi nhận các sửa đổi sau review cho LLM-03.7.2. Kết quả dưới đây là xác minh bằng test offline/dataset/preflight; các fixture thành công dùng HTTP mock, không phải output DeepSeek.
+
+### P1-01 — Tách success rate live khỏi response-based evaluation
+
+**Nguyên nhân:** `evaluation.runner.evaluate_offline()` được thiết kế để đánh giá response JSON đã lưu. Các lỗi HTTP được ghi trong `failures/`, không có response JSON để chấm. Vì vậy success rate tính trên response files có thể là 2/2 = 100% dù live runner đã thử ba case và một request trả HTTP 503.
+
+**Sửa đổi:** `evaluation.deepseek_runner` nay tạo một nhóm `live_execution` riêng trong operational record và report JSON/Markdown. Hàm `_send_one()` phân biệt request chưa được gửi với một HTTP attempt thực tế; `_execute()` ghi lại response thành công, lỗi đã xảy ra và các case còn lại sau khi dừng; `_live_execution_metrics()` tổng hợp counters. Các định nghĩa được áp dụng:
+
+| Counter | Định nghĩa |
+|---|---|
+| `selected_case_count` | Tổng số case được chọn cho run |
+| `attempted_count` | Case đã khởi tạo một HTTP extraction request |
+| `successful_count` | Attempt nhận HTTP 200 và response đạt Contract v1/request validation |
+| `failed_count` | Attempt thất bại bởi HTTP status, timeout/kết nối, JSON, Contract v1 hoặc model mismatch |
+| `reused_count` | Response đã lưu, cùng cấu hình và hợp lệ được dùng lại mà không tạo request mới |
+| `not_attempted_count` | Case được chọn nhưng không attempt hoặc reuse; gồm case còn lại khi run dừng sớm |
+| `live_execution_success_rate` | `successful_count / attempted_count`, hoặc `null` khi không có attempt |
+| `live_execution_success_rate_denominator` | Chính là `attempted_count` |
+
+Failure categories và HTTP status distribution chỉ tổng hợp các HTTP attempt; lỗi trước request được báo riêng. Với một success, một HTTP 503 và một case còn lại, fixture test ghi nhận `attempted=2`, `successful=1`, `failed=1`, `not_attempted=1`, rate `0.5` với denominator `2`. Reuse-only fixture ghi `attempted=0`, `reused=1`, rate `null`. Đây là ví dụ kiểm thử giả lập. Các file lỗi vẫn không được chuyển thành response giả; offline evaluator tiếp tục giữ case không có response là `not_evaluated`. Không sửa semantics hay code của `evaluation.runner`.
+
+### P1-02 — Human semantic quality gate sau technical smoke
+
+**Nguyên nhân:** HTTP/JSON/Contract v1 hợp lệ và đúng model chỉ chứng minh kỹ thuật; trường `semantic_evaluation_available` không phải kết quả semantic review. Trước remediation, dev run chỉ cần smoke kỹ thuật cùng cấu hình, nên có thể bắt đầu trước khi con người đối chiếu nội dung với transcript/gold.
+
+**Luồng và trạng thái:** Smoke thành công được lưu là `technical_smoke_passed`, trong khi `semantic_review_status` vẫn là `semantic_review_pending`. Runner tạo response public và review template rỗng, cùng `reviews/smoke-approval.json` ở trạng thái `pending_review`. Tạo response hợp lệ không tự sinh điểm, claim verdict hay approval. Lệnh offline `verify-smoke-review` kiểm tra review; chỉ trạng thái `semantic_review_passed` mới thỏa quality gate.
+
+Reviewer dùng schema review hiện có của `evaluation.runner`/`evaluation.scoring.py`: Summary scores và hallucination annotations, semantic verdict cho mọi claim ID đang tồn tại trên public response, cùng `action_matches` khi paraphrase/matching cần phán định. Action index lấy từ response đã lưu, sau production filtering; không suy ra từ candidate index. Các claim ID không hợp lệ, review thiếu, review một phần, decision sai, identity thiếu, digest mismatch, matching unresolved hoặc schema review lỗi đều không mở dev gate. `evaluation.runner` vẫn offline; runner gọi trực tiếp evaluator offline với review data và không gửi review/gold đến service.
+
+Approval được bind bằng SHA-256 của chính bytes response đã lưu và review file. Approval JSON phải khớp `case-001`, hash response, tên/hash review, decision `approved`, reviewer và rationale. Thay response hoặc review sau khi ký làm digest không khớp. Đây là liên kết xác định với file được review, không phải chữ ký mật mã hay bằng chứng độc lập về danh tính/review. Review local và sign-off vẫn là assertion của operator.
+
+Để pass, review phải hoàn chỉnh; tất cả semantic claims được đánh dấu supported; matching Action Item hoàn tất một-một và không có FP/FN; owner khớp, được transcript hỗ trợ, không có owner không hỗ trợ; raw deadline và temporal status khớp gold, không fabricated, và ngày tương đối của case smoke vẫn `unresolved`/không có resolved date theo rubric LLM-03; priority đúng, không fabricated; Summary không có hallucination, required-fact coverage và semantic source grounding đều bằng 1. Review phải có quyết định người dùng rõ ràng là `approved`. Faithfulness/actionability scores được validate, lưu và reviewer xem xét; rubric không định nghĩa numeric pass threshold nên runner không tự đặt ngưỡng.
+
+Development gọi quality gate trước `_execute()` và cần thêm cờ `--authorize-development`, nên có ba điều kiện tách biệt: smoke kỹ thuật đạt, semantic review đạt và operator cấp quyền development riêng. Review pending trả exit `3` và không tạo HTTP request; quality review hợp lệ nhưng không đạt trả exit `1`; review input sai/malformed trả exit `3`. Case-001 test fixture nay tham chiếu đúng commitment ở `SEG-0002`, với source timestamp `00:00:08.832`, raw expression “trước thứ Sáu này” và temporal state `unresolved`.
+
+### File thay đổi
+
+- `apps/llm-service/evaluation/deepseek_runner.py`: live execution accounting, smoke approval template/fingerprint, offline review gate và reporting.
+- `apps/llm-service/tests/evaluation/test_deepseek_runner.py`: mock regressions cho successes/failures/429/timeout/invalid contract/reuse/unattempted/null denominator, smoke review statuses, malformed/stale review, owner/deadline failures, approval và fixture source/timestamp.
+- `apps/llm-service/evaluation/README.md`: semantics live-vs-offline, human review/approval steps và lệnh xác minh gate.
+- Báo cáo này: remediation P1 và kết quả xác minh mới.
+
+Không sửa production extraction code, prompts, Contract v1 schemas, dataset/gold labels hay `.env`. Các số test được ghi ở đầu báo cáo (`123` evaluation và `713` service tests) là kết quả lịch sử trước remediation, không thay thế cho kiểm thử mới bên dưới.
+
+### Xác minh sau remediation
+
+Các lệnh đã chạy từ `apps/llm-service` sau thay đổi:
+
+| Lệnh | Kết quả quan sát |
+|---|---|
+| `UV_CACHE_DIR=/tmp/uv-cache uv run --locked --extra test pytest -q tests/evaluation/test_deepseek_runner.py` | **51 passed** |
+| `UV_CACHE_DIR=/tmp/uv-cache uv run --locked --extra test pytest -q tests/evaluation` | **145 passed** |
+| `UV_CACHE_DIR=/tmp/uv-cache uv run --locked --extra test python -m evaluation.runner validate-dataset` | Dataset `1.0.0` hợp lệ: **16 case (10 development, 6 holdout)** |
+| `test -f .env` | `.env` hiện diện; không đọc hay in giá trị secret |
+| `UV_CACHE_DIR=/tmp/uv-cache uv run --locked --extra test --env-file .env python -m evaluation.deepseek_runner preflight` | `READY`, đúng candidate model và timeout cấu hình; runner in rõ **no network request made** |
+| `UV_CACHE_DIR=/tmp/uv-cache uv run --locked --extra test python -m evaluation.runner run --mode live` | Từ chối fail-closed, exit **3**, yêu cầu `--ack-live`; không có request |
+| `UV_CACHE_DIR=/tmp/uv-cache uv run --locked --extra test pytest -q` | **735 passed** |
+
+Focused mocked tests chứng minh live denominator có HTTP failures, reused response không tính attempt, early-stop cases là `not_attempted`, zero attempts trả `null`, và offline report vẫn đánh dấu case không có response là `not_evaluated`. Tests cho gate xác nhận smoke ban đầu pending, review thiếu/partial/malformed/stale/unsupported/rejected bị chặn trước HTTP, owner/deadline fabricated thất bại, valid explicit review cho phép quality gate, nhưng cờ development vẫn bắt buộc. Fixture test xác nhận source ID/time mới. Các kết quả này chứng minh hành vi runner/evaluator offline, **không phải benchmark result**.
+
+### Trạng thái sau remediation và rủi ro còn lại
+
+P1-01 và P1-02 đã được sửa và offline validation đạt. Dataset vẫn nguyên vẹn. Không có OpenRouter/local extraction request, paid inference hay holdout execution; vì vậy chưa có kết quả DeepSeek, latency/token/cost thực tế hoặc semantic review thật. `$0.25` chưa được duyệt, runner không thi hành hard monetary cap, upstream route/billing chưa được xác minh. Review gate dựa trên reviewer local và rubric của case smoke; tính độc lập, nhất quán giữa nhiều reviewer và chất lượng gold vẫn cần con người kiểm chứng. Faithfulness/actionability chưa có cutoff số do rubric không chỉ rõ pass point. Các vấn đề P2 về resume/recovery và health checks vẫn ngoài phạm vi.
+
+**Kết luận milestone:** Hai lỗi P1 đã được remediate và kiểm chứng offline; `LLM-03.7.2` vẫn chưa hoàn tất. Real DeepSeek smoke phải được cấp quyền riêng, semantic review của smoke phải được phê duyệt trước development, và benchmark development vẫn đang chờ paid execution authorization.
