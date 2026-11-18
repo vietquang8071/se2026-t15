@@ -114,3 +114,94 @@ Semantic review status is `pending_review` when no claim has been reviewed, `par
 ## Future live mode status
 
 Live execution is fail-closed and is not implemented in this milestone. There is no provider client in the runner. Even an authorized invocation is refused because current provider prices have not been revalidated and reliable pre-request cost enforcement is unavailable. A future milestone must supply explicit operator acknowledgment, a positive per-run spending limit, a positive case limit, current verified pricing, and a real enforcement mechanism before any HTTP integration is enabled. No retries or concurrency are performed by this offline runner.
+
+## LLM-03.7.2 manual DeepSeek evaluation
+
+`evaluation.deepseek_runner` is separate from `evaluation.runner`. The existing offline evaluator remains offline and its `--mode live` option remains fail-closed. The new runner's default command is a network-free preflight; it never calls OpenRouter directly. Its only live destination is the authenticated local `POST /v1/extractions` endpoint.
+
+### Prerequisites and preflight
+
+Configure the service's local `.env` with `LLM_SERVICE_TOKEN`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL=deepseek/deepseek-v4.1-flash-1017`, `OPENROUTER_STRUCTURED_OUTPUT_MODE=json_object`, `OPENROUTER_MAX_OUTPUT_TOKENS` of at least `4096`, `OPENROUTER_REQUIRE_PARAMETERS=true`, `LLM_SERVICE_PROVIDER_TIMEOUT_SECONDS`, and `LLM_SERVICE_REQUEST_TIMEOUT_SECONDS` long enough to cover the two bounded provider stages. The runner requires an exact model ID match and does not provide a model override. Do not print or commit `.env` values.
+
+In terminal 1, start the existing service with that same `.env`:
+
+```bash
+uv run --locked --env-file .env uvicorn app.main:app \
+  --host 127.0.0.1 --port 8000
+```
+
+In terminal 2, run preflight. `uv --env-file` loads local settings into the process; preflight validates the 16-case dataset, runtime settings, local endpoint shape, model ID, JSON mode and timeouts. It makes no HTTP request:
+
+```bash
+uv run --locked --extra test --env-file .env \
+  python -m evaluation.deepseek_runner
+```
+
+Preflight cannot inspect the settings of an already running server or verify an OpenRouter account spending cap. Start the service with the same `.env`; compare the returned model ID after a smoke call. Model support and prices vary by provider endpoint, and the public Contract v1 response does not expose the selected upstream provider route or billed cost.
+
+### Smoke authorization
+
+Do not run this command until the repository owner separately approves the exact model, one smoke case, a positive spending amount, current provider pricing/route and an account-level spending restriction. The proposed `$0.25` is not an approved limit and is not a default. Set `APPROVED_SMOKE_LIMIT_USD` only after approval. The command accepts only `case-001` and requires the distinct `--authorize-smoke` flag:
+
+```bash
+uv run --locked --extra test --env-file .env \
+  python -m evaluation.deepseek_runner smoke \
+  --authorize-smoke \
+  --max-cases 1 \
+  --spend-limit-usd "$APPROVED_SMOKE_LIMIT_USD" \
+  --confirm-account-spending-limit \
+  --output-dir /tmp/llm03.7.2
+```
+
+The runner sends only the selected `llm-request.json`, unchanged in business content; it never sends `gold.json` or review annotations. It uses the service bearer token, finite request timeout, one sequential request, no retries, and no redirects or environment proxies. Response and failure files are written exclusively so existing files are not overwritten. An invalid Contract v1 response is written as a sanitized failure record, not as a successful response.
+
+### Development authorization
+
+Run the development split only after a successful same-configuration smoke record exists in `/tmp/llm03.7.2` and the owner separately authorizes the development run. This command uses a different required flag and a separately supplied spending authorization. It is limited to `case-001` through `case-010`; any holdout or unknown ID is rejected. A matching saved smoke response for `case-001` is reused. A config mismatch stops the run without overwriting or paying for `case-001` again.
+
+```bash
+uv run --locked --extra test --env-file .env \
+  python -m evaluation.deepseek_runner development \
+  --authorize-development \
+  --max-cases 10 \
+  --spend-limit-usd "$APPROVED_DEVELOPMENT_LIMIT_USD" \
+  --confirm-account-spending-limit \
+  --output-dir /tmp/llm03.7.2
+```
+
+There is no automatic retry or concurrency. A failed request stops the run because a failed HTTP call may still have incurred provider cost. The runner requires the operator to confirm an account-level spending cap; this is an operator assertion and is not independently verified or enforced by the runner. The supplied run limit and request count are not hard monetary caps. When selected route pricing or actual billing is unavailable, estimated and billed cost remain `null`, never zero.
+
+### Output and offline scoring
+
+The output directory is outside the immutable dataset:
+
+```text
+/tmp/llm03.7.2/
+├── responses/<case-id>.json
+├── failures/<case-id>.json
+├── metadata/<case-id>.json
+├── metadata/smoke.json
+├── metadata/development.json
+├── reviews/review-template-smoke.json
+├── reviews/review-template-development.json
+└── reports/{smoke,development}/report.{json,md}
+```
+
+The runner reuses the existing offline scorer after each manual run. It can also be invoked separately against saved responses:
+
+```bash
+uv run --locked --extra test python -m evaluation.runner run \
+  --responses-dir /tmp/llm03.7.2/responses \
+  --split development \
+  --output-dir /tmp/llm03.7.2/reports/offline-development
+```
+
+The generated review template contains empty case annotations only. Reviewers must inspect task equivalence, source support, owner, deadline, priority, Summary faithfulness/coverage/actionability, and hallucinations themselves. Valid source IDs establish structural grounding only; no semantic scores or verdicts are generated automatically. Until people fill in the review file, these metrics remain `pending_review`.
+
+### Troubleshooting
+
+- `preflight failed`: confirm the same `.env` is passed to both processes, the selected model ID is exact, `json_object` and `require_parameters=true` are configured, and request timeout is at least twice the provider timeout.
+- `Development requires a successful ... smoke run`: use the same output directory as the successful smoke run; do not copy only the response JSON because its run metadata and configuration fingerprint are needed.
+- `Existing output will not be overwritten`: choose a new output directory or retain the existing record; the runner will not replace it.
+- `case ... failed`: inspect the sanitized status/category in `failures/` and `metadata/`; the response body and credentials are not copied into failure logs. Resolve the cause, seek any required authorization again, and use a new output directory for an intentionally repeated request.
+- `unexpected_model`: stop. The response model differs from the pinned candidate in local configuration; do not accept it as a DeepSeek result.
