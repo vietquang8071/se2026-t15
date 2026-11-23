@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+# Preserve organization and repository-level settings.
+inheritance: true
+
+# Review language.
+language: "en-US"
+
+reviews:
+  # Balanced feedback, focusing on meaningful issues.
+  profile: "chill"
+
+  # Do not automatically approve pull requests.
+  request_changes_workflow: false
+
+  # Generate a summary of code changes.
+  high_level_summary: true
+
+  # Automatic pull request reviews.
+  auto_review:
+    enabled: true
+
+    # Review new changes when commits are pushed.
+    auto_incremental_review: true
+
+    # Do not automatically review draft PRs.
+    drafts: false
+
+    # Additional target branch besides the default (main).
+    base_branches:
+      - "develop"
