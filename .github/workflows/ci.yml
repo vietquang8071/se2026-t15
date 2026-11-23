@@ -1,0 +1,202 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+
+jobs:
+  ci-web:
+    name: ci-web
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 24 and pnpm 11.1.1
+        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          version: 11.1.1
+          runtime: node@24
+          cache: true
+          cache-dependency-path: pnpm-lock.yaml
+          install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint web
+        run: pnpm --filter @meeting-minutes/web lint
+
+      - name: Typecheck web
+        run: pnpm --filter @meeting-minutes/web typecheck
+
+      - name: Test web
+        run: pnpm --filter @meeting-minutes/web test
+
+      - name: Build web
+        run: CI=true pnpm --filter @meeting-minutes/web build
+
+  ci-api:
+    name: ci-api
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 24 and pnpm 11.1.1
+        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          version: 11.1.1
+          runtime: node@24
+          cache: true
+          cache-dependency-path: pnpm-lock.yaml
+          install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate shared Prisma schema
+        run: pnpm --filter @meeting-minutes/database exec prisma validate --config prisma.config.ts
+
+      - name: Generate shared Prisma Client
+        run: pnpm db:generate
+
+      - name: Lint database package
+        run: pnpm --filter @meeting-minutes/database lint
+
+      - name: Build database package
+        run: pnpm --filter @meeting-minutes/database build
+
+      - name: Lint API
+        run: pnpm --filter @meeting-minutes/api lint
+
+      - name: Typecheck API
+        run: pnpm --filter @meeting-minutes/api typecheck
+
+      - name: Build API
+        run: pnpm --filter @meeting-minutes/api build
+
+  ci-audio:
+    name: ci-audio
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: meeting_minutes
+          POSTGRES_PASSWORD: meeting_minutes
+          POSTGRES_DB: meeting_minutes_audio
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U meeting_minutes -d meeting_minutes_audio"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      AUDIO_DATABASE_URL: postgresql://meeting_minutes:meeting_minutes@127.0.0.1:5432/meeting_minutes_audio?schema=public
+      AUDIO_API_KEY: ci-audio-test-key-at-least-24-characters
+      OPENAI_API_KEY: offline-test-no-real-provider
+      AUDIO_PDF_FONT: /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 24 and pnpm 11.1.1
+        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          version: 11.1.1
+          runtime: node@24
+          cache: true
+          cache-dependency-path: pnpm-lock.yaml
+          install: false
+
+      - name: Install FFmpeg and DejaVu fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ffmpeg fonts-dejavu-core
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare runner-only environment
+        run: |
+          cp .env.example .env
+          mkdir -p "$RUNNER_TEMP/audio-storage"
+          echo "AUDIO_STORAGE_DIR=${RUNNER_TEMP}/audio-storage" >> "$GITHUB_ENV"
+
+      - name: Validate Audio Prisma schema
+        working-directory: apps/audio
+        run: pnpm exec prisma validate --config prisma.config.ts
+
+      - name: Generate Audio Prisma Client
+        working-directory: apps/audio
+        run: pnpm db:generate
+
+      - name: Lint Audio
+        run: pnpm --filter @meeting-minutes/audio lint
+
+      - name: Typecheck Audio
+        run: pnpm --filter @meeting-minutes/audio typecheck
+
+      - name: Build Audio
+        run: pnpm --filter @meeting-minutes/audio build
+
+      - name: Test Audio
+        run: pnpm --filter @meeting-minutes/audio test:audio
+
+      - name: Test Audio HTTP integration
+        run: pnpm --filter @meeting-minutes/audio test:http
+
+  ci-llm:
+    name: ci-llm
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/llm-service
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv and Python 3.12
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          version: "0.11.32"
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+          working-directory: apps/llm-service
+
+      - name: Install locked dependencies
+        run: uv sync --locked --extra test --python 3.12
+
+      - name: Run tests
+        run: uv run --locked --extra test pytest -q
+
+      - name: Validate offline evaluation dataset
+        run: uv run --locked --extra test python -m evaluation.runner validate-dataset
