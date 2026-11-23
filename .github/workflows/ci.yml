@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Node.js 24 and pnpm 11.1.1
         uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
@@ -57,6 +59,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Node.js 24 and pnpm 11.1.1
         uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
@@ -113,11 +117,12 @@ jobs:
       AUDIO_DATABASE_URL: postgresql://meeting_minutes:meeting_minutes@127.0.0.1:5432/meeting_minutes_audio?schema=public
       AUDIO_API_KEY: ci-audio-test-key-at-least-24-characters
       OPENAI_API_KEY: offline-test-no-real-provider
-      AUDIO_STORAGE_DIR: ${{ runner.temp }}/audio-storage
       AUDIO_PDF_FONT: /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Node.js 24 and pnpm 11.1.1
         uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
@@ -136,8 +141,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Prepare runner-only environment file
-        run: cp .env.example .env
+      - name: Prepare runner-only environment
+        run: |
+          cp .env.example .env
+          mkdir -p "$RUNNER_TEMP/audio-storage"
+          echo "AUDIO_STORAGE_DIR=${RUNNER_TEMP}/audio-storage" >> "$GITHUB_ENV"
 
       - name: Validate Audio Prisma schema
         working-directory: apps/audio
@@ -172,10 +180,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up uv and Python 3.12
         uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
         with:
+          version: "0.11.32"
           python-version: "3.12"
           enable-cache: true
           cache-dependency-glob: uv.lock
